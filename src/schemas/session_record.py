@@ -14,6 +14,13 @@ class AgentRunResult(BaseModel):
     provider: str
     response: Optional[AgentResponse] = None
     error: Optional[str] = None
+    warning: Optional[str] = None
+    stderr_preview: Optional[str] = None
+    stdout_preview: Optional[str] = None
+    active_account_masked: Optional[str] = None
+    expected_account_masked: Optional[str] = None
+    gemini_cli_home: Optional[str] = None
+    preflight_status: Optional[str] = None
 
 
 class SessionRecord(BaseModel):

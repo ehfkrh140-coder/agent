@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from src.agent_config import AgentConfig
-from src.llm.gemini_cli_client import GeminiCliClient
+from src.llm.gemini_cli_client import CliCallResult, GeminiCliClient, ProfilePreflightResult
 from src.llm.gemini_client import GeminiClient
 from src.schemas.agent_response import AgentResponse
 
@@ -28,25 +28,49 @@ class GenericGeminiAgent:
         else:
             raise ValueError(f"Unsupported provider: {config.provider}")
 
+    def preflight(self) -> ProfilePreflightResult | None:
+        if self.config.provider != "gemini_cli":
+            return None
+        return self.cli_client.preflight_profile(
+            agent_id=self.config.agent_id,
+            gemini_cli_home=self.config.gemini_cli_home,
+            expected_account=self.config.expected_account,
+            working_dir=self.config.working_dir,
+        )
+
     def _load_system_prompt(self) -> str:
         path = Path(self.config.system_prompt_path)
         if not path.exists():
-            raise FileNotFoundError(
-                f"System prompt file not found for agent {self.config.agent_id}: {path}"
-            )
+            raise FileNotFoundError(f"System prompt file not found for agent {self.config.agent_id}: {path}")
         return path.read_text(encoding="utf-8").strip()
 
     @staticmethod
     def _build_cli_prompt(system_prompt: str, user_message: str) -> str:
-        return (
-            f"{system_prompt}\n\n"
-            "아래 사용자 메시지를 분석하세요.\n"
-            "반드시 AgentResponse JSON schema 형식의 순수 JSON 객체만 출력하세요.\n"
-            "다른 설명, 마크다운, 코드블록을 절대 추가하지 마세요.\n\n"
-            f"사용자 메시지:\n{user_message}"
-        )
+        return f"""{system_prompt}
 
-    def run(self, user_message: str) -> AgentResponse:
+규칙:
+- 사용자 메시지에만 답하세요.
+- 프로젝트 파일을 읽거나 분석하지 마세요.
+- 도구 사용을 시도하지 마세요.
+- 마크다운을 출력하지 마세요.
+- 코드블록을 출력하지 마세요.
+- 아래 JSON 객체 스키마 형태의 순수 JSON만 출력하세요.
+
+출력 예시:
+{{
+  "summary": "string",
+  "key_points": ["string"],
+  "concerns": ["string"],
+  "questions": ["string"],
+  "suggested_next_steps": ["string"],
+  "confidence": 0.0
+}}
+
+사용자 메시지:
+{user_message}
+"""
+
+    def run(self, user_message: str) -> AgentResponse | CliCallResult:
         system_prompt = self._load_system_prompt()
 
         if self.config.provider == "gemini_cli":
@@ -54,7 +78,8 @@ class GenericGeminiAgent:
             return self.cli_client.generate_structured(
                 prompt=cli_prompt,
                 response_schema=AgentResponse,
-                gemini_cli_home=self.config.gemini_cli_home or "",
+                gemini_cli_home=self.config.gemini_cli_home,
+                working_dir=self.config.working_dir,
             )
 
         return self.api_client.generate_structured(

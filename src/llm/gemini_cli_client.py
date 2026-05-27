@@ -2,22 +2,54 @@ import json
 import os
 import re
 import subprocess
-from typing import Type
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional, Type
 
 from pydantic import BaseModel
 
 
+AUTH_PROMPT_PATTERNS = ["Opening authentication page", "Do you want to continue"]
+
+
+@dataclass
+class ProfilePreflightResult:
+    status: str
+    message: str
+    active_account_masked: Optional[str] = None
+    expected_account_masked: Optional[str] = None
+
+
+@dataclass
+class CliCallResult:
+    response: BaseModel
+    warning: Optional[str] = None
+    stdout_preview: Optional[str] = None
+    stderr_preview: Optional[str] = None
+
+
 class GeminiCliClient:
-    def __init__(self, cli_command: str = "gemini", timeout_seconds: int = 120):
+    def __init__(self, cli_command: str = "gemini.cmd", timeout_seconds: int = 120):
         self.cli_command = cli_command
         self.timeout_seconds = timeout_seconds
+
+    @staticmethod
+    def _preview(text: str, limit: int = 4000) -> str:
+        return (text or "")[:limit]
+
+    @staticmethod
+    def mask_email(email: Optional[str]) -> Optional[str]:
+        if not email or "@" not in email:
+            return None
+        local, domain = email.split("@", 1)
+        keep = min(4, max(1, len(local)))
+        return f"{local[:keep]}****@{domain}"
 
     @staticmethod
     def _extract_first_json_object(text: str) -> str:
         start = text.find("{")
         if start < 0:
-            raise ValueError("No JSON object start found in CLI stdout")
-
+            raise ValueError("No JSON object start found")
         depth = 0
         in_string = False
         escape = False
@@ -39,48 +71,63 @@ class GeminiCliClient:
                     depth -= 1
                     if depth == 0:
                         return text[start : idx + 1]
-
-        raise ValueError("No complete JSON object found in CLI stdout")
+        raise ValueError("No complete JSON object found")
 
     @staticmethod
     def _strip_json_code_block(text: str) -> str:
-        code_block = re.search(r"```json\s*(.*?)\s*```", text, flags=re.DOTALL | re.IGNORECASE)
-        if code_block:
-            return code_block.group(1).strip()
-        return text.strip()
+        m = re.search(r"```json\s*(.*?)\s*```", text or "", flags=re.DOTALL | re.IGNORECASE)
+        return m.group(1).strip() if m else (text or "").strip()
 
     @classmethod
-    def parse_agent_response_from_stdout(cls, stdout: str, response_schema: Type[BaseModel]) -> BaseModel:
-        outer_json_str = cls._extract_first_json_object(stdout)
-        outer = json.loads(outer_json_str)
+    def _try_parse_json_text(cls, text: str) -> Optional[dict]:
+        cleaned = cls._strip_json_code_block(text)
+        try:
+            return json.loads(cleaned)
+        except Exception:
+            pass
+        try:
+            chunk = cls._extract_first_json_object(cleaned)
+            return json.loads(chunk)
+        except Exception:
+            return None
 
-        response_text = outer.get("response")
-        if not isinstance(response_text, str) or not response_text.strip():
-            raise ValueError("Outer JSON does not contain a valid 'response' string")
+    @classmethod
+    def parse_agent_response_from_stdout(cls, stdout: str, response_schema: Type[BaseModel]) -> tuple[BaseModel, Optional[str]]:
+        warning = None
+        response_text = ""
+        parsed_inner = None
 
-        inner_json_text = cls._strip_json_code_block(response_text)
-        inner = json.loads(inner_json_text)
-        return response_schema.model_validate(inner)
+        try:
+            outer_json_str = cls._extract_first_json_object(stdout)
+            outer = json.loads(outer_json_str)
+            response_text = outer.get("response") if isinstance(outer, dict) else ""
+            if isinstance(response_text, str) and response_text.strip():
+                parsed_inner = cls._try_parse_json_text(response_text)
+        except Exception:
+            pass
 
-    def generate_structured(
-        self,
-        *,
-        prompt: str,
-        response_schema: Type[BaseModel],
-        gemini_cli_home: str,
-    ) -> BaseModel:
-        if not gemini_cli_home:
-            raise ValueError("gemini_cli_home is required for gemini_cli provider")
+        if parsed_inner is None:
+            parsed_inner = cls._try_parse_json_text(stdout)
 
-        cmd = [
-            self.cli_command,
-            "--skip-trust",
-            "-p",
-            prompt,
-            "--output-format",
-            "json",
-        ]
+        if isinstance(parsed_inner, dict):
+            try:
+                return response_schema.model_validate(parsed_inner), warning
+            except Exception:
+                pass
 
+        warning = "non_json_output"
+        fallback_summary_src = (response_text or stdout or "")[:1000]
+        fallback = {
+            "summary": fallback_summary_src,
+            "key_points": [],
+            "concerns": ["non_json_output"],
+            "questions": [],
+            "suggested_next_steps": ["프롬프트를 더 엄격하게 하거나 raw_output을 확인하세요."],
+            "confidence": 0.0,
+        }
+        return response_schema.model_validate(fallback), warning
+
+    def _build_env(self, gemini_cli_home: str) -> dict:
         env = os.environ.copy()
         env.update(
             {
@@ -88,29 +135,114 @@ class GeminiCliClient:
                 "GEMINI_FORCE_ENCRYPTED_FILE_STORAGE": "true",
                 "GEMINI_FORCE_FILE_STORAGE": "true",
                 "GEMINI_CLI_TRUST_WORKSPACE": "true",
+                "NO_COLOR": "1",
+                "TERM": "dumb",
             }
         )
+        return env
 
+    def preflight_profile(self, *, agent_id: str, gemini_cli_home: str, expected_account: Optional[str], working_dir: Optional[str]) -> ProfilePreflightResult:
+        home = Path(gemini_cli_home)
+        if not home.exists():
+            return ProfilePreflightResult("FAILED", f"home path not found: {gemini_cli_home}")
+
+        accounts_path = home / ".gemini" / "google_accounts.json"
+        if not accounts_path.exists():
+            return ProfilePreflightResult("FAILED", f"google_accounts.json not found: {accounts_path}")
+
+        try:
+            data = json.loads(accounts_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return ProfilePreflightResult("FAILED", f"google_accounts.json read error: {exc}")
+
+        active = data.get("active") if isinstance(data, dict) else None
+        if not active:
+            return ProfilePreflightResult("FAILED", "active account not found")
+
+        active_masked = self.mask_email(active)
+        expected_masked = self.mask_email(expected_account)
+        if expected_account and active.lower() != expected_account.lower():
+            return ProfilePreflightResult(
+                "FAILED",
+                f"active account mismatch active={active_masked} expected={expected_masked}",
+                active_account_masked=active_masked,
+                expected_account_masked=expected_masked,
+            )
+
+        # headless quick check
+        wd = Path(working_dir) if working_dir else Path.cwd()
+        wd.mkdir(parents=True, exist_ok=True)
+        cmd = [self.cli_command, "--skip-trust", "-p", '{"summary":"ping"}', "--output-format", "json"]
+        try:
+            completed = subprocess.run(
+                cmd,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                env=self._build_env(gemini_cli_home),
+                timeout=20,
+                shell=False,
+                cwd=str(wd),
+            )
+            combined = (completed.stdout or "") + "\n" + (completed.stderr or "")
+            if any(p.lower() in combined.lower() for p in AUTH_PROMPT_PATTERNS):
+                return ProfilePreflightResult(
+                    "AUTH_REQUIRED",
+                    "interactive auth prompt detected",
+                    active_account_masked=active_masked,
+                    expected_account_masked=expected_masked,
+                )
+        except subprocess.TimeoutExpired:
+            return ProfilePreflightResult(
+                "AUTH_REQUIRED",
+                "preflight headless check timeout",
+                active_account_masked=active_masked,
+                expected_account_masked=expected_masked,
+            )
+        except Exception:
+            pass
+
+        return ProfilePreflightResult(
+            "OK",
+            f"{agent_id} profile ready",
+            active_account_masked=active_masked,
+            expected_account_masked=expected_masked,
+        )
+
+    def generate_structured(
+        self,
+        *,
+        prompt: str,
+        response_schema: Type[BaseModel],
+        gemini_cli_home: str,
+        working_dir: Optional[str] = None,
+    ) -> CliCallResult:
+        wd = Path(working_dir) if working_dir else Path.cwd()
+        wd.mkdir(parents=True, exist_ok=True)
+
+        cmd = [self.cli_command, "--skip-trust", "-p", prompt, "--output-format", "json"]
         completed = subprocess.run(
             cmd,
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
-            env=env,
+            encoding="utf-8",
+            errors="replace",
+            env=self._build_env(gemini_cli_home),
             timeout=self.timeout_seconds,
             shell=False,
+            cwd=str(wd),
         )
 
         stdout = completed.stdout or ""
         stderr = completed.stderr or ""
+        out_prev = self._preview(stdout)
+        err_prev = self._preview(stderr)
 
         if completed.returncode != 0:
-            raise RuntimeError(
-                f"Gemini CLI failed with code {completed.returncode}. stderr={stderr.strip()} stdout={stdout.strip()}"
-            )
+            raise RuntimeError(f"Gemini CLI failed with code {completed.returncode}. stderr={err_prev}")
 
-        try:
-            return self.parse_agent_response_from_stdout(stdout, response_schema)
-        except Exception as exc:
-            raise ValueError(
-                f"Failed to parse Gemini CLI output. stderr={stderr.strip()} stdout={stdout.strip()} error={exc}"
-            ) from exc
+        response, warning = self.parse_agent_response_from_stdout(stdout, response_schema)
+        return CliCallResult(response=response, warning=warning, stdout_preview=out_prev, stderr_preview=err_prev)
