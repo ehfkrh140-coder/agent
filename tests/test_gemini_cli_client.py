@@ -161,26 +161,27 @@ class GeminiCliClientParsingTests(unittest.TestCase):
             self.assertIn("--output-format", cmd)
 
 
-    def test_interactive_file_uses_powershell_tee(self):
+    def test_interactive_file_uses_direct_gemini_cmd(self):
         client = GeminiCliClient(cli_command="gemini.cmd", timeout_seconds=30)
-        from tempfile import TemporaryDirectory
         with TemporaryDirectory() as td:
             out_dir = Path(td) / "out"
             out_dir.mkdir(parents=True, exist_ok=True)
 
+            payload = {
+                "summary": "ok",
+                "key_points": [],
+                "concerns": [],
+                "questions": [],
+                "suggested_next_steps": [],
+                "confidence": 1.0,
+            }
+            stdout_wrapper = json.dumps({"response": json.dumps(payload)})
+
             def fake_run(cmd, env, cwd, timeout_seconds):
-                self.assertEqual(cmd[0].lower(), "powershell.exe")
-                self.assertIn("Tee-Object", cmd[-1])
-                output_path = list(out_dir.glob("*.json"))
-                if not output_path:
-                    # write to expected path by parsing command tail
-                    import re
-                    m = re.search(r"-FilePath '([^']+)'", cmd[-1])
-                    if m:
-                        import json
-                        payload = {"summary":"ok","key_points":[],"concerns":[],"questions":[],"suggested_next_steps":[],"confidence":1.0}
-                        Path(m.group(1)).write_text(json.dumps({"response": json.dumps(payload)}), encoding="utf-8")
-                return 0, "", ""
+                self.assertEqual(cmd[0], "gemini.cmd")
+                self.assertNotIn("powershell.exe", " ".join(cmd).lower())
+                self.assertNotIn("tee-object", " ".join(cmd).lower())
+                return 0, stdout_wrapper, ""
 
             with patch.object(client, "_run_cli_command", side_effect=fake_run):
                 res = client.generate_structured_interactive_file(

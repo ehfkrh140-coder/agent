@@ -236,41 +236,27 @@ class GeminiCliClient:
         wd.mkdir(parents=True, exist_ok=True)
         out_dir = Path(output_dir) if output_dir else (wd / "outputs")
         out_dir.mkdir(parents=True, exist_ok=True)
+        output_path = out_dir / f"{agent_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_path = out_dir / f"{agent_id}_{ts}.json"
-
-        env = self._build_env(gemini_cli_home)
-        env["GEMINI_AGENT_PROMPT"] = prompt
-
-        ps_command = (
-            f"& {self.cli_command} --skip-trust -p $env:GEMINI_AGENT_PROMPT --output-format json "
-            f"| Tee-Object -FilePath '{str(output_path)}'"
-        )
-        cmd = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_command]
-
+        cmd = [self.cli_command, "--skip-trust", "-p", prompt, "--output-format", "json"]
         returncode, stdout, stderr = self._run_cli_command(
             cmd=cmd,
-            env=env,
+            env=self._build_env(gemini_cli_home),
             cwd=wd,
             timeout_seconds=max(self.timeout_seconds, 300),
         )
 
         if self._detect_auth_required((stdout or "") + "\n" + (stderr or "")):
             raise RuntimeError(f"AUTH_REQUIRED: run python tools/auth_warmup.py --agent {agent_id} first.")
-
         if returncode != 0:
             raise RuntimeError(f"Gemini CLI failed with code {returncode}. stderr={self._preview(stderr)}")
 
-        if not output_path.exists():
-            raise RuntimeError(f"Interactive output file missing: {output_path}")
-
-        file_text = output_path.read_text(encoding="utf-8", errors="replace")
-        if not file_text.strip():
+        output_path.write_text(stdout or "", encoding="utf-8")
+        if not (stdout or "").strip():
             raise RuntimeError(f"Interactive output file empty: {output_path}")
 
-        response, warning = self.parse_agent_response_from_stdout(file_text, response_schema)
-        return CliCallResult(response=response, warning=warning, stdout_preview=self._preview(file_text), stderr_preview=self._preview(stderr))
+        response, warning = self.parse_agent_response_from_stdout(stdout or "", response_schema)
+        return CliCallResult(response=response, warning=warning, stdout_preview=self._preview(stdout), stderr_preview=self._preview(stderr))
 
     def generate_structured(self, *, prompt: str, response_schema: Type[BaseModel], gemini_cli_home: str, working_dir: Optional[str] = None) -> CliCallResult:
         wd = Path(working_dir) if working_dir else Path.cwd()
