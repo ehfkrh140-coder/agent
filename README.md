@@ -133,20 +133,6 @@ python main.py
 
 ---
 
-
-## 첫 실제 실행 테스트 체크리스트
-
-아래 순서를 그대로 점검하세요.
-
-- [ ] `.env` 작성 확인 (Gemini API Key 5개 입력)
-- [ ] `py -m venv .venv`
-- [ ] `.\.venv\Scripts\Activate.ps1`
-- [ ] `pip install -r requirements.txt`
-- [ ] `python main.py`
-- [ ] `data/sessions` 폴더에 `session_<timestamp>.json` 파일 생성 확인
-
----
-
 ## 9) 자주 나는 오류와 해결 방법
 
 ### 오류 A: `ModuleNotFoundError`
