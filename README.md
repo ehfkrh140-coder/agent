@@ -66,3 +66,9 @@ python main.py
 python -m compileall main.py src tests
 python -m unittest tests/test_gemini_cli_client.py
 ```
+
+
+## Preflight와 Healthcheck 차이
+- 기본 실행(`python main.py`)의 preflight는 **모델 호출 없이** `google_accounts.json` 파일만 검사합니다.
+- 그래서 agent_02처럼 preflight 단계에서 20초 timeout으로 멈추는 문제를 방지합니다.
+- 실제 모델 호출 점검은 별도 `healthcheck_profile` 또는 수동 PowerShell 점검 스크립트에서만 수행하세요.

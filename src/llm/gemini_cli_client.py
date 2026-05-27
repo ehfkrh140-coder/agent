@@ -8,7 +8,6 @@ from typing import Optional, Type
 
 from pydantic import BaseModel
 
-
 AUTH_PROMPT_PATTERNS = ["Opening authentication page", "Do you want to continue"]
 
 
@@ -169,7 +168,14 @@ class GeminiCliClient:
                 expected_account_masked=expected_masked,
             )
 
-        # headless quick check
+        return ProfilePreflightResult(
+            "OK",
+            f"{agent_id} profile ready",
+            active_account_masked=active_masked,
+            expected_account_masked=expected_masked,
+        )
+
+    def healthcheck_profile(self, *, gemini_cli_home: str, working_dir: Optional[str] = None) -> ProfilePreflightResult:
         wd = Path(working_dir) if working_dir else Path.cwd()
         wd.mkdir(parents=True, exist_ok=True)
         cmd = [self.cli_command, "--skip-trust", "-p", '{"summary":"ping"}', "--output-format", "json"]
@@ -188,37 +194,16 @@ class GeminiCliClient:
             )
             combined = (completed.stdout or "") + "\n" + (completed.stderr or "")
             if any(p.lower() in combined.lower() for p in AUTH_PROMPT_PATTERNS):
-                return ProfilePreflightResult(
-                    "AUTH_REQUIRED",
-                    "interactive auth prompt detected",
-                    active_account_masked=active_masked,
-                    expected_account_masked=expected_masked,
-                )
+                return ProfilePreflightResult("AUTH_REQUIRED", "interactive auth prompt detected")
+            if completed.returncode != 0:
+                return ProfilePreflightResult("FAILED", f"healthcheck failed code={completed.returncode}")
+            return ProfilePreflightResult("OK", "healthcheck ok")
         except subprocess.TimeoutExpired:
-            return ProfilePreflightResult(
-                "AUTH_REQUIRED",
-                "preflight headless check timeout",
-                active_account_masked=active_masked,
-                expected_account_masked=expected_masked,
-            )
-        except Exception:
-            pass
+            return ProfilePreflightResult("FAILED", "healthcheck timeout")
+        except Exception as exc:
+            return ProfilePreflightResult("FAILED", f"healthcheck exception: {exc}")
 
-        return ProfilePreflightResult(
-            "OK",
-            f"{agent_id} profile ready",
-            active_account_masked=active_masked,
-            expected_account_masked=expected_masked,
-        )
-
-    def generate_structured(
-        self,
-        *,
-        prompt: str,
-        response_schema: Type[BaseModel],
-        gemini_cli_home: str,
-        working_dir: Optional[str] = None,
-    ) -> CliCallResult:
+    def generate_structured(self, *, prompt: str, response_schema: Type[BaseModel], gemini_cli_home: str, working_dir: Optional[str] = None) -> CliCallResult:
         wd = Path(working_dir) if working_dir else Path.cwd()
         wd.mkdir(parents=True, exist_ok=True)
 
