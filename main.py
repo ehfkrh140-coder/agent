@@ -1,0 +1,77 @@
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+from src.agents.agent_runner import AgentRunner
+from src.config_loader import load_agent_configs
+from src.storage.session_store import SessionStore
+
+
+def maybe_warmup(skip_warmup: bool, force_warmup: bool) -> bool:
+    root_dir = Path(__file__).resolve().parent
+
+    def run_warmup_once() -> bool:
+        completed = subprocess.run(
+            [sys.executable, "tools/auth_warmup.py", "--all"],
+            cwd=str(root_dir),
+            shell=False,
+        )
+        if completed.returncode == 0:
+            return True
+
+        print("Auth warmup failed.")
+        ans = input("Continue without warmup? [y/N] ").strip().lower()
+        return ans in {"y", "yes"}
+
+    if force_warmup:
+        return run_warmup_once()
+    if skip_warmup:
+        return True
+
+    ans = input("Run auth warmup first? [Y/n] ").strip().lower()
+    if ans in {"", "y", "yes"}:
+        return run_warmup_once()
+    return True
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--warmup", action="store_true")
+    parser.add_argument("--skip-warmup", action="store_true")
+    args = parser.parse_args()
+
+    load_dotenv()
+    if not maybe_warmup(skip_warmup=args.skip_warmup, force_warmup=args.warmup):
+        return
+
+    agent_configs = load_agent_configs("configs/agents.yaml")
+    user_message = input("Enter your message for all agents: ").strip()
+    if not user_message:
+        print("Input message is empty. Exit.")
+        return
+
+    runner = AgentRunner(agent_configs)
+    results = runner.run_all(user_message)
+
+    store = SessionStore("data/sessions")
+    saved_path = store.save(user_message=user_message, results=results)
+
+    print("\n=== Agent run summary ===")
+    for result in results:
+        if result.status == "success" and result.response is not None:
+            msg = result.response.summary
+            if len(msg) > 120:
+                msg = msg[:120] + "..."
+            print(f"- [success] {result.name}: {msg}")
+        else:
+            err = (result.error or "")[:140]
+            print(f"- [failed] {result.name}: {err}")
+
+    print(f"\nSession saved to: {saved_path}")
+
+
+if __name__ == "__main__":
+    main()
