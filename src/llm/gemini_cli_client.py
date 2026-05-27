@@ -44,6 +44,61 @@ class GeminiCliClient:
         keep = min(4, max(1, len(local)))
         return f"{local[:keep]}****@{domain}"
 
+    def _run_cli_command(self, cmd: list[str], env: dict, cwd: Path, timeout_seconds: int) -> tuple[int, str, str]:
+        creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
+        process = subprocess.Popen(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env=env,
+            cwd=str(cwd),
+            shell=False,
+            creationflags=creationflags,
+        )
+
+        try:
+            stdout, stderr = process.communicate(timeout=timeout_seconds)
+            return process.returncode or 0, stdout or "", stderr or ""
+        except subprocess.TimeoutExpired as exc:
+            stdout = exc.stdout or ""
+            stderr = exc.stderr or ""
+
+            if os.name == "nt":
+                try:
+                    subprocess.run(
+                        ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                        stdin=subprocess.DEVNULL,
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        errors="replace",
+                        timeout=10,
+                        shell=False,
+                    )
+                except Exception:
+                    pass
+            else:
+                try:
+                    process.kill()
+                except Exception:
+                    pass
+
+            try:
+                s2, e2 = process.communicate(timeout=5)
+                stdout = stdout or (s2 or "")
+                stderr = stderr or (e2 or "")
+            except Exception:
+                pass
+
+            raise TimeoutError(
+                f"Gemini CLI timed out after {timeout_seconds}s. pid={process.pid} "
+                f"stdout_preview={self._preview(stdout)} stderr_preview={self._preview(stderr)}"
+            ) from exc
+
     @staticmethod
     def _extract_first_json_object(text: str) -> str:
         start = text.find("{")
@@ -85,8 +140,7 @@ class GeminiCliClient:
         except Exception:
             pass
         try:
-            chunk = cls._extract_first_json_object(cleaned)
-            return json.loads(chunk)
+            return json.loads(cls._extract_first_json_object(cleaned))
         except Exception:
             return None
 
@@ -97,8 +151,7 @@ class GeminiCliClient:
         parsed_inner = None
 
         try:
-            outer_json_str = cls._extract_first_json_object(stdout)
-            outer = json.loads(outer_json_str)
+            outer = json.loads(cls._extract_first_json_object(stdout))
             response_text = outer.get("response") if isinstance(outer, dict) else ""
             if isinstance(response_text, str) and response_text.strip():
                 parsed_inner = cls._try_parse_json_text(response_text)
@@ -115,9 +168,8 @@ class GeminiCliClient:
                 pass
 
         warning = "non_json_output"
-        fallback_summary_src = (response_text or stdout or "")[:1000]
         fallback = {
-            "summary": fallback_summary_src,
+            "summary": (response_text or stdout or "")[:1000],
             "key_points": [],
             "concerns": ["non_json_output"],
             "questions": [],
@@ -164,78 +216,57 @@ class GeminiCliClient:
             return ProfilePreflightResult(
                 "FAILED",
                 f"active account mismatch active={active_masked} expected={expected_masked}",
-                active_account_masked=active_masked,
-                expected_account_masked=expected_masked,
+                active_masked,
+                expected_masked,
             )
 
-        return ProfilePreflightResult(
-            "OK",
-            f"{agent_id} profile ready",
-            active_account_masked=active_masked,
-            expected_account_masked=expected_masked,
-        )
+        return ProfilePreflightResult("OK", f"{agent_id} profile ready", active_masked, expected_masked)
 
     def healthcheck_profile(self, *, gemini_cli_home: str, working_dir: Optional[str] = None) -> ProfilePreflightResult:
         wd = Path(working_dir) if working_dir else Path.cwd()
         wd.mkdir(parents=True, exist_ok=True)
         cmd = [self.cli_command, "--skip-trust", "-p", '{"summary":"ping"}', "--output-format", "json"]
         try:
-            completed = subprocess.run(
-                cmd,
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
+            code, stdout, stderr = self._run_cli_command(
+                cmd=cmd,
                 env=self._build_env(gemini_cli_home),
-                timeout=20,
-                shell=False,
-                cwd=str(wd),
+                cwd=wd,
+                timeout_seconds=20,
             )
-            combined = (completed.stdout or "") + "\n" + (completed.stderr or "")
-            if any(p.lower() in combined.lower() for p in AUTH_PROMPT_PATTERNS):
-                return ProfilePreflightResult("AUTH_REQUIRED", "interactive auth prompt detected")
-            if completed.returncode != 0:
-                return ProfilePreflightResult("FAILED", f"healthcheck failed code={completed.returncode}")
-            return ProfilePreflightResult("OK", "healthcheck ok")
-        except subprocess.TimeoutExpired:
+        except TimeoutError:
             return ProfilePreflightResult("FAILED", "healthcheck timeout")
-        except Exception as exc:
-            return ProfilePreflightResult("FAILED", f"healthcheck exception: {exc}")
 
-    def generate_structured(self, *, prompt: str, response_schema: Type[BaseModel], gemini_cli_home: str, working_dir: Optional[str] = None) -> CliCallResult:
+        combined = (stdout or "") + "\n" + (stderr or "")
+        if any(p.lower() in combined.lower() for p in AUTH_PROMPT_PATTERNS):
+            return ProfilePreflightResult("AUTH_REQUIRED", "interactive auth prompt detected")
+        if code != 0:
+            return ProfilePreflightResult("FAILED", f"healthcheck failed code={code}")
+        return ProfilePreflightResult("OK", "healthcheck ok")
+
+    def generate_structured(
+        self,
+        *,
+        prompt: str,
+        response_schema: Type[BaseModel],
+        gemini_cli_home: str,
+        working_dir: Optional[str] = None,
+    ) -> CliCallResult:
         wd = Path(working_dir) if working_dir else Path.cwd()
         wd.mkdir(parents=True, exist_ok=True)
-
         cmd = [self.cli_command, "--skip-trust", "-p", prompt, "--output-format", "json"]
-        try:
-            completed = subprocess.run(
-                cmd,
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                env=self._build_env(gemini_cli_home),
-                timeout=self.timeout_seconds,
-                shell=False,
-                cwd=str(wd),
-            )
-        except subprocess.TimeoutExpired as exc:
-            stdout = exc.stdout or ""
-            stderr = exc.stderr or ""
-            raise TimeoutError(
-                f"Gemini CLI timed out after {self.timeout_seconds}s. "
-                f"stdout_preview={self._preview(stdout)} stderr_preview={self._preview(stderr)}"
-            ) from exc
 
-        stdout = completed.stdout or ""
-        stderr = completed.stderr or ""
+        returncode, stdout, stderr = self._run_cli_command(
+            cmd=cmd,
+            env=self._build_env(gemini_cli_home),
+            cwd=wd,
+            timeout_seconds=self.timeout_seconds,
+        )
+
         out_prev = self._preview(stdout)
         err_prev = self._preview(stderr)
 
-        if completed.returncode != 0:
-            raise RuntimeError(f"Gemini CLI failed with code {completed.returncode}. stderr={err_prev}")
+        if returncode != 0:
+            raise RuntimeError(f"Gemini CLI failed with code {returncode}. stderr={err_prev}")
 
         response, warning = self.parse_agent_response_from_stdout(stdout, response_schema)
         return CliCallResult(response=response, warning=warning, stdout_preview=out_prev, stderr_preview=err_prev)

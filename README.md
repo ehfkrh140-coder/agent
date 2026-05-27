@@ -85,3 +85,10 @@ python -m unittest tests/test_gemini_cli_client.py
 $env:GEMINI_CLI_HOME="C:\gemini-profilesgent_01"
 gemini.cmd --skip-trust -p '반드시 JSON만 출력' --output-format json
 ```
+
+
+- preflight OK 후 멈추는 경우는 계정 문제가 아니라 run 단계에서 gemini.cmd/node.exe 프로세스 정리 문제일 수 있습니다.
+- Windows에서 gemini.cmd는 node.exe 자식 프로세스를 띄울 수 있습니다.
+- timeout 시 `taskkill /T /F /PID`로 프로세스 트리를 종료해야 합니다.
+- timeout이 나도 해당 agent만 failed 처리되고 다음 agent로 넘어가야 정상입니다.
+- 직접 수동 실행은 되는데 main.py에서 멈추면 subprocess 프로세스 정리 이슈를 의심하세요.
