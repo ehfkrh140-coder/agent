@@ -24,6 +24,13 @@ class AgentRunner:
                     else:
                         raise RuntimeError(f"preflight {status}: {preflight.message}")
 
+                print(
+                    f"{config.agent_id} run command: {config.cli_command} --skip-trust -p <prompt omitted> --output-format json"
+                )
+                print(f"home={config.gemini_cli_home}")
+                print(f"cwd={config.working_dir}")
+                print(f"timeout={config.timeout_seconds}")
+
                 run_output = agent.run(user_message)
                 response = run_output.response if hasattr(run_output, "response") else run_output
                 warning = getattr(run_output, "warning", None)

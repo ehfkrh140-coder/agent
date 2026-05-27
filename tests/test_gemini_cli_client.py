@@ -1,4 +1,5 @@
 import json
+import subprocess
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -54,6 +55,22 @@ class GeminiCliClientParsingTests(unittest.TestCase):
     def test_healthcheck_method_exists(self):
         client = GeminiCliClient()
         self.assertTrue(hasattr(client, "healthcheck_profile"))
+
+
+    def test_generate_structured_timeout_raises_timeouterror(self):
+        client = GeminiCliClient(timeout_seconds=1)
+        with TemporaryDirectory() as td:
+            g = Path(td) / ".gemini"
+            g.mkdir(parents=True)
+            (g / "google_accounts.json").write_text(json.dumps({"active": "a@gmail.com"}), encoding="utf-8")
+            with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd=["gemini.cmd"], timeout=1, output="out", stderr="err")):
+                with self.assertRaises(TimeoutError):
+                    client.generate_structured(
+                        prompt='{"summary":"ok"}',
+                        response_schema=AgentResponse,
+                        gemini_cli_home=td,
+                        working_dir=td,
+                    )
 
     def test_readme_uses_profile_home_not_home(self):
         readme = Path("README.md").read_text(encoding="utf-8")

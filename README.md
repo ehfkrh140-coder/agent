@@ -72,3 +72,16 @@ python -m unittest tests/test_gemini_cli_client.py
 - 기본 실행(`python main.py`)의 preflight는 **모델 호출 없이** `google_accounts.json` 파일만 검사합니다.
 - 그래서 agent_02처럼 preflight 단계에서 20초 timeout으로 멈추는 문제를 방지합니다.
 - 실제 모델 호출 점검은 별도 `healthcheck_profile` 또는 수동 PowerShell 점검 스크립트에서만 수행하세요.
+
+
+## Troubleshooting
+- preflight OK 후 멈추면, 이는 preflight가 아니라 실제 `agent.run` 단계의 Gemini CLI timeout 문제일 수 있습니다.
+- `timeout_seconds`를 30으로 낮춰 디버깅하세요(기본값 반영됨).
+- agent별 `working_dir`이 빈 폴더인지 확인하세요.
+- Gemini CLI는 코딩 CLI 특성상 workspace context를 붙일 수 있습니다.
+- timeout 발생 시 해당 프로필로 수동 테스트:
+
+```powershell
+$env:GEMINI_CLI_HOME="C:\gemini-profilesgent_01"
+gemini.cmd --skip-trust -p '반드시 JSON만 출력' --output-format json
+```

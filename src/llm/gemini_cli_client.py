@@ -208,18 +208,26 @@ class GeminiCliClient:
         wd.mkdir(parents=True, exist_ok=True)
 
         cmd = [self.cli_command, "--skip-trust", "-p", prompt, "--output-format", "json"]
-        completed = subprocess.run(
-            cmd,
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            env=self._build_env(gemini_cli_home),
-            timeout=self.timeout_seconds,
-            shell=False,
-            cwd=str(wd),
-        )
+        try:
+            completed = subprocess.run(
+                cmd,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                env=self._build_env(gemini_cli_home),
+                timeout=self.timeout_seconds,
+                shell=False,
+                cwd=str(wd),
+            )
+        except subprocess.TimeoutExpired as exc:
+            stdout = exc.stdout or ""
+            stderr = exc.stderr or ""
+            raise TimeoutError(
+                f"Gemini CLI timed out after {self.timeout_seconds}s. "
+                f"stdout_preview={self._preview(stdout)} stderr_preview={self._preview(stderr)}"
+            ) from exc
 
         stdout = completed.stdout or ""
         stderr = completed.stderr or ""

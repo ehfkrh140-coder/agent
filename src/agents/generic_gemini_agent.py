@@ -48,7 +48,7 @@ class GenericGeminiAgent:
     def _build_cli_prompt(system_prompt: str, user_message: str) -> str:
         return f"""{system_prompt}
 
-규칙:
+최우선 규칙:
 - 사용자 메시지에만 답하세요.
 - 프로젝트 파일을 읽거나 분석하지 마세요.
 - 도구 사용을 시도하지 마세요.

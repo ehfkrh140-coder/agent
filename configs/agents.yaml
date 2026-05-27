@@ -7,7 +7,7 @@ agents:
     working_dir: C:\gemini-agent-workspaces\agent_01
     expected_account: qhrb9292@gmail.com
     system_prompt_path: prompts/agent_01.md
-    timeout_seconds: 120
+    timeout_seconds: 30
     temperature: 0.3
 
   - agent_id: agent_02
@@ -18,7 +18,7 @@ agents:
     working_dir: C:\gemini-agent-workspaces\agent_02
     expected_account: ehfkrh22@gmail.com
     system_prompt_path: prompts/agent_02.md
-    timeout_seconds: 120
+    timeout_seconds: 30
     temperature: 0.3
 
   - agent_id: agent_03
@@ -29,7 +29,7 @@ agents:
     working_dir: C:\gemini-agent-workspaces\agent_03
     expected_account: ehfkrh33@gmail.com
     system_prompt_path: prompts/agent_03.md
-    timeout_seconds: 120
+    timeout_seconds: 30
     temperature: 0.3
 
   - agent_id: agent_04
@@ -40,7 +40,7 @@ agents:
     working_dir: C:\gemini-agent-workspaces\agent_04
     expected_account: ehfkrh44@gmail.com
     system_prompt_path: prompts/agent_04.md
-    timeout_seconds: 120
+    timeout_seconds: 30
     temperature: 0.3
 
   - agent_id: agent_05
@@ -51,5 +51,5 @@ agents:
     working_dir: C:\gemini-agent-workspaces\agent_05
     expected_account: ehfkrh55@gmail.com
     system_prompt_path: prompts/agent_05.md
-    timeout_seconds: 120
+    timeout_seconds: 30
     temperature: 0.3
