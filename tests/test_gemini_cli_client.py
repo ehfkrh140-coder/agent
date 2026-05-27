@@ -1,7 +1,9 @@
 import json
 import subprocess
+import sys
 import unittest
 from pathlib import Path
+import types
 from tempfile import TemporaryDirectory
 from unittest.mock import patch, MagicMock
 
@@ -115,6 +117,48 @@ class GeminiCliClientParsingTests(unittest.TestCase):
 
     def test_auth_required_fatal_cancel_detect(self):
         self.assertTrue(GeminiCliClient._detect_auth_required("FatalCancellationError"))
+
+
+    def test_auth_warmup_help_runs(self):
+        completed = subprocess.run([sys.executable, "tools/auth_warmup.py", "--help"], capture_output=True, text=True)
+        self.assertEqual(completed.returncode, 0)
+
+    def test_auth_warmup_login_only_cmd_shape(self):
+        import tools.auth_warmup as aw
+
+        cfg = types.SimpleNamespace(
+            agent_id="agent_01",
+            gemini_cli_home="C:/tmp/home",
+            working_dir=".",
+            expected_account="a@gmail.com",
+            cli_command="gemini.cmd",
+            timeout_seconds=30,
+        )
+
+        with patch("tools.auth_warmup.read_active_masked", return_value="a***@gmail.com"), patch("tools.auth_warmup.subprocess.run") as m:
+            m.return_value.returncode = 0
+            ok = aw.login_only_for_agent(cfg)
+            self.assertTrue(ok)
+            self.assertEqual(m.call_args[0][0], ["gemini.cmd"])
+
+    def test_auth_warmup_verify_cmd_shape(self):
+        import tools.auth_warmup as aw
+
+        cfg = types.SimpleNamespace(
+            agent_id="agent_01",
+            gemini_cli_home="C:/tmp/home",
+            working_dir=".",
+            expected_account="a@gmail.com",
+            cli_command="gemini.cmd",
+            timeout_seconds=30,
+        )
+
+        with patch("src.llm.gemini_cli_client.GeminiCliClient._run_cli_command", return_value=(0, "{}", "")) as m:
+            aw.verify_for_agent(cfg)
+            cmd = m.call_args.kwargs["cmd"]
+            self.assertEqual(cmd[0], "gemini.cmd")
+            self.assertIn("--skip-trust", cmd)
+            self.assertIn("--output-format", cmd)
 
     def test_readme_uses_profile_home_not_home(self):
         readme = Path("README.md").read_text(encoding="utf-8")

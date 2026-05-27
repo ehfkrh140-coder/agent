@@ -106,3 +106,26 @@ gemini.cmd --skip-trust -p '반드시 JSON만 출력' --output-format json
 - `ModuleNotFoundError: No module named 'src'`가 warmup에서 발생하면 import path 문제일 수 있습니다.
 - 최신 코드의 `tools/auth_warmup.py`는 프로젝트 루트를 `sys.path`에 추가해 이 문제를 해결합니다.
 - `main.py`는 warmup 실패 시 계속 진행 여부를 물어봅니다.
+
+
+## Warmup 모드 분리 (중요)
+- `Path not in workspace` 에러는 보안 제한 장치가 정상 작동한 것입니다.
+- 하지만 warmup에서 도구 호출이 발생하는 것은 바람직하지 않으므로 warmup을 분리했습니다.
+- **login-only**: `gemini.cmd`만 interactive 실행 (사용자가 직접 로그인 후 `/quit`).
+- **verify**: 짧은 headless 호출로 profile 사용 가능 여부만 점검.
+
+권장 순서:
+```powershell
+python tools/auth_warmup.py --all --login-only
+python tools/auth_warmup.py --all --verify
+python main.py --skip-warmup
+```
+
+기본 `python tools/auth_warmup.py --all` 은 login-only → verify를 순서대로 실행합니다.
+
+주의:
+- `$home` 사용 금지, `$profileHome` 사용
+- OAuth credential/token 파일은 절대 열거나 공유하지 말 것
+- active 계정이 expected_account와 일치해야 정상
+- old 목록에 계정이 있어도 active가 다르면 잘못된 상태
+- `429 No capacity available`은 계정 매핑 문제가 아니라 capacity/rate 문제일 수 있음
