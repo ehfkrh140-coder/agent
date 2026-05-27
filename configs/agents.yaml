@@ -5,9 +5,11 @@ agents:
     cli_command: gemini.cmd
     gemini_cli_home: C:\gemini-profiles\agent_01
     working_dir: C:\gemini-agent-workspaces\agent_01
+    output_dir: C:\gemini-agent-outputs\agent_01
+    run_mode: interactive_file
     expected_account: qhrb9292@gmail.com
     system_prompt_path: prompts/agent_01.md
-    timeout_seconds: 60
+    timeout_seconds: 180
     temperature: 0.3
 
   - agent_id: agent_02
@@ -16,9 +18,11 @@ agents:
     cli_command: gemini.cmd
     gemini_cli_home: C:\gemini-profiles\agent_02
     working_dir: C:\gemini-agent-workspaces\agent_02
+    output_dir: C:\gemini-agent-outputs\agent_02
+    run_mode: interactive_file
     expected_account: ehfkrh22@gmail.com
     system_prompt_path: prompts/agent_02.md
-    timeout_seconds: 60
+    timeout_seconds: 180
     temperature: 0.3
 
   - agent_id: agent_03
@@ -27,9 +31,11 @@ agents:
     cli_command: gemini.cmd
     gemini_cli_home: C:\gemini-profiles\agent_03
     working_dir: C:\gemini-agent-workspaces\agent_03
+    output_dir: C:\gemini-agent-outputs\agent_03
+    run_mode: interactive_file
     expected_account: ehfkrh33@gmail.com
     system_prompt_path: prompts/agent_03.md
-    timeout_seconds: 60
+    timeout_seconds: 180
     temperature: 0.3
 
   - agent_id: agent_04
@@ -38,9 +44,11 @@ agents:
     cli_command: gemini.cmd
     gemini_cli_home: C:\gemini-profiles\agent_04
     working_dir: C:\gemini-agent-workspaces\agent_04
+    output_dir: C:\gemini-agent-outputs\agent_04
+    run_mode: interactive_file
     expected_account: ehfkrh44@gmail.com
     system_prompt_path: prompts/agent_04.md
-    timeout_seconds: 60
+    timeout_seconds: 180
     temperature: 0.3
 
   - agent_id: agent_05
@@ -49,7 +57,9 @@ agents:
     cli_command: gemini.cmd
     gemini_cli_home: C:\gemini-profiles\agent_05
     working_dir: C:\gemini-agent-workspaces\agent_05
+    output_dir: C:\gemini-agent-outputs\agent_05
+    run_mode: interactive_file
     expected_account: ehfkrh55@gmail.com
     system_prompt_path: prompts/agent_05.md
-    timeout_seconds: 60
+    timeout_seconds: 180
     temperature: 0.3

@@ -24,6 +24,7 @@ class AgentRunner:
                     else:
                         raise RuntimeError(f"preflight {status}: {preflight.message}")
 
+                print(f"{config.agent_id} run_mode={config.run_mode}. If Gemini asks 'Do you want to continue?', type Y.")
                 print(
                     f"{config.agent_id} run command: {config.cli_command} --skip-trust -p <prompt omitted> --output-format json"
                 )

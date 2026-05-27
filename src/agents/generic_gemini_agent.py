@@ -75,6 +75,15 @@ class GenericGeminiAgent:
 
         if self.config.provider == "gemini_cli":
             cli_prompt = self._build_cli_prompt(system_prompt, user_message)
+            if self.config.run_mode == "interactive_file":
+                return self.cli_client.generate_structured_interactive_file(
+                    prompt=cli_prompt,
+                    response_schema=AgentResponse,
+                    gemini_cli_home=self.config.gemini_cli_home,
+                    working_dir=self.config.working_dir,
+                    output_dir=self.config.output_dir,
+                    agent_id=self.config.agent_id,
+                )
             return self.cli_client.generate_structured(
                 prompt=cli_prompt,
                 response_schema=AgentResponse,

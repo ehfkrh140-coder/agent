@@ -129,3 +129,20 @@ python main.py --skip-warmup
 - active 계정이 expected_account와 일치해야 정상
 - old 목록에 계정이 있어도 active가 다르면 잘못된 상태
 - `429 No capacity available`은 계정 매핑 문제가 아니라 capacity/rate 문제일 수 있음
+
+
+## Run 모드
+- `headless_capture`: 완전 자동 실행용. 인증 프롬프트가 뜨면 AUTH_REQUIRED 실패 가능.
+- `interactive_file`(기본): 터미널과 연결되어 실행 중 Y/n 입력 가능.
+  결과는 `output_dir`(예: `C:\gemini-agent-outputs\agent_01`)에 저장된 파일을 다시 읽어 파싱합니다.
+
+Google Pro CLI 방식에서는 `interactive_file`이 기본 운영에 더 안정적입니다.
+완전 무인 자동화가 필요하면 API key/Vertex AI가 일반적으로 더 적합하지만, 이 프로젝트는 API key를 사용하지 않습니다.
+
+권장 실행:
+```powershell
+python tools/auth_warmup.py --all --login-only
+python main.py --skip-warmup
+```
+
+또는 `python main.py` 실행 중 Y/n 프롬프트가 나오면 Y를 입력하세요.

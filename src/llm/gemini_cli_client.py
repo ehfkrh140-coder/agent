@@ -3,12 +3,18 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Type
 
 from pydantic import BaseModel
 
-AUTH_PROMPT_PATTERNS = ["Opening authentication page", "Do you want to continue"]
+AUTH_PROMPT_PATTERNS = [
+    "Opening authentication page",
+    "Do you want to continue",
+    "Authentication cancelled by user",
+    "FatalCancellationError",
+]
 
 
 @dataclass
@@ -47,13 +53,7 @@ class GeminiCliClient:
     @staticmethod
     def _detect_auth_required(text: str) -> bool:
         t = (text or "").lower()
-        patterns = [
-            "opening authentication page",
-            "do you want to continue",
-            "authentication cancelled by user",
-            "fatalcancellationerror",
-        ]
-        return any(p in t for p in patterns)
+        return any(p.lower() in t for p in AUTH_PROMPT_PATTERNS)
 
     def _run_cli_command(self, cmd: list[str], env: dict, cwd: Path, timeout_seconds: int) -> tuple[int, str, str]:
         creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
@@ -70,16 +70,12 @@ class GeminiCliClient:
             shell=False,
             creationflags=creationflags,
         )
-
         try:
             stdout, stderr = process.communicate(timeout=timeout_seconds)
-            if self._detect_auth_required((stdout or "") + "\n" + (stderr or "")):
-                raise RuntimeError("AUTH_REQUIRED: run python tools/auth_warmup.py --agent agent_XX first.")
             return process.returncode or 0, stdout or "", stderr or ""
         except subprocess.TimeoutExpired as exc:
             stdout = exc.stdout or ""
             stderr = exc.stderr or ""
-
             if os.name == "nt":
                 try:
                     subprocess.run(
@@ -99,14 +95,12 @@ class GeminiCliClient:
                     process.kill()
                 except Exception:
                     pass
-
             try:
                 s2, e2 = process.communicate(timeout=5)
                 stdout = stdout or (s2 or "")
                 stderr = stderr or (e2 or "")
             except Exception:
                 pass
-
             raise TimeoutError(
                 f"Gemini CLI timed out after {timeout_seconds}s. pid={process.pid} "
                 f"stdout_preview={self._preview(stdout)} stderr_preview={self._preview(stderr)}"
@@ -162,7 +156,6 @@ class GeminiCliClient:
         warning = None
         response_text = ""
         parsed_inner = None
-
         try:
             outer = json.loads(cls._extract_first_json_object(stdout))
             response_text = outer.get("response") if isinstance(outer, dict) else ""
@@ -170,10 +163,8 @@ class GeminiCliClient:
                 parsed_inner = cls._try_parse_json_text(response_text)
         except Exception:
             pass
-
         if parsed_inner is None:
             parsed_inner = cls._try_parse_json_text(stdout)
-
         if isinstance(parsed_inner, dict):
             try:
                 return response_schema.model_validate(parsed_inner), warning
@@ -209,30 +200,20 @@ class GeminiCliClient:
         home = Path(gemini_cli_home)
         if not home.exists():
             return ProfilePreflightResult("FAILED", f"home path not found: {gemini_cli_home}")
-
         accounts_path = home / ".gemini" / "google_accounts.json"
         if not accounts_path.exists():
             return ProfilePreflightResult("FAILED", f"google_accounts.json not found: {accounts_path}")
-
         try:
             data = json.loads(accounts_path.read_text(encoding="utf-8"))
         except Exception as exc:
             return ProfilePreflightResult("FAILED", f"google_accounts.json read error: {exc}")
-
         active = data.get("active") if isinstance(data, dict) else None
         if not active:
             return ProfilePreflightResult("FAILED", "active account not found")
-
         active_masked = self.mask_email(active)
         expected_masked = self.mask_email(expected_account)
         if expected_account and active.lower() != expected_account.lower():
-            return ProfilePreflightResult(
-                "FAILED",
-                f"active account mismatch active={active_masked} expected={expected_masked}",
-                active_masked,
-                expected_masked,
-            )
-
+            return ProfilePreflightResult("FAILED", f"active account mismatch active={active_masked} expected={expected_masked}", active_masked, expected_masked)
         return ProfilePreflightResult("OK", f"{agent_id} profile ready", active_masked, expected_masked)
 
     def healthcheck_profile(self, *, gemini_cli_home: str, working_dir: Optional[str] = None) -> ProfilePreflightResult:
@@ -240,49 +221,69 @@ class GeminiCliClient:
         wd.mkdir(parents=True, exist_ok=True)
         cmd = [self.cli_command, "--skip-trust", "-p", '{"summary":"ping"}', "--output-format", "json"]
         try:
-            code, stdout, stderr = self._run_cli_command(
-                cmd=cmd,
-                env=self._build_env(gemini_cli_home),
-                cwd=wd,
-                timeout_seconds=20,
-            )
+            code, stdout, stderr = self._run_cli_command(cmd=cmd, env=self._build_env(gemini_cli_home), cwd=wd, timeout_seconds=20)
         except TimeoutError:
             return ProfilePreflightResult("FAILED", "healthcheck timeout")
-
         combined = (stdout or "") + "\n" + (stderr or "")
-        if any(p.lower() in combined.lower() for p in AUTH_PROMPT_PATTERNS):
+        if self._detect_auth_required(combined):
             return ProfilePreflightResult("AUTH_REQUIRED", "interactive auth prompt detected")
         if code != 0:
             return ProfilePreflightResult("FAILED", f"healthcheck failed code={code}")
         return ProfilePreflightResult("OK", "healthcheck ok")
 
-    def generate_structured(
-        self,
-        *,
-        prompt: str,
-        response_schema: Type[BaseModel],
-        gemini_cli_home: str,
-        working_dir: Optional[str] = None,
-    ) -> CliCallResult:
+    def generate_structured_interactive_file(self, *, prompt: str, response_schema: Type[BaseModel], gemini_cli_home: str, working_dir: Optional[str] = None, output_dir: Optional[str] = None, agent_id: str = "agent") -> CliCallResult:
         wd = Path(working_dir) if working_dir else Path.cwd()
         wd.mkdir(parents=True, exist_ok=True)
-        cmd = [self.cli_command, "--skip-trust", "-p", prompt, "--output-format", "json"]
+        out_dir = Path(output_dir) if output_dir else (wd / "outputs")
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = out_dir / f"{agent_id}_{ts}.json"
+
+        env = self._build_env(gemini_cli_home)
+        env["GEMINI_AGENT_PROMPT"] = prompt
+
+        ps_command = (
+            f"& {self.cli_command} --skip-trust -p $env:GEMINI_AGENT_PROMPT --output-format json "
+            f"| Tee-Object -FilePath '{str(output_path)}'"
+        )
+        cmd = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_command]
 
         returncode, stdout, stderr = self._run_cli_command(
             cmd=cmd,
-            env=self._build_env(gemini_cli_home),
+            env=env,
             cwd=wd,
-            timeout_seconds=self.timeout_seconds,
+            timeout_seconds=max(self.timeout_seconds, 300),
         )
 
-        out_prev = self._preview(stdout)
-        err_prev = self._preview(stderr)
+        if self._detect_auth_required((stdout or "") + "\n" + (stderr or "")):
+            raise RuntimeError(f"AUTH_REQUIRED: run python tools/auth_warmup.py --agent {agent_id} first.")
+
+        if returncode != 0:
+            raise RuntimeError(f"Gemini CLI failed with code {returncode}. stderr={self._preview(stderr)}")
+
+        if not output_path.exists():
+            raise RuntimeError(f"Interactive output file missing: {output_path}")
+
+        file_text = output_path.read_text(encoding="utf-8", errors="replace")
+        if not file_text.strip():
+            raise RuntimeError(f"Interactive output file empty: {output_path}")
+
+        response, warning = self.parse_agent_response_from_stdout(file_text, response_schema)
+        return CliCallResult(response=response, warning=warning, stdout_preview=self._preview(file_text), stderr_preview=self._preview(stderr))
+
+    def generate_structured(self, *, prompt: str, response_schema: Type[BaseModel], gemini_cli_home: str, working_dir: Optional[str] = None) -> CliCallResult:
+        wd = Path(working_dir) if working_dir else Path.cwd()
+        wd.mkdir(parents=True, exist_ok=True)
+        cmd = [self.cli_command, "--skip-trust", "-p", prompt, "--output-format", "json"]
+        returncode, stdout, stderr = self._run_cli_command(cmd=cmd, env=self._build_env(gemini_cli_home), cwd=wd, timeout_seconds=self.timeout_seconds)
 
         if self._detect_auth_required((stdout or "") + "\n" + (stderr or "")):
             raise RuntimeError("AUTH_REQUIRED: run python tools/auth_warmup.py --agent agent_XX first.")
 
+        out_prev = self._preview(stdout)
+        err_prev = self._preview(stderr)
         if returncode != 0:
             raise RuntimeError(f"Gemini CLI failed with code {returncode}. stderr={err_prev}")
-
         response, warning = self.parse_agent_response_from_stdout(stdout, response_schema)
         return CliCallResult(response=response, warning=warning, stdout_preview=out_prev, stderr_preview=err_prev)

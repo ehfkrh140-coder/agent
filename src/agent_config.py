@@ -14,3 +14,5 @@ class AgentConfig(BaseModel):
     expected_account: Optional[str] = None
     system_prompt_path: str
     temperature: float = Field(default=0.3, ge=0.0, le=2.0)
+    run_mode: str = "interactive_file"
+    output_dir: Optional[str] = None
