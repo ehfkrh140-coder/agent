@@ -44,6 +44,17 @@ class GeminiCliClient:
         keep = min(4, max(1, len(local)))
         return f"{local[:keep]}****@{domain}"
 
+    @staticmethod
+    def _detect_auth_required(text: str) -> bool:
+        t = (text or "").lower()
+        patterns = [
+            "opening authentication page",
+            "do you want to continue",
+            "authentication cancelled by user",
+            "fatalcancellationerror",
+        ]
+        return any(p in t for p in patterns)
+
     def _run_cli_command(self, cmd: list[str], env: dict, cwd: Path, timeout_seconds: int) -> tuple[int, str, str]:
         creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
         process = subprocess.Popen(
@@ -62,6 +73,8 @@ class GeminiCliClient:
 
         try:
             stdout, stderr = process.communicate(timeout=timeout_seconds)
+            if self._detect_auth_required((stdout or "") + "\n" + (stderr or "")):
+                raise RuntimeError("AUTH_REQUIRED: run python tools/auth_warmup.py --agent agent_XX first.")
             return process.returncode or 0, stdout or "", stderr or ""
         except subprocess.TimeoutExpired as exc:
             stdout = exc.stdout or ""
@@ -264,6 +277,9 @@ class GeminiCliClient:
 
         out_prev = self._preview(stdout)
         err_prev = self._preview(stderr)
+
+        if self._detect_auth_required((stdout or "") + "\n" + (stderr or "")):
+            raise RuntimeError("AUTH_REQUIRED: run python tools/auth_warmup.py --agent agent_XX first.")
 
         if returncode != 0:
             raise RuntimeError(f"Gemini CLI failed with code {returncode}. stderr={err_prev}")

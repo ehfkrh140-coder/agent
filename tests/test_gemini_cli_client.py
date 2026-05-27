@@ -106,6 +106,16 @@ class GeminiCliClientParsingTests(unittest.TestCase):
             # first timeout call + second collect call with 5s
             self.assertEqual(proc.communicate.call_args_list[1].kwargs.get("timeout"), 5)
 
+
+    def test_auth_required_opening_page_detect(self):
+        self.assertTrue(GeminiCliClient._detect_auth_required("Opening authentication page in your browser"))
+
+    def test_auth_required_cancelled_detect(self):
+        self.assertTrue(GeminiCliClient._detect_auth_required("Authentication cancelled by user"))
+
+    def test_auth_required_fatal_cancel_detect(self):
+        self.assertTrue(GeminiCliClient._detect_auth_required("FatalCancellationError"))
+
     def test_readme_uses_profile_home_not_home(self):
         readme = Path("README.md").read_text(encoding="utf-8")
         self.assertIn("$profileHome", readme)

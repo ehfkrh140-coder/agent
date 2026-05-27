@@ -92,3 +92,13 @@ gemini.cmd --skip-trust -p '반드시 JSON만 출력' --output-format json
 - timeout 시 `taskkill /T /F /PID`로 프로세스 트리를 종료해야 합니다.
 - timeout이 나도 해당 agent만 failed 처리되고 다음 agent로 넘어가야 정상입니다.
 - 직접 수동 실행은 되는데 main.py에서 멈추면 subprocess 프로세스 정리 이슈를 의심하세요.
+
+
+## 인증 워밍업
+- 전체: `python tools/auth_warmup.py --all`
+- 단일: `python tools/auth_warmup.py --agent agent_02`
+- warmup 중 `yy`를 입력하면 `Authentication cancelled`가 날 수 있습니다. 이 경우 해당 agent만 다시 실행하세요.
+- `AUTH_REQUIRED`가 뜨면 해당 agent warmup이 필요합니다.
+- timeout이 잦으면 `timeout_seconds`를 60~90으로 늘려보세요. 디버깅 중에는 30으로 줄일 수 있습니다.
+- 계정 확인 예: `Get-Content C:\gemini-profiles\agent_02\.gemini\google_accounts.json`
+- PowerShell에서는 `$home` 대신 `$profileHome` 사용하세요.
