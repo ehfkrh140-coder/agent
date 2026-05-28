@@ -94,20 +94,6 @@ gemini.cmd --skip-trust -p '반드시 JSON만 출력' --output-format json
 - 직접 수동 실행은 되는데 main.py에서 멈추면 subprocess 프로세스 정리 이슈를 의심하세요.
 
 
-## 인증 워밍업
-- 전체: `python tools/auth_warmup.py --all`
-- 단일: `python tools/auth_warmup.py --agent agent_02`
-- warmup 중 `yy`를 입력하면 `Authentication cancelled`가 날 수 있습니다. 이 경우 해당 agent만 다시 실행하세요.
-- `AUTH_REQUIRED`가 뜨면 해당 agent warmup이 필요합니다.
-- timeout이 잦으면 `timeout_seconds`를 60~90으로 늘려보세요. 디버깅 중에는 30으로 줄일 수 있습니다.
-- 계정 확인 예: `Get-Content C:\gemini-profiles\agent_02\.gemini\google_accounts.json`
-- PowerShell에서는 `$home` 대신 `$profileHome` 사용하세요.
-
-- `ModuleNotFoundError: No module named 'src'`가 warmup에서 발생하면 import path 문제일 수 있습니다.
-- 최신 코드의 `tools/auth_warmup.py`는 프로젝트 루트를 `sys.path`에 추가해 이 문제를 해결합니다.
-- `main.py`는 warmup 실패 시 계속 진행 여부를 물어봅니다.
-
-
 ## Warmup (Account Check/Repair)
 - `python tools/auth_warmup.py --all` is **check-only** by default (no Gemini CLI call, no browser open).
 - If an agent mismatches, run: `python tools/auth_warmup.py --agent agent_02 --repair-login`.
