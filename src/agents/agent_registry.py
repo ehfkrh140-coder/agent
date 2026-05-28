@@ -9,4 +9,4 @@ def build_agent(config: AgentConfig) -> GenericGeminiAgent:
         )
     if not config.gemini_cli_home:
         raise ValueError(f"gemini_cli_home is required for gemini_cli provider: {config.agent_id}")
-    return GenericGeminiAgent(config=config, api_key=None)
+    return GenericGeminiAgent(config=config)

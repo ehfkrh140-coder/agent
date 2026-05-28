@@ -369,6 +369,39 @@ class GeminiCliClientParsingTests(unittest.TestCase):
             ok = aw.repair_login_for_agent(cfg)
             self.assertFalse(ok)
 
+    def test_generic_agent_rejects_non_cli_provider(self):
+        from src.agent_config import AgentConfig
+        from src.agents.generic_gemini_agent import GenericGeminiAgent
+        cfg = AgentConfig(
+            agent_id='a', name='A', provider='gemini_api', gemini_cli_home='C:/x',
+            system_prompt_path='prompts/agent_01.md'
+        )
+        with self.assertRaises(ValueError):
+            GenericGeminiAgent(cfg)
+
+    def test_agent_registry_builds_without_api_key(self):
+        from src.agent_config import AgentConfig
+        from src.agents.agent_registry import build_agent
+        cfg = AgentConfig(
+            agent_id='a', name='A', provider='gemini_cli', gemini_cli_home='C:/x',
+            system_prompt_path='prompts/agent_01.md'
+        )
+        agent = build_agent(cfg)
+        self.assertIsNotNone(agent)
+
+    def test_requirements_no_google_genai_or_dotenv(self):
+        req = Path('requirements.txt').read_text(encoding='utf-8').lower()
+        self.assertNotIn('google-genai', req)
+        self.assertNotIn('python-dotenv', req)
+
+    def test_main_has_no_dotenv(self):
+        m = Path('main.py').read_text(encoding='utf-8')
+        self.assertNotIn('load_dotenv', m)
+
+    def test_readme_mentions_check_only(self):
+        t = Path('README.md').read_text(encoding='utf-8').lower()
+        self.assertIn('check-only', t)
+
 
 if __name__ == "__main__":
     unittest.main()

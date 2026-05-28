@@ -2,31 +2,18 @@ from pathlib import Path
 
 from src.agent_config import AgentConfig
 from src.llm.gemini_cli_client import CliCallResult, GeminiCliClient, ProfilePreflightResult
-from src.llm.gemini_client import GeminiClient
 from src.schemas.agent_response import AgentResponse
 
 
 class GenericGeminiAgent:
-    def __init__(self, config: AgentConfig, api_key: str | None = None):
+    def __init__(self, config: AgentConfig):
+        if config.provider != "gemini_cli":
+            raise ValueError(f"Unsupported provider: {config.provider}. This runtime supports gemini_cli only.")
         self.config = config
-        self.api_client = None
-        self.cli_client = None
-
-        if config.provider == "gemini_cli":
-            self.cli_client = GeminiCliClient(
-                cli_command=config.cli_command,
-                timeout_seconds=config.timeout_seconds,
-            )
-        elif config.provider in {"gemini", "gemini_api"}:
-            if not api_key:
-                raise ValueError("api_key is required for gemini/gemini_api provider")
-            self.api_client = GeminiClient(
-                api_key=api_key,
-                model=config.model,
-                temperature=config.temperature,
-            )
-        else:
-            raise ValueError(f"Unsupported provider: {config.provider}")
+        self.cli_client = GeminiCliClient(
+            cli_command=config.cli_command,
+            timeout_seconds=config.timeout_seconds,
+        )
 
     def preflight(self) -> ProfilePreflightResult | None:
         if self.config.provider != "gemini_cli":
@@ -73,26 +60,19 @@ class GenericGeminiAgent:
     def run(self, user_message: str) -> AgentResponse | CliCallResult:
         system_prompt = self._load_system_prompt()
 
-        if self.config.provider == "gemini_cli":
-            cli_prompt = self._build_cli_prompt(system_prompt, user_message)
-            if self.config.run_mode == "interactive_file":
-                return self.cli_client.generate_structured_interactive_file(
-                    prompt=cli_prompt,
-                    response_schema=AgentResponse,
-                    gemini_cli_home=self.config.gemini_cli_home,
-                    working_dir=self.config.working_dir,
-                    output_dir=self.config.output_dir,
-                    agent_id=self.config.agent_id,
-                )
-            return self.cli_client.generate_structured(
+        cli_prompt = self._build_cli_prompt(system_prompt, user_message)
+        if self.config.run_mode == "interactive_file":
+            return self.cli_client.generate_structured_interactive_file(
                 prompt=cli_prompt,
                 response_schema=AgentResponse,
                 gemini_cli_home=self.config.gemini_cli_home,
                 working_dir=self.config.working_dir,
+                output_dir=self.config.output_dir,
+                agent_id=self.config.agent_id,
             )
-
-        return self.api_client.generate_structured(
-            system_prompt=system_prompt,
-            user_message=user_message,
+        return self.cli_client.generate_structured(
+            prompt=cli_prompt,
             response_schema=AgentResponse,
+            gemini_cli_home=self.config.gemini_cli_home,
+            working_dir=self.config.working_dir,
         )

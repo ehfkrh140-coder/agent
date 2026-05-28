@@ -3,8 +3,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 from src.agents.agent_runner import AgentRunner
 from src.config_loader import load_agent_configs
 from src.storage.session_store import SessionStore
@@ -26,7 +24,6 @@ def main() -> None:
     parser.add_argument("--skip-warmup", action="store_true")
     args = parser.parse_args()
 
-    load_dotenv()
     if not maybe_warmup(skip_warmup=args.skip_warmup, force_warmup=args.warmup):
         return
 

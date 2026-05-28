@@ -137,7 +137,7 @@ python main.py --skip-warmup
   결과는 `output_dir`(예: `C:\gemini-agent-outputs\agent_01`)에 저장된 파일을 다시 읽어 파싱합니다.
 
 Google Pro CLI 방식에서는 `interactive_file`이 기본 운영에 더 안정적입니다.
-완전 무인 자동화가 필요하면 API key/Vertex AI가 일반적으로 더 적합하지만, 이 프로젝트는 API key를 사용하지 않습니다.
+완전 무인 자동화가 필요하면 (deprecated note removed)가 일반적으로 더 적합하지만, 이 프로젝트는 API key를 사용하지 않습니다.
 
 권장 실행:
 ```powershell
@@ -180,3 +180,15 @@ python main.py --skip-warmup
 - If an agent mismatches, run: `python tools/auth_warmup.py --agent agent_02 --repair-login`.
 - Use `--force-login` only when you intentionally want re-login even when active==expected.
 - `--verify` is optional headless healthcheck (not required for normal authenticated runs).
+
+
+## Final CLI-only policy
+- This runtime supports **Gemini CLI OAuth only**.
+- `GEMINI_API_KEY` is not used and API-key mode is not supported.
+- Default run: `python main.py`
+- Account check-only: `python tools/auth_warmup.py --all`
+- Repair when mismatched: `python tools/auth_warmup.py --agent agent_02 --repair-login`
+- Force repair: `python tools/auth_warmup.py --agent agent_02 --repair-login --force-login`
+- Optional verify (healthcheck only): `python tools/auth_warmup.py --all --verify`
+- `active == expected_account` is final pass condition (old list is not pass condition).
+- Do not use `$home`; use `$profileHome` in PowerShell scripts.
