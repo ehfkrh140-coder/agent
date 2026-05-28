@@ -85,9 +85,10 @@ class GeminiCliClientParsingTests(unittest.TestCase):
         proc.pid = 1234
         proc.communicate.side_effect = [subprocess.TimeoutExpired(cmd=["gemini.cmd"], timeout=30, output="out", stderr="err"), ("", "")]
 
+        cwd = Path.cwd()
         with patch("subprocess.Popen", return_value=proc), patch("os.name", "posix"):
             with self.assertRaises(TimeoutError) as cm:
-                client._run_cli_command(["gemini.cmd"], env={}, cwd=Path.cwd(), timeout_seconds=30)
+                client._run_cli_command(["gemini.cmd"], env={}, cwd=cwd, timeout_seconds=30)
             msg = str(cm.exception)
             self.assertIn("stdout_preview=out", msg)
             self.assertIn("stderr_preview=err", msg)
@@ -100,9 +101,10 @@ class GeminiCliClientParsingTests(unittest.TestCase):
         first_exc = subprocess.TimeoutExpired(cmd=["gemini.cmd"], timeout=30, output="", stderr="")
         proc.communicate.side_effect = [first_exc, ("", "")]
 
+        cwd = Path.cwd()
         with patch("subprocess.Popen", return_value=proc), patch("os.name", "nt"), patch("subprocess.run") as mock_run:
             with self.assertRaises(TimeoutError):
-                client._run_cli_command(["gemini.cmd"], env={}, cwd=Path.cwd(), timeout_seconds=30)
+                client._run_cli_command(["gemini.cmd"], env={}, cwd=cwd, timeout_seconds=30)
             mock_run.assert_called()
             args = mock_run.call_args[0][0]
             self.assertEqual(args[:3], ["taskkill", "/F", "/T"])
