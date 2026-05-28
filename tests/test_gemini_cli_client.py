@@ -133,9 +133,13 @@ class GeminiCliClientParsingTests(unittest.TestCase):
             expected_account="a@gmail.com",
             cli_command="gemini.cmd",
             timeout_seconds=30,
+            browser_executable=None,
+            browser_profile_directory=None,
+            browser_start_url="https://accounts.google.com/",
+            browser_launcher_mode="preopen",
         )
 
-        with patch("tools.auth_warmup.read_active_masked", return_value="a***@gmail.com"), patch("tools.auth_warmup.subprocess.run") as m:
+        with patch("tools.auth_warmup.read_active", return_value="a@gmail.com"), patch("tools.auth_warmup.subprocess.run") as m:
             m.return_value.returncode = 0
             ok = aw.login_only_for_agent(cfg)
             self.assertTrue(ok)
@@ -151,6 +155,10 @@ class GeminiCliClientParsingTests(unittest.TestCase):
             expected_account="a@gmail.com",
             cli_command="gemini.cmd",
             timeout_seconds=30,
+            browser_executable=None,
+            browser_profile_directory=None,
+            browser_start_url="https://accounts.google.com/",
+            browser_launcher_mode="preopen",
         )
 
         with patch("src.llm.gemini_cli_client.GeminiCliClient._run_cli_command", return_value=(0, "{}", "")) as m:
@@ -214,6 +222,35 @@ class GeminiCliClientParsingTests(unittest.TestCase):
     def test_readme_uses_profile_home_not_home(self):
         readme = Path("README.md").read_text(encoding="utf-8")
         self.assertIn("$profileHome", readme)
+
+    def test_env_example_has_no_gemini_api_key(self):
+        txt = Path('.env.example').read_text(encoding='utf-8')
+        self.assertNotIn('GEMINI_API_KEY', txt)
+
+    def test_readme_mentions_experimental_mode_c(self):
+        txt = Path('README.md').read_text(encoding='utf-8').lower()
+        self.assertIn('experimental', txt)
+
+    def test_verify_timeout_default_warning_and_strict_failed(self):
+        import tools.auth_warmup as aw
+        cfg = types.SimpleNamespace(
+            agent_id='agent_01', gemini_cli_home='C:/tmp/home', working_dir='.',
+            expected_account='a@gmail.com', cli_command='gemini.cmd', timeout_seconds=30,
+            browser_executable=None, browser_profile_directory=None, browser_start_url='https://accounts.google.com/', browser_launcher_mode='preopen'
+        )
+        with patch('tools.auth_warmup.read_active', return_value='a@gmail.com'), patch('src.llm.gemini_cli_client.GeminiCliClient._run_cli_command', side_effect=TimeoutError('x')):
+            st, _ = aw.verify_for_agent(cfg, strict_verify=False, verify_timeout=60)
+            self.assertEqual(st, 'warning')
+        with patch('tools.auth_warmup.read_active', return_value='a@gmail.com'), patch('src.llm.gemini_cli_client.GeminiCliClient._run_cli_command', side_effect=TimeoutError('x')):
+            st, _ = aw.verify_for_agent(cfg, strict_verify=True, verify_timeout=60)
+            self.assertEqual(st, 'failed')
+
+    def test_browser_preopen_skip_without_profile(self):
+        import tools.auth_warmup as aw
+        cfg = types.SimpleNamespace(browser_launcher_mode='preopen', browser_executable=None, browser_profile_directory=None, browser_start_url='https://accounts.google.com/', agent_id='a', expected_account='a@gmail.com')
+        with patch('tools.auth_warmup.subprocess.Popen') as m:
+            aw.maybe_preopen_browser(cfg)
+            m.assert_not_called()
 
 
 if __name__ == "__main__":

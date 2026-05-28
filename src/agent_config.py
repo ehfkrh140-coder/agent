@@ -16,3 +16,7 @@ class AgentConfig(BaseModel):
     temperature: float = Field(default=0.3, ge=0.0, le=2.0)
     run_mode: str = "interactive_file"
     output_dir: Optional[str] = None
+    browser_executable: Optional[str] = None
+    browser_profile_directory: Optional[str] = None
+    browser_start_url: str = "https://accounts.google.com/"
+    browser_launcher_mode: str = "preopen"

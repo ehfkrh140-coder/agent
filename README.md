@@ -146,3 +146,17 @@ python main.py --skip-warmup
 ```
 
 또는 `python main.py` 실행 중 Y/n 프롬프트가 나오면 Y를 입력하세요.
+
+
+## 브라우저 인증 운영 정책 (방식 B/C)
+- 기본 운영은 **방식 B(preopen)** 입니다. agent별 Chrome 프로필 창을 먼저 열고 로그인 상태를 확인한 뒤 Gemini CLI login-only를 진행합니다.
+- 방식 C(BROWSER 환경변수)는 이 환경에서 실패했으며 **experimental** 입니다.
+- wrapper log가 생성되지 않고 기본 Chrome 프로필이 열리면 BROWSER 방식 실패로 판단합니다.
+- Chrome profile-directory 확인: `chrome://version` -> `Profile Path`의 마지막 폴더명
+- 현재 매핑: agent_01=Default, agent_02=Profile 1, agent_03=Profile 2, agent_04=Profile 3, agent_05=Profile 4
+- 최종 판정은 `active == expected_account` 입니다. old 목록에 expected가 있어도 active가 다르면 실패입니다.
+- 하나의 Chrome 프로필에서 여러 계정을 고르면 active 계정이 꼬일 수 있습니다.
+- `$home` 사용 금지, `$profileHome` 사용.
+- verify는 선택적 headless healthcheck이며 필수 인증 단계가 아닙니다. verify timeout은 기본 warning, `--strict-verify`에서만 failed 처리합니다.
+- `429 No capacity available` / `rateLimitExceeded`는 계정 매핑 오류가 아니라 capacity/rate/burst/IP 문제일 수 있습니다.
+- 과거 FF-FE BOM(UTF-16LE) 문제는 Tee-Object 저장 방식에서 발생했으며, 현재는 Python UTF-8 저장 방식으로 회피합니다.

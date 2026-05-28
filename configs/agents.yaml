@@ -8,6 +8,10 @@ agents:
     output_dir: C:\gemini-agent-outputs\agent_01
     run_mode: interactive_file
     expected_account: qhrb9292@gmail.com
+    browser_executable: C:\Program Files\Google\Chrome\Application\chrome.exe
+    browser_profile_directory: Default
+    browser_start_url: https://accounts.google.com/
+    browser_launcher_mode: preopen
     system_prompt_path: prompts/agent_01.md
     timeout_seconds: 180
     temperature: 0.3
@@ -21,6 +25,10 @@ agents:
     output_dir: C:\gemini-agent-outputs\agent_02
     run_mode: interactive_file
     expected_account: ehfkrh22@gmail.com
+    browser_executable: C:\Program Files\Google\Chrome\Application\chrome.exe
+    browser_profile_directory: Profile 1
+    browser_start_url: https://accounts.google.com/
+    browser_launcher_mode: preopen
     system_prompt_path: prompts/agent_02.md
     timeout_seconds: 180
     temperature: 0.3
@@ -34,6 +42,10 @@ agents:
     output_dir: C:\gemini-agent-outputs\agent_03
     run_mode: interactive_file
     expected_account: ehfkrh33@gmail.com
+    browser_executable: C:\Program Files\Google\Chrome\Application\chrome.exe
+    browser_profile_directory: Profile 2
+    browser_start_url: https://accounts.google.com/
+    browser_launcher_mode: preopen
     system_prompt_path: prompts/agent_03.md
     timeout_seconds: 180
     temperature: 0.3
@@ -47,6 +59,10 @@ agents:
     output_dir: C:\gemini-agent-outputs\agent_04
     run_mode: interactive_file
     expected_account: ehfkrh44@gmail.com
+    browser_executable: C:\Program Files\Google\Chrome\Application\chrome.exe
+    browser_profile_directory: Profile 3
+    browser_start_url: https://accounts.google.com/
+    browser_launcher_mode: preopen
     system_prompt_path: prompts/agent_04.md
     timeout_seconds: 180
     temperature: 0.3
@@ -60,6 +76,10 @@ agents:
     output_dir: C:\gemini-agent-outputs\agent_05
     run_mode: interactive_file
     expected_account: ehfkrh55@gmail.com
+    browser_executable: C:\Program Files\Google\Chrome\Application\chrome.exe
+    browser_profile_directory: Profile 4
+    browser_start_url: https://accounts.google.com/
+    browser_launcher_mode: preopen
     system_prompt_path: prompts/agent_05.md
     timeout_seconds: 180
     temperature: 0.3
