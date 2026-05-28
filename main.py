@@ -12,34 +12,17 @@ from src.storage.session_store import SessionStore
 
 def maybe_warmup(skip_warmup: bool, force_warmup: bool) -> bool:
     root_dir = Path(__file__).resolve().parent
-
-    def run_warmup_once() -> bool:
-        completed = subprocess.run(
-            [sys.executable, "tools/auth_warmup.py", "--all"],
-            cwd=str(root_dir),
-            shell=False,
-        )
-        if completed.returncode == 0:
-            return True
-
-        print("Auth warmup failed.")
-        ans = input("Continue without warmup? [y/N] ").strip().lower()
-        return ans in {"y", "yes"}
-
-    if force_warmup:
-        return run_warmup_once()
     if skip_warmup:
         return True
-
-    ans = input("Run auth warmup first? [Y/n] ").strip().lower()
-    if ans in {"", "y", "yes"}:
-        return run_warmup_once()
-    return True
+    if not force_warmup:
+        return True
+    completed = subprocess.run([sys.executable, "tools/auth_warmup.py", "--all"], cwd=str(root_dir), shell=False)
+    return completed.returncode == 0
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--warmup", action="store_true")
+    parser.add_argument("--warmup", action="store_true", help="Run account check/repair tool before execution")
     parser.add_argument("--skip-warmup", action="store_true")
     args = parser.parse_args()
 

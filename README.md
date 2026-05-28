@@ -173,3 +173,10 @@ python main.py --skip-warmup
 - OAuth token/credential 내용은 절대 공유하지 마세요.
 - verify는 선택적 headless healthcheck입니다. timeout은 기본 warning이며 strict 모드에서만 failed 처리합니다.
 - `429 No capacity available` / `rateLimitExceeded`는 계정 매핑 오류가 아니라 capacity/rate/burst/IP 문제일 수 있습니다.
+
+
+## Warmup (Account Check/Repair)
+- `python tools/auth_warmup.py --all` is **check-only** by default (no Gemini CLI call, no browser open).
+- If an agent mismatches, run: `python tools/auth_warmup.py --agent agent_02 --repair-login`.
+- Use `--force-login` only when you intentionally want re-login even when active==expected.
+- `--verify` is optional headless healthcheck (not required for normal authenticated runs).

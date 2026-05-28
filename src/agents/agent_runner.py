@@ -57,7 +57,10 @@ class AgentRunner:
                     )
                 )
             except Exception as exc:
-                print(f"{config.agent_id} failed: {exc}")
+                msg = str(exc)
+                if "AUTH_REQUIRED" in msg:
+                    msg = f"AUTH_REQUIRED: run python tools/auth_warmup.py --agent {config.agent_id} --repair-login"
+                print(f"{config.agent_id} failed: {msg}")
                 results.append(
                     AgentRunResult(
                         agent_id=config.agent_id,
@@ -65,7 +68,7 @@ class AgentRunner:
                         status="failed",
                         model=getattr(config, "model", "gemini-cli"),
                         provider=config.provider,
-                        error=str(exc),
+                        error=msg,
                         gemini_cli_home=getattr(config, "gemini_cli_home", None),
                     )
                 )

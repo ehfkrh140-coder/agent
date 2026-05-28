@@ -148,9 +148,12 @@ class GeminiCliClientParsingTests(unittest.TestCase):
         fake_proc.returncode = 0
 
         with patch("tools.auth_warmup.read_active", return_value="a@gmail.com"), patch("tools.auth_warmup.subprocess.Popen", return_value=fake_proc) as m:
-            ok = aw.login_only_for_agent(cfg)
+            ok = aw.repair_login_for_agent(cfg, force_login=True)
             self.assertTrue(ok)
-            self.assertEqual(m.call_args[0][0], ["gemini.cmd"])
+            cmd = m.call_args[0][0]
+            self.assertEqual(cmd[0], "gemini.cmd")
+            self.assertIn("--skip-trust", cmd)
+            self.assertIn("--output-format", cmd)
 
     def test_auth_warmup_verify_cmd_shape(self):
         import tools.auth_warmup as aw
@@ -200,7 +203,7 @@ class GeminiCliClientParsingTests(unittest.TestCase):
         fake_proc.returncode = 0
 
         with patch("tools.auth_warmup.read_active", return_value="a@gmail.com"), patch("tools.auth_warmup.subprocess.Popen", return_value=fake_proc) as m, patch("tools.auth_warmup.open_profile_browser") as open_browser:
-            ok = aw.login_only_for_agent(cfg)
+            ok = aw.repair_login_for_agent(cfg, force_login=True)
             self.assertTrue(ok)
             m.assert_called_once()
             # preopen + deduped relay open = 2 calls total
@@ -274,7 +277,7 @@ class GeminiCliClientParsingTests(unittest.TestCase):
         cfg = types.SimpleNamespace(
             agent_id='agent_01', gemini_cli_home='C:/tmp/home', working_dir='.',
             expected_account='a@gmail.com', cli_command='gemini.cmd', timeout_seconds=30,
-            browser_executable=None, browser_profile_directory=None, browser_start_url='https://accounts.google.com/', browser_launcher_mode='preopen'
+            browser_executable=None, browser_profile_directory=None, browser_start_url='https://accounts.google.com/', browser_launcher_mode='preopen', auth_browser_mode='relay'
         )
         with patch('tools.auth_warmup.read_active', return_value='a@gmail.com'), patch('src.llm.gemini_cli_client.GeminiCliClient._run_cli_command', side_effect=TimeoutError('x')):
             st, _ = aw.verify_for_agent(cfg, strict_verify=False, verify_timeout=60)
@@ -316,7 +319,7 @@ class GeminiCliClientParsingTests(unittest.TestCase):
         with patch('tools.auth_warmup.read_active', return_value='a@gmail.com'), \
              patch('tools.auth_warmup.open_profile_browser') as ob, \
              patch('tools.auth_warmup.subprocess.Popen', return_value=proc):
-            ok = aw.login_only_for_agent(cfg)
+            ok = aw.repair_login_for_agent(cfg, force_login=True)
             self.assertTrue(ok)
             # preopen + relay url open
             self.assertEqual(ob.call_count, 2)
@@ -341,7 +344,7 @@ class GeminiCliClientParsingTests(unittest.TestCase):
         with patch('tools.auth_warmup.read_active', return_value='a@gmail.com'), \
              patch('tools.auth_warmup.open_profile_browser') as ob, \
              patch('tools.auth_warmup.subprocess.Popen', return_value=proc):
-            ok = aw.login_only_for_agent(cfg)
+            ok = aw.repair_login_for_agent(cfg, force_login=True)
             self.assertTrue(ok)
             # only preopen in preopen mode
             self.assertEqual(ob.call_count, 1)
@@ -363,7 +366,7 @@ class GeminiCliClientParsingTests(unittest.TestCase):
             def poll(self):
                 return self.returncode
         with patch('tools.auth_warmup.subprocess.Popen', return_value=P2()), patch('tools.auth_warmup.read_active', return_value='other@gmail.com'):
-            ok = aw.login_only_for_agent(cfg)
+            ok = aw.repair_login_for_agent(cfg)
             self.assertFalse(ok)
 
 
