@@ -2,6 +2,7 @@ import json
 import subprocess
 import sys
 import unittest
+import io
 from pathlib import Path
 import types
 from tempfile import TemporaryDirectory
@@ -137,10 +138,16 @@ class GeminiCliClientParsingTests(unittest.TestCase):
             browser_profile_directory=None,
             browser_start_url="https://accounts.google.com/",
             browser_launcher_mode="preopen",
+            auth_browser_mode="relay",
         )
 
-        with patch("tools.auth_warmup.read_active", return_value="a@gmail.com"), patch("tools.auth_warmup.subprocess.run") as m:
-            m.return_value.returncode = 0
+        fake_proc = MagicMock()
+        fake_proc.stdout = io.StringIO("Opening authentication page in your browser.\n")
+        fake_proc.stderr = io.StringIO("")
+        fake_proc.poll.side_effect = [None, 0]
+        fake_proc.returncode = 0
+
+        with patch("tools.auth_warmup.read_active", return_value="a@gmail.com"), patch("tools.auth_warmup.subprocess.Popen", return_value=fake_proc) as m:
             ok = aw.login_only_for_agent(cfg)
             self.assertTrue(ok)
             self.assertEqual(m.call_args[0][0], ["gemini.cmd"])
@@ -159,6 +166,7 @@ class GeminiCliClientParsingTests(unittest.TestCase):
             browser_profile_directory=None,
             browser_start_url="https://accounts.google.com/",
             browser_launcher_mode="preopen",
+            auth_browser_mode="relay",
         )
 
         with patch("src.llm.gemini_cli_client.GeminiCliClient._run_cli_command", return_value=(0, "{}", "")) as m:
@@ -167,6 +175,36 @@ class GeminiCliClientParsingTests(unittest.TestCase):
             self.assertEqual(cmd[0], "gemini.cmd")
             self.assertIn("--skip-trust", cmd)
             self.assertIn("--output-format", cmd)
+
+    def test_auth_warmup_relay_opens_auth_url_once(self):
+        import tools.auth_warmup as aw
+
+        cfg = types.SimpleNamespace(
+            agent_id="agent_03",
+            gemini_cli_home="C:/tmp/home",
+            working_dir=".",
+            expected_account="a@gmail.com",
+            cli_command="gemini.cmd",
+            timeout_seconds=30,
+            browser_executable="chrome.exe",
+            browser_profile_directory="Profile 2",
+            browser_start_url="https://accounts.google.com/",
+            browser_launcher_mode="preopen",
+            auth_browser_mode="relay",
+        )
+        line = "https://accounts.google.com/o/oauth2/v2/auth?x=1\n"
+        fake_proc = MagicMock()
+        fake_proc.stdout = io.StringIO(line + line)
+        fake_proc.stderr = io.StringIO("")
+        fake_proc.poll.side_effect = [None, 0]
+        fake_proc.returncode = 0
+
+        with patch("tools.auth_warmup.read_active", return_value="a@gmail.com"), patch("tools.auth_warmup.subprocess.Popen", return_value=fake_proc) as m, patch("tools.auth_warmup.open_profile_browser") as open_browser:
+            ok = aw.login_only_for_agent(cfg)
+            self.assertTrue(ok)
+            m.assert_called_once()
+            # preopen + deduped relay open = 2 calls total
+            self.assertEqual(open_browser.call_count, 2)
 
 
     def test_interactive_file_uses_direct_gemini_cmd(self):
@@ -247,10 +285,86 @@ class GeminiCliClientParsingTests(unittest.TestCase):
 
     def test_browser_preopen_skip_without_profile(self):
         import tools.auth_warmup as aw
-        cfg = types.SimpleNamespace(browser_launcher_mode='preopen', browser_executable=None, browser_profile_directory=None, browser_start_url='https://accounts.google.com/', agent_id='a', expected_account='a@gmail.com')
+        cfg = types.SimpleNamespace(browser_launcher_mode='preopen', auth_browser_mode='preopen', browser_executable=None, browser_profile_directory=None, browser_start_url='https://accounts.google.com/', agent_id='a', expected_account='a@gmail.com')
         with patch('tools.auth_warmup.subprocess.Popen') as m:
             aw.maybe_preopen_browser(cfg)
             m.assert_not_called()
+
+    def test_auth_url_regex_detect(self):
+        import tools.auth_warmup as aw
+        line = "Open this: https://accounts.google.com/o/oauth2/v2/auth?x=1"
+        found = aw.AUTH_URL_RE.findall(line)
+        self.assertTrue(len(found) > 0)
+
+    def test_relay_mode_opens_browser_on_auth_url(self):
+        import tools.auth_warmup as aw
+        cfg = types.SimpleNamespace(
+            agent_id='agent_02', gemini_cli_home='C:/tmp/home', working_dir='.', expected_account='a@gmail.com',
+            cli_command='gemini.cmd', timeout_seconds=30,
+            browser_executable='chrome.exe', browser_profile_directory='Profile 1', browser_start_url='https://accounts.google.com/',
+            browser_launcher_mode='preopen', auth_browser_mode='relay'
+        )
+        class P:
+            def __init__(self):
+                from io import StringIO
+                self.stdout = StringIO('Opening authentication page\nhttps://accounts.google.com/o/oauth2/v2/auth?a=1\n')
+                self.stderr = StringIO('')
+                self.returncode = 0
+            def poll(self):
+                return self.returncode
+        proc = P()
+        with patch('tools.auth_warmup.read_active', return_value='a@gmail.com'), \
+             patch('tools.auth_warmup.open_profile_browser') as ob, \
+             patch('tools.auth_warmup.subprocess.Popen', return_value=proc):
+            ok = aw.login_only_for_agent(cfg)
+            self.assertTrue(ok)
+            # preopen + relay url open
+            self.assertEqual(ob.call_count, 2)
+
+    def test_preopen_mode_only_preopen(self):
+        import tools.auth_warmup as aw
+        cfg = types.SimpleNamespace(
+            agent_id='agent_01', gemini_cli_home='C:/tmp/home', working_dir='.', expected_account='a@gmail.com',
+            cli_command='gemini.cmd', timeout_seconds=30,
+            browser_executable='chrome.exe', browser_profile_directory='Default', browser_start_url='https://accounts.google.com/',
+            browser_launcher_mode='preopen', auth_browser_mode='preopen'
+        )
+        class P:
+            def __init__(self):
+                from io import StringIO
+                self.stdout = StringIO('no auth url\n')
+                self.stderr = StringIO('')
+                self.returncode = 0
+            def poll(self):
+                return self.returncode
+        proc = P()
+        with patch('tools.auth_warmup.read_active', return_value='a@gmail.com'), \
+             patch('tools.auth_warmup.open_profile_browser') as ob, \
+             patch('tools.auth_warmup.subprocess.Popen', return_value=proc):
+            ok = aw.login_only_for_agent(cfg)
+            self.assertTrue(ok)
+            # only preopen in preopen mode
+            self.assertEqual(ob.call_count, 1)
+
+    def test_old_has_expected_but_active_diff_still_fail(self):
+        import tools.auth_warmup as aw
+        cfg = types.SimpleNamespace(
+            agent_id='agent_03', gemini_cli_home='C:/tmp/home', working_dir='.', expected_account='expected@gmail.com',
+            cli_command='gemini.cmd', timeout_seconds=30,
+            browser_executable=None, browser_profile_directory=None, browser_start_url='https://accounts.google.com/',
+            browser_launcher_mode='preopen', auth_browser_mode='none'
+        )
+        class P2:
+            def __init__(self):
+                from io import StringIO
+                self.stdout = StringIO('')
+                self.stderr = StringIO('')
+                self.returncode = 0
+            def poll(self):
+                return self.returncode
+        with patch('tools.auth_warmup.subprocess.Popen', return_value=P2()), patch('tools.auth_warmup.read_active', return_value='other@gmail.com'):
+            ok = aw.login_only_for_agent(cfg)
+            self.assertFalse(ok)
 
 
 if __name__ == "__main__":

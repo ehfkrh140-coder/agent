@@ -20,3 +20,4 @@ class AgentConfig(BaseModel):
     browser_profile_directory: Optional[str] = None
     browser_start_url: str = "https://accounts.google.com/"
     browser_launcher_mode: str = "preopen"
+    auth_browser_mode: str = "relay"

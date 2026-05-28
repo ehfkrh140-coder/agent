@@ -160,3 +160,16 @@ python main.py --skip-warmup
 - verify는 선택적 headless healthcheck이며 필수 인증 단계가 아닙니다. verify timeout은 기본 warning, `--strict-verify`에서만 failed 처리합니다.
 - `429 No capacity available` / `rateLimitExceeded`는 계정 매핑 오류가 아니라 capacity/rate/burst/IP 문제일 수 있습니다.
 - 과거 FF-FE BOM(UTF-16LE) 문제는 Tee-Object 저장 방식에서 발생했으며, 현재는 Python UTF-8 저장 방식으로 회피합니다.
+
+
+## Auth URL Relay (기본)
+- 방식 B(preopen) 단독은 Chrome 프로필 창을 먼저 여는 것만 보장하며, Gemini CLI 로그인 링크가 반드시 그 창에서 열리는 것은 보장하지 않습니다.
+- 방식 C(BROWSER env)는 현재 Windows 환경에서 실패했으며 experimental 입니다.
+- 기본 운영 방식은 **Auth URL Relay** 입니다.
+- Auth URL Relay는 Gemini CLI 출력의 인증 URL을 감지해, 지정된 Chrome `profile-directory`로 다시 엽니다.
+- 사용자는 여전히 Y 입력과 브라우저 로그인은 직접 수행해야 합니다(자동 Y 입력 없음).
+- 최종 판정은 `active == expected_account`입니다. old에 expected가 있어도 active가 다르면 실패입니다.
+- 하나의 Chrome 프로필에서 여러 Google 계정을 선택하면 active가 꼬일 수 있습니다.
+- OAuth token/credential 내용은 절대 공유하지 마세요.
+- verify는 선택적 headless healthcheck입니다. timeout은 기본 warning이며 strict 모드에서만 failed 처리합니다.
+- `429 No capacity available` / `rateLimitExceeded`는 계정 매핑 오류가 아니라 capacity/rate/burst/IP 문제일 수 있습니다.

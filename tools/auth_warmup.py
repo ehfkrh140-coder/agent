@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -13,6 +14,8 @@ if str(ROOT_DIR) not in sys.path:
 
 from src.config_loader import load_agent_configs
 from src.llm.gemini_cli_client import GeminiCliClient
+
+AUTH_URL_RE = re.compile(r"https://(?:accounts\.google\.com|developers\.google\.com/gemini-code-assist)[^\s\]\)\"']+", re.IGNORECASE)
 
 
 def mask_email(email: str | None) -> str | None:
@@ -48,18 +51,17 @@ def build_env(gemini_cli_home: str) -> dict:
     return env
 
 
-def maybe_preopen_browser(cfg) -> None:
-    if cfg.browser_launcher_mode != "preopen":
-        return
+def open_profile_browser(cfg, url: str) -> None:
     if not cfg.browser_executable or not cfg.browser_profile_directory:
         return
-    cmd = [
-        cfg.browser_executable,
-        f'--profile-directory={cfg.browser_profile_directory}',
-        "--new-window",
-        cfg.browser_start_url,
-    ]
+    cmd = [cfg.browser_executable, f'--profile-directory={cfg.browser_profile_directory}', '--new-window', url]
     subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def maybe_preopen_browser(cfg) -> None:
+    if cfg.auth_browser_mode not in {"preopen", "relay"}:
+        return
+    open_profile_browser(cfg, cfg.browser_start_url)
     print(f"Chrome profile for {cfg.agent_id} has been opened.")
     print(f"Make sure this browser profile is logged in as {mask_email(cfg.expected_account)}.")
     print("If Gemini asks 'Do you want to continue?', type Y.")
@@ -70,14 +72,60 @@ def login_only_for_agent(cfg) -> bool:
     wd.mkdir(parents=True, exist_ok=True)
     maybe_preopen_browser(cfg)
     print(f"\n[{cfg.agent_id}] LOGIN-ONLY home={cfg.gemini_cli_home} cwd={wd}")
-    cmd = [cfg.cli_command]
-    try:
-        completed = subprocess.run(cmd, cwd=str(wd), env=build_env(cfg.gemini_cli_home), shell=False)
-        if completed.returncode != 0:
-            print(f"[{cfg.agent_id}] login-only failed (code={completed.returncode})")
-            return False
-    except Exception as exc:
-        print(f"[{cfg.agent_id}] login-only failed: {exc}")
+
+    env = build_env(cfg.gemini_cli_home)
+    process = subprocess.Popen(
+        [cfg.cli_command],
+        stdin=None,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        cwd=str(wd),
+        env=env,
+        shell=False,
+    )
+
+    last_output = time.time()
+    opened_urls = set()
+
+    def pump(pipe, is_err=False):
+        nonlocal last_output
+        stream = sys.stderr if is_err else sys.stdout
+        if pipe is None:
+            return
+        for line in iter(pipe.readline, ""):
+            last_output = time.time()
+            print(line, end="", file=stream, flush=True)
+            if cfg.auth_browser_mode == "relay":
+                for m in AUTH_URL_RE.findall(line):
+                    if m in opened_urls:
+                        continue
+                    opened_urls.add(m)
+                    print(
+                        f"Auth URL detected. Opening it in Chrome profile {cfg.browser_profile_directory} for {cfg.agent_id}."
+                    )
+                    print("If another default Chrome window opens, ignore it and use the relayed profile window.")
+                    open_profile_browser(cfg, m)
+        pipe.close()
+
+    t_out = threading.Thread(target=pump, args=(process.stdout, False), daemon=True)
+    t_err = threading.Thread(target=pump, args=(process.stderr, True), daemon=True)
+    t_out.start()
+    t_err.start()
+
+    while process.poll() is None:
+        time.sleep(1)
+        if time.time() - last_output > 20:
+            print("No output for 20s. Gemini CLI may be waiting for input or browser authentication. Check the terminal prompt or browser.")
+            last_output = time.time()
+
+    t_out.join(timeout=3)
+    t_err.join(timeout=3)
+
+    if process.returncode != 0:
+        print(f"[{cfg.agent_id}] login-only failed (code={process.returncode})")
         return False
 
     active = read_active(cfg.gemini_cli_home)
@@ -88,9 +136,10 @@ def login_only_for_agent(cfg) -> bool:
     if expected and active.lower() != expected.lower():
         print(
             f"Wrong active account. Expected {mask_email(expected)} but active is {mask_email(active)}. "
-            f"Re-run login-only and choose the correct Chrome/Google account."
+            f"The login was completed with the wrong Google account or Chrome profile. Re-run login-only for this agent."
         )
         return False
+
     print(f"[{cfg.agent_id}] login-only success active={mask_email(active)}")
     return True
 
@@ -100,7 +149,6 @@ def verify_for_agent(cfg, strict_verify: bool = False, verify_timeout: int = 60)
     wd.mkdir(parents=True, exist_ok=True)
     client = GeminiCliClient(cli_command=cfg.cli_command, timeout_seconds=verify_timeout)
     cmd = [cfg.cli_command, "--skip-trust", "-p", '{"summary":"verify"}', "--output-format", "json"]
-
     start = time.time()
     try:
         code, stdout, stderr = client._run_cli_command(cmd=cmd, env=build_env(cfg.gemini_cli_home), cwd=wd, timeout_seconds=verify_timeout)

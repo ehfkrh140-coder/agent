@@ -12,6 +12,7 @@ agents:
     browser_profile_directory: Default
     browser_start_url: https://accounts.google.com/
     browser_launcher_mode: preopen
+    auth_browser_mode: relay
     system_prompt_path: prompts/agent_01.md
     timeout_seconds: 180
     temperature: 0.3
@@ -29,6 +30,7 @@ agents:
     browser_profile_directory: Profile 1
     browser_start_url: https://accounts.google.com/
     browser_launcher_mode: preopen
+    auth_browser_mode: relay
     system_prompt_path: prompts/agent_02.md
     timeout_seconds: 180
     temperature: 0.3
@@ -46,6 +48,7 @@ agents:
     browser_profile_directory: Profile 2
     browser_start_url: https://accounts.google.com/
     browser_launcher_mode: preopen
+    auth_browser_mode: relay
     system_prompt_path: prompts/agent_03.md
     timeout_seconds: 180
     temperature: 0.3
@@ -63,6 +66,7 @@ agents:
     browser_profile_directory: Profile 3
     browser_start_url: https://accounts.google.com/
     browser_launcher_mode: preopen
+    auth_browser_mode: relay
     system_prompt_path: prompts/agent_04.md
     timeout_seconds: 180
     temperature: 0.3
@@ -80,6 +84,7 @@ agents:
     browser_profile_directory: Profile 4
     browser_start_url: https://accounts.google.com/
     browser_launcher_mode: preopen
+    auth_browser_mode: relay
     system_prompt_path: prompts/agent_05.md
     timeout_seconds: 180
     temperature: 0.3
