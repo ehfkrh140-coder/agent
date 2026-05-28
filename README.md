@@ -108,73 +108,6 @@ gemini.cmd --skip-trust -p '반드시 JSON만 출력' --output-format json
 - `main.py`는 warmup 실패 시 계속 진행 여부를 물어봅니다.
 
 
-## Warmup 모드 분리 (중요)
-- `Path not in workspace` 에러는 보안 제한 장치가 정상 작동한 것입니다.
-- 하지만 warmup에서 도구 호출이 발생하는 것은 바람직하지 않으므로 warmup을 분리했습니다.
-- **login-only**: `gemini.cmd`만 interactive 실행 (사용자가 직접 로그인 후 `/quit`).
-- **verify**: 짧은 headless 호출로 profile 사용 가능 여부만 점검.
-
-권장 순서:
-```powershell
-python tools/auth_warmup.py --all --login-only
-python tools/auth_warmup.py --all --verify
-python main.py --skip-warmup
-```
-
-기본 `python tools/auth_warmup.py --all` 은 login-only → verify를 순서대로 실행합니다.
-
-주의:
-- `$home` 사용 금지, `$profileHome` 사용
-- OAuth credential/token 파일은 절대 열거나 공유하지 말 것
-- active 계정이 expected_account와 일치해야 정상
-- old 목록에 계정이 있어도 active가 다르면 잘못된 상태
-- `429 No capacity available`은 계정 매핑 문제가 아니라 capacity/rate 문제일 수 있음
-
-
-## Run 모드
-- `headless_capture`: 완전 자동 실행용. 인증 프롬프트가 뜨면 AUTH_REQUIRED 실패 가능.
-- `interactive_file`(기본): 터미널과 연결되어 실행 중 Y/n 입력 가능.
-  결과는 `output_dir`(예: `C:\gemini-agent-outputs\agent_01`)에 저장된 파일을 다시 읽어 파싱합니다.
-
-Google Pro CLI 방식에서는 `interactive_file`이 기본 운영에 더 안정적입니다.
-완전 무인 자동화가 필요하면 (deprecated note removed)가 일반적으로 더 적합하지만, 이 프로젝트는 API key를 사용하지 않습니다.
-
-권장 실행:
-```powershell
-python tools/auth_warmup.py --all --login-only
-python main.py --skip-warmup
-```
-
-또는 `python main.py` 실행 중 Y/n 프롬프트가 나오면 Y를 입력하세요.
-
-
-## 브라우저 인증 운영 정책 (방식 B/C)
-- 기본 운영은 **방식 B(preopen)** 입니다. agent별 Chrome 프로필 창을 먼저 열고 로그인 상태를 확인한 뒤 Gemini CLI login-only를 진행합니다.
-- 방식 C(BROWSER 환경변수)는 이 환경에서 실패했으며 **experimental** 입니다.
-- wrapper log가 생성되지 않고 기본 Chrome 프로필이 열리면 BROWSER 방식 실패로 판단합니다.
-- Chrome profile-directory 확인: `chrome://version` -> `Profile Path`의 마지막 폴더명
-- 현재 매핑: agent_01=Default, agent_02=Profile 1, agent_03=Profile 2, agent_04=Profile 3, agent_05=Profile 4
-- 최종 판정은 `active == expected_account` 입니다. old 목록에 expected가 있어도 active가 다르면 실패입니다.
-- 하나의 Chrome 프로필에서 여러 계정을 고르면 active 계정이 꼬일 수 있습니다.
-- `$home` 사용 금지, `$profileHome` 사용.
-- verify는 선택적 headless healthcheck이며 필수 인증 단계가 아닙니다. verify timeout은 기본 warning, `--strict-verify`에서만 failed 처리합니다.
-- `429 No capacity available` / `rateLimitExceeded`는 계정 매핑 오류가 아니라 capacity/rate/burst/IP 문제일 수 있습니다.
-- 과거 FF-FE BOM(UTF-16LE) 문제는 Tee-Object 저장 방식에서 발생했으며, 현재는 Python UTF-8 저장 방식으로 회피합니다.
-
-
-## Auth URL Relay (기본)
-- 방식 B(preopen) 단독은 Chrome 프로필 창을 먼저 여는 것만 보장하며, Gemini CLI 로그인 링크가 반드시 그 창에서 열리는 것은 보장하지 않습니다.
-- 방식 C(BROWSER env)는 현재 Windows 환경에서 실패했으며 experimental 입니다.
-- 기본 운영 방식은 **Auth URL Relay** 입니다.
-- Auth URL Relay는 Gemini CLI 출력의 인증 URL을 감지해, 지정된 Chrome `profile-directory`로 다시 엽니다.
-- 사용자는 여전히 Y 입력과 브라우저 로그인은 직접 수행해야 합니다(자동 Y 입력 없음).
-- 최종 판정은 `active == expected_account`입니다. old에 expected가 있어도 active가 다르면 실패입니다.
-- 하나의 Chrome 프로필에서 여러 Google 계정을 선택하면 active가 꼬일 수 있습니다.
-- OAuth token/credential 내용은 절대 공유하지 마세요.
-- verify는 선택적 headless healthcheck입니다. timeout은 기본 warning이며 strict 모드에서만 failed 처리합니다.
-- `429 No capacity available` / `rateLimitExceeded`는 계정 매핑 오류가 아니라 capacity/rate/burst/IP 문제일 수 있습니다.
-
-
 ## Warmup (Account Check/Repair)
 - `python tools/auth_warmup.py --all` is **check-only** by default (no Gemini CLI call, no browser open).
 - If an agent mismatches, run: `python tools/auth_warmup.py --agent agent_02 --repair-login`.
@@ -184,11 +117,36 @@ python main.py --skip-warmup
 
 ## Final CLI-only policy
 - This runtime supports **Gemini CLI OAuth only**.
-- `GEMINI_API_KEY` is not used and API-key mode is not supported.
-- Default run: `python main.py`
-- Account check-only: `python tools/auth_warmup.py --all`
-- Repair when mismatched: `python tools/auth_warmup.py --agent agent_02 --repair-login`
-- Force repair: `python tools/auth_warmup.py --agent agent_02 --repair-login --force-login`
-- Optional verify (healthcheck only): `python tools/auth_warmup.py --all --verify`
-- `active == expected_account` is final pass condition (old list is not pass condition).
-- Do not use `$home`; use `$profileHome` in PowerShell scripts.
+- API key mode is not supported, and `.env` is not required for the default workflow.
+
+### 기본 실행
+```powershell
+python main.py
+```
+
+### 계정 상태 점검 (check-only)
+```powershell
+python tools/auth_warmup.py --all
+```
+
+### 계정 복구
+```powershell
+python tools/auth_warmup.py --agent agent_02 --repair-login
+```
+
+### 강제 재로그인
+```powershell
+python tools/auth_warmup.py --agent agent_02 --repair-login --force-login
+```
+
+### 선택적 healthcheck
+```powershell
+python tools/auth_warmup.py --all --verify
+```
+
+### 핵심 정책
+- `active == expected_account` 가 최종 통과 조건입니다.
+- `old`에 expected가 있어도 `active`가 다르면 실패입니다.
+- verify timeout은 계정 실패가 아닐 수 있습니다(용량/지연 이슈 가능).
+- PowerShell에서는 `$home` 대신 `$profileHome`을 사용하세요.
+- OAuth token/credential 내용은 출력/공유하지 마세요.

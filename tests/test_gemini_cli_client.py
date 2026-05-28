@@ -268,10 +268,6 @@ class GeminiCliClientParsingTests(unittest.TestCase):
         txt = Path('.env.example').read_text(encoding='utf-8')
         self.assertNotIn('GEMINI_API_KEY', txt)
 
-    def test_readme_mentions_experimental_mode_c(self):
-        txt = Path('README.md').read_text(encoding='utf-8').lower()
-        self.assertIn('experimental', txt)
-
     def test_verify_timeout_default_warning_and_strict_failed(self):
         import tools.auth_warmup as aw
         cfg = types.SimpleNamespace(
@@ -401,6 +397,18 @@ class GeminiCliClientParsingTests(unittest.TestCase):
     def test_readme_mentions_check_only(self):
         t = Path('README.md').read_text(encoding='utf-8').lower()
         self.assertIn('check-only', t)
+
+    def test_gemini_client_file_removed(self):
+        self.assertFalse(Path('src/llm/gemini_client.py').exists())
+
+    def test_readme_no_legacy_login_only_verify_flow(self):
+        t = Path('README.md').read_text(encoding='utf-8').lower()
+        self.assertNotIn('login-only → verify', t)
+        self.assertNotIn('login-only -> verify', t)
+
+    def test_generic_agent_no_gemini_client_import(self):
+        t = Path('src/agents/generic_gemini_agent.py').read_text(encoding='utf-8')
+        self.assertNotIn('GeminiClient', t)
 
 
 if __name__ == "__main__":
