@@ -1,0 +1,95 @@
+agents:
+  - agent_id: agent_01
+    name: Agent 01
+    provider: gemini_cli
+    model: null  # Optional experimental CLI model override, e.g. gemini-3-flash-preview
+    cli_command: gemini.cmd
+    gemini_cli_home: C:\gemini-profiles\agent_01
+    working_dir: C:\gemini-agent-workspaces\agent_01
+    output_dir: C:\gemini-agent-outputs\agent_01
+    run_mode: interactive_file
+    expected_account: qhrb9292@gmail.com
+    browser_executable: C:\Program Files\Google\Chrome\Application\chrome.exe
+    browser_profile_directory: Default
+    browser_start_url: https://accounts.google.com/
+    browser_launcher_mode: preopen
+    auth_browser_mode: relay
+    system_prompt_path: prompts/agent_01.md
+    timeout_seconds: 180
+    temperature: 0.3
+
+  - agent_id: agent_02
+    name: Agent 02
+    provider: gemini_cli
+    model: null  # Optional experimental CLI model override, e.g. gemini-3-flash-preview
+    cli_command: gemini.cmd
+    gemini_cli_home: C:\gemini-profiles\agent_02
+    working_dir: C:\gemini-agent-workspaces\agent_02
+    output_dir: C:\gemini-agent-outputs\agent_02
+    run_mode: interactive_file
+    expected_account: ehfkrh22@gmail.com
+    browser_executable: C:\Program Files\Google\Chrome\Application\chrome.exe
+    browser_profile_directory: Profile 1
+    browser_start_url: https://accounts.google.com/
+    browser_launcher_mode: preopen
+    auth_browser_mode: relay
+    system_prompt_path: prompts/agent_02.md
+    timeout_seconds: 180
+    temperature: 0.3
+
+  - agent_id: agent_03
+    name: Agent 03
+    provider: gemini_cli
+    model: null  # Optional experimental CLI model override, e.g. gemini-3-flash-preview
+    cli_command: gemini.cmd
+    gemini_cli_home: C:\gemini-profiles\agent_03
+    working_dir: C:\gemini-agent-workspaces\agent_03
+    output_dir: C:\gemini-agent-outputs\agent_03
+    run_mode: interactive_file
+    expected_account: ehfkrh33@gmail.com
+    browser_executable: C:\Program Files\Google\Chrome\Application\chrome.exe
+    browser_profile_directory: Profile 2
+    browser_start_url: https://accounts.google.com/
+    browser_launcher_mode: preopen
+    auth_browser_mode: relay
+    system_prompt_path: prompts/agent_03.md
+    timeout_seconds: 180
+    temperature: 0.3
+
+  - agent_id: agent_04
+    name: Agent 04
+    provider: gemini_cli
+    model: null  # Optional experimental CLI model override, e.g. gemini-3-flash-preview
+    cli_command: gemini.cmd
+    gemini_cli_home: C:\gemini-profiles\agent_04
+    working_dir: C:\gemini-agent-workspaces\agent_04
+    output_dir: C:\gemini-agent-outputs\agent_04
+    run_mode: interactive_file
+    expected_account: ehfkrh44@gmail.com
+    browser_executable: C:\Program Files\Google\Chrome\Application\chrome.exe
+    browser_profile_directory: Profile 3
+    browser_start_url: https://accounts.google.com/
+    browser_launcher_mode: preopen
+    auth_browser_mode: relay
+    system_prompt_path: prompts/agent_04.md
+    timeout_seconds: 180
+    temperature: 0.3
+
+  - agent_id: agent_05
+    name: Agent 05
+    provider: gemini_cli
+    model: null  # Optional experimental CLI model override, e.g. gemini-3-flash-preview
+    cli_command: gemini.cmd
+    gemini_cli_home: C:\gemini-profiles\agent_05
+    working_dir: C:\gemini-agent-workspaces\agent_05
+    output_dir: C:\gemini-agent-outputs\agent_05
+    run_mode: interactive_file
+    expected_account: ehfkrh55@gmail.com
+    browser_executable: C:\Program Files\Google\Chrome\Application\chrome.exe
+    browser_profile_directory: Profile 4
+    browser_start_url: https://accounts.google.com/
+    browser_launcher_mode: preopen
+    auth_browser_mode: relay
+    system_prompt_path: prompts/agent_05.md
+    timeout_seconds: 180
+    temperature: 0.3
