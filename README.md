@@ -49,13 +49,17 @@ foreach ($n in 1..5) {
     Get-Content "$profileHome\.gemini\google_accounts.json" -ErrorAction SilentlyContinue
 
     $prompt = '반드시 다음 JSON만 출력하세요: {"summary":"ok","key_points":[],"concerns":[],"questions":[],"suggested_next_steps":[],"confidence":1.0}'
-    gemini.cmd --skip-trust -p $prompt --output-format json
+    $prompt | gemini.cmd --skip-trust --approval-mode=plan --policy "$(Resolve-Path configs/gemini_cli_targeted_policy.toml)" -o json --model flash
 }
 ```
 
 ## 실행
 ```powershell
 python main.py
+python main.py --council --parallel --max-workers 2
+python main.py --list-scenarios
+python main.py --council --scenario missing_data_gap --dry-run-context
+python main.py --council --scenario multi_exchange_best_edge --parallel --max-workers 2
 ```
 
 실행 중 preflight에서 각 agent의 active/expected 계정을 마스킹해서 확인합니다.
@@ -82,8 +86,8 @@ python -m unittest tests/test_gemini_cli_client.py
 - timeout 발생 시 해당 프로필로 수동 테스트:
 
 ```powershell
-$env:GEMINI_CLI_HOME="C:\gemini-profilesgent_01"
-gemini.cmd --skip-trust -p '반드시 JSON만 출력' --output-format json
+$env:GEMINI_CLI_HOME="C:\gemini-profiles\agent_01"
+'반드시 JSON만 출력' | gemini.cmd --skip-trust --approval-mode=plan --policy "$(Resolve-Path configs/gemini_cli_targeted_policy.toml)" -o json --model flash
 ```
 
 
