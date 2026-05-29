@@ -16,14 +16,14 @@ MARK_SCENARIOS = [
 
 
 class StrategyCatalogTests(unittest.TestCase):
-    def test_strategy_catalog_exists_and_includes_p0_strategies(self):
+    def test_strategy_catalog_exists_and_includes_active_and_experimental_strategies(self):
         text = Path("docs/strategy_catalog.md").read_text(encoding="utf-8")
-        self.assertIn("Strategy 01. Mark-Orderbook Gap Hunt", text)
+        self.assertIn("Active Strategy: P0 Cross-Exchange Spot Executable Spread", text)
+        self.assertIn("strategy_id: `cross_exchange_spot_spread_v1`", text)
+        self.assertIn("status: `active`", text)
+        self.assertIn("Experimental Strategy: Mark-Orderbook Gap Hunt", text)
         self.assertIn("strategy_id: `mark_orderbook_gap_hunt_v0`", text)
-        self.assertIn("status: `P0-A`", text)
-        self.assertIn("Strategy 02. Cross-Exchange Spot Executable Spread", text)
-        self.assertIn("strategy_id: `cross_exchange_spot_spread_v0`", text)
-        self.assertIn("status: `P0-B`", text)
+        self.assertIn("status: `experimental`", text)
         self.assertIn("target_gap_pct = max(base_percent / leverage, min_gap_floor_pct)", text)
         self.assertIn("gross_spread = target_bid - source_ask", text)
         self.assertIn("NO_TRADE_ONLY", text)

@@ -1,12 +1,17 @@
-# Read-only market data adapter registry for fixture/replay based v0 collection.
-# This file must not contain private credentials or trading permissions.
+# Read-only market data adapter registry. No private credentials or trading permissions.
 adapters:
   replay_mark_orderbook_gap:
     type: replay
     fixture_path: data/fixtures/market_data/mark_orderbook_gap_snapshot.json
+    enabled: false
+    experimental: true
+    strategy_family: mark_orderbook_gap
+    note: Not part of active v1 strategy
   replay_cross_exchange_spot_spread:
     type: replay
     fixture_path: data/fixtures/market_data/cross_exchange_spot_snapshot.json
+    enabled: true
+    strategy_family: cross_exchange_spot_spread
   live_bybit_mark_orderbook_gap:
     type: bybit_public
     base_url: https://api.bybit.com
@@ -28,3 +33,7 @@ adapters:
       runtime_blocked: false
       open_position: false
       pending_duplicate: false
+    enabled: false
+    experimental: true
+    strategy_family: mark_orderbook_gap
+    note: Not part of active v1 strategy

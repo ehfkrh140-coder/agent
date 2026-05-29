@@ -8,14 +8,15 @@ from src.schemas.agent_response import AgentResponse
 from src.schemas.council_session import CouncilFlowMetadata
 from src.schemas.opportunity_packet import OpportunityPacket
 from src.schemas.session_record import AgentRunResult
+from src.strategy.readiness import build_readiness_report
 
-CHAIR_INSTRUCTION = "opportunity_packet을 회의 가능한 브리프로 정리하라. 여러 observations와 candidates가 있으면 모두 요약하라. 없는 데이터는 추정하지 말라. human_context가 있으면 시장 데이터와 분리해 정리하라."
+CHAIR_INSTRUCTION = "opportunity_packet을 회의 가능한 브리프로 정리하라. readiness_report를 우선 참고하라. active strategy가 아니면 experimental로 취급하라. readiness_pass=false이면 ENTER를 금지한다. last_price_only_candidate이면 수익 기회로 과장하지 말라. mark_orderbook_gap은 현재 active v1 전략이 아니므로 실험 전략으로만 논의하라. 여러 observations와 candidates가 있으면 모두 요약하라. 없는 데이터는 추정하지 말라. human_context가 있으면 시장 데이터와 분리해 정리하라."
 REVIEW_INSTRUCTIONS = {
-    "agent_02": ("pro_opportunity", "조건부 수익 가능성이 성립하려면 필요한 조건을 검토하라. 여러 candidates가 있으면 조건부로 유망한 후보를 분리하라. 없는 데이터는 추정하지 말라. human_context.thesis가 있으면 검토할 가설로만 다뤄라."),
-    "agent_03": ("skeptic", "가짜 기회, 데이터 오류, 비용, 체결 불가능성, 시세 지연 가능성을 공격하라. 여러 candidates가 있으면 데이터 품질이 낮거나 비용 반영이 부족한 후보를 지적하라. human_context가 공격적이면 편향/과신 가능성을 검토하라."),
-    "agent_04": ("risk_manager", "deterministic 실행부가 나중에 확인해야 할 risk gate와 중단 조건을 정리하라. 여러 venues가 있으면 venue별 risk gate를 구분하라. human_context.constraints는 더 엄격한 제한 조건으로 반영할 수 있다."),
+    "agent_02": ("pro_opportunity", "조건부 수익 가능성이 성립하려면 필요한 조건을 검토하라. readiness_report를 우선 참고하라. readiness_pass=false이면 ENTER를 금지한다. last_price_only_candidate이면 수익 기회로 과장하지 말라. active strategy가 아니면 experimental로 취급하라. 여러 candidates가 있으면 조건부로 유망한 후보를 분리하라. 없는 데이터는 추정하지 말라. human_context.thesis가 있으면 검토할 가설로만 다뤄라."),
+    "agent_03": ("skeptic", "가짜 기회, 데이터 오류, 비용, 체결 불가능성, 시세 지연 가능성을 공격하라. readiness_report를 우선 참고하라. readiness_pass=false이면 ENTER를 금지한다. last_price_only_candidate이면 수익 기회로 과장하지 말라. active strategy가 아니면 experimental로 취급하라. 여러 candidates가 있으면 데이터 품질이 낮거나 비용 반영이 부족한 후보를 지적하라. human_context가 공격적이면 편향/과신 가능성을 검토하라."),
+    "agent_04": ("risk_manager", "deterministic 실행부가 나중에 확인해야 할 risk gate와 중단 조건을 정리하라. readiness_report를 우선 참고하라. readiness_pass=false이면 ENTER를 금지한다. last_price_only_candidate이면 수익 기회로 과장하지 말라. active strategy가 아니면 experimental로 취급하라. 여러 venues가 있으면 venue별 risk gate를 구분하라. human_context.constraints는 더 엄격한 제한 조건으로 반영할 수 있다."),
 }
-FINAL_INSTRUCTION = "agent_01~04 결과를 종합해 ENTER/WATCH/REJECT/NEED_DATA 성향을 정리하라. 실행 지시는 금지한다. 여러 candidates가 있으면 가장 안전하고 데이터 품질이 높은 후보와 제외할 후보를 분리하라. human_context가 있으면 데이터 기반 판단과 사용자 의견 반영분을 분리하라. human_context.veto=true이면 진입 강제는 불가하고 보류/거부 성향을 강하게 반영하라."
+FINAL_INSTRUCTION = "agent_01~04 결과를 종합해 ENTER/WATCH/REJECT/NEED_DATA 성향을 정리하라. readiness_report를 우선 참고하라. readiness_pass=false이면 ENTER를 금지한다. last_price_only_candidate이면 수익 기회로 과장하지 말라. active strategy가 아니면 experimental로 취급하라. mark_orderbook_gap은 현재 active v1 전략이 아니므로 실험 전략으로만 논의하라. 실행 지시는 금지한다. 여러 candidates가 있으면 가장 안전하고 데이터 품질이 높은 후보와 제외할 후보를 분리하라. human_context가 있으면 데이터 기반 판단과 사용자 의견 반영분을 분리하라. human_context.veto=true이면 진입 강제는 불가하고 보류/거부 성향을 강하게 반영하라."
 
 
 def _response_to_dict(response: Optional[AgentResponse]) -> Optional[dict]:
@@ -39,6 +40,10 @@ def _json_context(context: dict) -> str:
 
 def packet_agent_dict(opportunity_packet: Optional[OpportunityPacket]) -> Optional[dict]:
     return opportunity_packet.agent_context_dict() if opportunity_packet else None
+
+
+def packet_readiness_report(opportunity_packet: Optional[OpportunityPacket]) -> Optional[dict]:
+    return build_readiness_report(opportunity_packet) if opportunity_packet else None
 
 
 class SingleRoundCouncilRunner:
@@ -70,6 +75,7 @@ class SingleRoundCouncilRunner:
         }
         if opportunity_packet:
             context["opportunity_packet"] = opportunity_packet.agent_context_dict()
+            context["readiness_report"] = build_readiness_report(opportunity_packet)
         return context
 
     def _build_review_context(self, original_user_message: str, chair_result: AgentRunResult, opportunity_packet: Optional[OpportunityPacket], agent_id: str = "agent_02") -> dict:
@@ -84,6 +90,7 @@ class SingleRoundCouncilRunner:
         }
         if opportunity_packet:
             context["opportunity_packet"] = opportunity_packet.agent_context_dict()
+            context["readiness_report"] = build_readiness_report(opportunity_packet)
         return context
 
     def _build_final_context(self, original_user_message: str, results_by_id: dict[str, AgentRunResult], opportunity_packet: Optional[OpportunityPacket]) -> dict:
@@ -99,6 +106,7 @@ class SingleRoundCouncilRunner:
         }
         if opportunity_packet:
             context["opportunity_packet"] = opportunity_packet.agent_context_dict()
+            context["readiness_report"] = build_readiness_report(opportunity_packet)
         return context
 
     def build_dry_run_contexts(self, user_message: str, opportunity_packet: Optional[OpportunityPacket] = None) -> tuple[dict, dict[str, dict], dict]:
