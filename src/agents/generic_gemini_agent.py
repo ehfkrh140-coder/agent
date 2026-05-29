@@ -55,6 +55,21 @@ class GenericGeminiAgent:
 
 사용자 메시지:
 {user_message}
+
+최종 출력 계약:
+- 지금부터 너의 출력은 JSON validator에 직접 들어갑니다.
+- JSON 파싱에 실패하면 전체 agent run은 실패입니다.
+- 사용자 입력이 인사, 잡담, hello, 테스트여도 반드시 AgentResponse JSON 객체 하나만 출력합니다.
+- 절대 자기소개하지 않습니다.
+- 절대 초기화 완료, 준비 완료, 역할 확인 문구를 출력하지 않습니다.
+- 절대 도움 요청, 추가 지시 요청, 자료 제공 요청, 사용자 승인 요청을 하지 않습니다.
+- 첫 글자는 반드시 {{ 이어야 합니다.
+- 마지막 글자는 반드시 }} 이어야 합니다.
+- JSON 객체 외 텍스트, 마크다운, 코드블록, 주석, preamble을 출력하지 않습니다.
+- 허용 키 외 키를 추가하지 않습니다. 허용 키: summary, key_points, concerns, questions, suggested_next_steps, confidence.
+- 도구를 호출하지 말고 최종 답변만 생성합니다.
+- workspace, repository, file system, tool, command, shell, grep, read_file, write_file을 최종 답변에 언급하지 않습니다.
+- 비시장 입력이면 summary에 거래소 매매 판단 데이터가 제공되지 않음을 쓰고, concerns에 시장 데이터 부족을 포함합니다.
 """
 
     def run(self, user_message: str) -> AgentResponse | CliCallResult:
