@@ -37,3 +37,49 @@ adapters:
     experimental: true
     strategy_family: mark_orderbook_gap
     note: Not part of active v1 strategy
+  live_upbit_spot:
+    type: upbit_public_spot
+    enabled: true
+    base_url: https://api.upbit.com
+    market: KRW-BTC
+    display_symbol: BTC/KRW
+    ticker_path: /v1/ticker
+    orderbook_path: /v1/orderbook
+    orderbook_limit: 15
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_config_path: configs/spot_fees.yaml
+  live_bithumb_spot:
+    type: bithumb_public_spot
+    enabled: true
+    base_url: https://api.bithumb.com
+    market: KRW-BTC
+    api_symbol: BTC_KRW
+    display_symbol: BTC/KRW
+    # Public Bithumb endpoint paths are kept configurable because public API versions may differ.
+    ticker_path: /public/ticker/{symbol}
+    orderbook_path: /public/orderbook/{symbol}
+    orderbook_limit: 15
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_config_path: configs/spot_fees.yaml
+  live_upbit_bithumb_spot_spread:
+    type: composite_spot_spread
+    enabled: true
+    strategy_family: cross_exchange_spot_spread
+    strategy_id: cross_exchange_spot_spread_v1
+    signal_type: cross_exchange_spot_spread
+    asset: BTC
+    quote: KRW
+    venues:
+      - live_upbit_spot
+      - live_bithumb_spot
+    thresholds:
+      min_net_gap_pct: 0.2
+      max_data_age_ms: 3000
+      max_latency_ms: 1000
+      min_notional: 1000000
+      min_executable_notional: 1000000
+      safety_buffer_pct: 0.05

@@ -177,6 +177,8 @@ class OpportunityPacketBuilder:
     def _spot_candidates(self, observations: list[MarketObservation], snapshot: dict[str, Any]) -> list[OpportunityCandidate]:
         thresholds = snapshot.get("thresholds", {})
         min_notional = float(thresholds.get("min_notional", 0.0))
+        min_net_gap_pct = thresholds.get("min_net_gap_pct")
+        safety_buffer_pct = float(thresholds.get("safety_buffer_pct", 0.0))
         candidates: list[OpportunityCandidate] = []
         for source in observations:
             for target in observations:
@@ -189,12 +191,34 @@ class OpportunityPacketBuilder:
                 source_notional = source.ask * (source.ask_size or 0)
                 target_notional = target.bid * (target.bid_size or 0)
                 executable_notional = min(source_notional, target_notional)
+                source_fee_pct = self._fee_pct(source)
+                target_fee_pct = self._fee_pct(target)
+                source_slippage_pct = self._slippage_pct(source)
+                target_slippage_pct = self._slippage_pct(target)
+                estimated_slippage_pct = None
+                if source_slippage_pct is not None and target_slippage_pct is not None:
+                    estimated_slippage_pct = source_slippage_pct + target_slippage_pct
+                estimated_net_gap_pct = None
+                if source_fee_pct is not None and target_fee_pct is not None and estimated_slippage_pct is not None:
+                    estimated_net_gap_pct = (
+                        gross_spread_pct
+                        - source_fee_pct
+                        - target_fee_pct
+                        - estimated_slippage_pct
+                        - safety_buffer_pct
+                    )
+                freshness_pass = self._freshness_pass(source, thresholds.get("max_data_age_ms")) and self._freshness_pass(
+                    target, thresholds.get("max_data_age_ms")
+                )
+                net_gap_pass = None
+                if estimated_net_gap_pct is not None and min_net_gap_pct is not None:
+                    net_gap_pass = estimated_net_gap_pct >= float(min_net_gap_pct)
                 candidates.append(
                     OpportunityCandidate(
                         candidate_id=f"{source.venue_id}_to_{target.venue_id}",
                         candidate_type="spot_executable_spread_candidate",
                         strategy_family="cross_exchange_spot_spread",
-                        strategy_id="cross_exchange_spot_spread_v0",
+                        strategy_id=snapshot.get("strategy_id") or "cross_exchange_spot_spread_v0",
                         side_candidate="BUY_SOURCE_SELL_TARGET",
                         source_observation_id=source.observation_id,
                         target_observation_id=target.observation_id,
@@ -203,23 +227,40 @@ class OpportunityPacketBuilder:
                         direction="buy_source_ask_sell_target_bid_candidate",
                         gross_gap_absolute=round(gross_spread, 8),
                         gross_gap_pct=round(gross_spread_pct, 8),
-                        estimated_net_gap_pct=None,
+                        estimated_net_gap_pct=round(estimated_net_gap_pct, 8) if estimated_net_gap_pct is not None else None,
                         liquidity_pass=executable_notional >= min_notional,
-                        freshness_pass=self._freshness_pass(
-                            source, thresholds.get("max_data_age_ms")
-                        ) and self._freshness_pass(target, thresholds.get("max_data_age_ms")),
+                        freshness_pass=freshness_pass,
                         gap_pass=True,
                         guard_pass=True,
                         metrics={
                             "source_ask": source.ask,
                             "target_bid": target.bid,
+                            "source_fee_pct": source_fee_pct,
+                            "target_fee_pct": target_fee_pct,
+                            "estimated_slippage_pct": estimated_slippage_pct,
+                            "safety_buffer_pct": safety_buffer_pct,
                             "executable_notional": executable_notional,
+                            "net_gap_pass": net_gap_pass,
                         },
                         thresholds=thresholds,
                         required_missing_fields=self._missing_spot_fields(source, target),
                     )
                 )
         return candidates
+
+
+    def _fee_pct(self, obs: MarketObservation) -> float | None:
+        if obs.fees is None:
+            return None
+        for value in (obs.fees.trading_fee_pct, obs.fees.taker_fee_pct, obs.fees.maker_fee_pct):
+            if value is not None:
+                return value
+        return None
+
+    def _slippage_pct(self, obs: MarketObservation) -> float | None:
+        if obs.liquidity is None:
+            return None
+        return obs.liquidity.estimated_slippage_pct
 
     def _missing_mark_fields(self, obs: MarketObservation) -> list[str]:
         missing: list[str] = []
@@ -238,6 +279,8 @@ class OpportunityPacketBuilder:
                 missing.append(f"{label}.fees")
             if obs.liquidity is None or not obs.liquidity.orderbook_depth_available:
                 missing.append(f"{label}.liquidity.depth_levels")
+            if obs.liquidity is None or obs.liquidity.estimated_slippage_pct is None:
+                missing.append(f"{label}.liquidity.estimated_slippage_pct")
             if obs.data_quality is None or obs.data_quality.max_data_age_ms is None:
                 missing.append(f"{label}.data_quality.max_data_age_ms")
         return missing

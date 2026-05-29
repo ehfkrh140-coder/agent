@@ -167,3 +167,12 @@ python main.py --parallel --max-workers 2
 - `configs/agents.yaml`의 `model` 필드는 실험용 CLI model 직접 지정 옵션입니다. 비워두면 기본 Gemini CLI 설정을 사용합니다.
 - 이 시스템은 매매 실행부가 아니라 AI Council 판단부 기반입니다.
 - 거래소 API, 주문, 출금, 이체, 자동매매 기능은 아직 구현하지 않습니다.
+
+## Public spot market-data collection (read-only)
+- Active v1 spot spread packets can be generated from public Upbit/Bithumb ticker and orderbook data only; no API key, balance, order, withdrawal, transfer, or private endpoint is used.
+
+```powershell
+python tools/collect_market_data.py --list-adapters
+python tools/collect_market_data.py --adapter live_upbit_bithumb_spot_spread --output data/generated_packets/upbit_bithumb_spot_packet.json
+python main.py --council --opportunity-file data/generated_packets/upbit_bithumb_spot_packet.json --parallel --max-workers 2
+```
