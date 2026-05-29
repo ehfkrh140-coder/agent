@@ -509,6 +509,31 @@ class GeminiCliClientParsingTests(unittest.TestCase):
         self.assertIn("--parallel", text)
         self.assertIn("--max-workers", text)
 
+    def test_generic_agent_preflight_does_not_pass_model(self):
+        from src.agent_config import AgentConfig
+        from src.agents.generic_gemini_agent import GenericGeminiAgent
+
+        cfg = AgentConfig(
+            agent_id="agent_model",
+            name="Agent Model",
+            provider="gemini_cli",
+            model="gemini-3-flash-preview",
+            gemini_cli_home="C:/tmp/home",
+            system_prompt_path="prompts/agent_01.md",
+        )
+        agent = GenericGeminiAgent(cfg)
+        with patch.object(agent.cli_client, "preflight_profile") as mocked:
+            mocked.return_value = types.SimpleNamespace(status="OK")
+            agent.preflight()
+        self.assertNotIn("model", mocked.call_args.kwargs)
+        self.assertEqual(mocked.call_args.kwargs["agent_id"], "agent_model")
+
+    def test_preflight_profile_signature_has_no_model_parameter(self):
+        import inspect
+
+        params = inspect.signature(GeminiCliClient.preflight_profile).parameters
+        self.assertNotIn("model", params)
+
 
 if __name__ == "__main__":
     unittest.main()
