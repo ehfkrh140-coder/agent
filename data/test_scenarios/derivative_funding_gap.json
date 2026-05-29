@@ -1,0 +1,150 @@
+{
+  "schema_version": "opportunity_packet_v0",
+  "packet_id": "derivative_funding_gap",
+  "created_at_utc": "2026-05-29T00:00:00Z",
+  "asset": "BTC",
+  "quote": "KRW",
+  "signal_type": "funding_rate_gap",
+  "observations": [
+    {
+      "observation_id": "binance_perp_1",
+      "venue_id": "binance",
+      "venue_name": "Binance",
+      "market_symbol": "BTC/USDT-PERP",
+      "instrument_type": "perpetual",
+      "region": "GLOBAL",
+      "last_price": null,
+      "bid": null,
+      "ask": null,
+      "bid_size": null,
+      "ask_size": null,
+      "base_volume_24h": null,
+      "quote_volume_24h": null,
+      "timestamp_utc": "2026-05-29T00:00:01Z",
+      "fees": null,
+      "liquidity": {
+        "orderbook_depth_available": true,
+        "volume_available": true,
+        "estimated_executable_notional": 50000000,
+        "estimated_slippage_pct": 0.08,
+        "depth_levels": []
+      },
+      "transfer": {
+        "status_known": false
+      },
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": null,
+        "max_data_age_ms": 500,
+        "source": "manual_scenario",
+        "latency_ms": null,
+        "is_realtime": true
+      },
+      "health": {
+        "api_status_known": false
+      },
+      "extensions": {},
+      "derivatives": {
+        "funding_rate_pct": 0.045,
+        "next_funding_time_utc": "2026-05-29T08:00:00Z",
+        "open_interest": 123456789,
+        "mark_price": 69000,
+        "index_price": 68950,
+        "extensions": {}
+      }
+    },
+    {
+      "observation_id": "bybit_perp_1",
+      "venue_id": "bybit",
+      "venue_name": "Bybit",
+      "market_symbol": "BTC/USDT-PERP",
+      "instrument_type": "perpetual",
+      "region": "GLOBAL",
+      "last_price": null,
+      "bid": null,
+      "ask": null,
+      "bid_size": null,
+      "ask_size": null,
+      "base_volume_24h": null,
+      "quote_volume_24h": null,
+      "timestamp_utc": "2026-05-29T00:00:01Z",
+      "fees": null,
+      "liquidity": {
+        "orderbook_depth_available": true,
+        "volume_available": true,
+        "estimated_executable_notional": 50000000,
+        "estimated_slippage_pct": 0.08,
+        "depth_levels": []
+      },
+      "transfer": {
+        "status_known": false
+      },
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": null,
+        "max_data_age_ms": 500,
+        "source": "manual_scenario",
+        "latency_ms": null,
+        "is_realtime": true
+      },
+      "health": {
+        "api_status_known": false
+      },
+      "extensions": {},
+      "derivatives": {
+        "funding_rate_pct": -0.005,
+        "next_funding_time_utc": "2026-05-29T08:00:00Z",
+        "open_interest": 98765432,
+        "mark_price": 69020,
+        "index_price": 68955,
+        "extensions": {}
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "f1",
+      "candidate_type": "funding_arbitrage",
+      "source_observation_id": "binance_perp_1",
+      "target_observation_id": "bybit_perp_1",
+      "source_venue_id": "binance",
+      "target_venue_id": "bybit",
+      "direction": "funding_rate_gap_watch",
+      "gross_gap_absolute": null,
+      "gross_gap_pct": 0.05,
+      "estimated_net_gap_pct": null,
+      "required_missing_fields": [
+        "borrow_cost",
+        "position_risk",
+        "funding_time_alignment"
+      ],
+      "assumptions": [
+        "funding rates may change before settlement"
+      ],
+      "extensions": {}
+    }
+  ],
+  "human_context": null,
+  "expected_behavior": {
+    "preferred_final_decision": "WATCH",
+    "acceptable_final_decisions": [
+      "WATCH",
+      "NEED_DATA"
+    ],
+    "must_not_include": [
+      "선물 포지션 진입"
+    ],
+    "max_confidence": 0.7,
+    "notes": "derivatives schema extension"
+  },
+  "detector_metadata": {
+    "detector_name": "manual_scenario",
+    "detector_version": "v0",
+    "generated_from": "manual_scenario",
+    "source_files": [
+      "data/test_scenarios/derivative_funding_gap.json"
+    ],
+    "extensions": {}
+  },
+  "extensions": {}
+}
