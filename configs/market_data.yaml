@@ -7,3 +7,24 @@ adapters:
   replay_cross_exchange_spot_spread:
     type: replay
     fixture_path: data/fixtures/market_data/cross_exchange_spot_snapshot.json
+  live_bybit_mark_orderbook_gap:
+    type: bybit_public
+    base_url: https://api.bybit.com
+    category: linear
+    symbol: BTCUSDT
+    display_symbol: BTC/USDT-PERP
+    orderbook_limit: 25
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    unit: 1
+    thresholds:
+      base_percent: 2.0
+      min_gap_floor_pct: 0.2
+      min_notional: 500.0
+      max_data_age_ms: 3000
+    guards:
+      manual_blacklisted: false
+      runtime_blocked: false
+      open_position: false
+      pending_duplicate: false

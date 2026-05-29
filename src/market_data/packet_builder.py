@@ -5,6 +5,7 @@ from typing import Any
 
 from src.schemas.opportunity_packet import (
     DataQualitySnapshot,
+    DerivativesSnapshot,
     DetectorMetadata,
     FeeSnapshot,
     LiquiditySnapshot,
@@ -67,6 +68,7 @@ class OpportunityPacketBuilder:
         fees = raw.get("fees")
         liquidity = raw.get("liquidity")
         health = raw.get("health")
+        derivatives = raw.get("derivatives")
         return MarketObservation(
             observation_id=raw.get("observation_id"),
             venue_id=raw["venue_id"],
@@ -91,6 +93,7 @@ class OpportunityPacketBuilder:
             timestamp_utc=raw.get("timestamp_utc"),
             fees=FeeSnapshot.model_validate(fees) if fees else None,
             liquidity=LiquiditySnapshot.model_validate(liquidity) if liquidity else None,
+            derivatives=DerivativesSnapshot.model_validate(derivatives) if derivatives else None,
             data_quality=DataQualitySnapshot.model_validate(data_quality) if data_quality else None,
             health=VenueHealthSnapshot.model_validate(health) if health else None,
             extensions=raw.get("extensions", {}),

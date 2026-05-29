@@ -63,6 +63,8 @@ python main.py --council --scenario multi_exchange_best_edge --parallel --max-wo
 python main.py --council --scenario mark_orderbook_gap_long_watch --dry-run-context
 python tools/collect_market_data.py --list-adapters
 python tools/collect_market_data.py --adapter replay_mark_orderbook_gap --output data/test_scenarios/replay_mark_orderbook_gap.json
+python tools/collect_market_data.py --adapter live_bybit_mark_orderbook_gap --output data/generated_packets/bybit_live_packet.json
+python main.py --council --opportunity-file data/generated_packets/bybit_live_packet.json --parallel --max-workers 2
 ```
 
 실행 중 preflight에서 각 agent의 active/expected 계정을 마스킹해서 확인합니다.

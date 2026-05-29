@@ -9,6 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from src.market_data.adapters.base import MarketDataAdapterError
 from src.market_data.packet_builder import OpportunityPacketBuilder
 from src.market_data.registry import build_adapter, list_adapters, load_market_data_config
 
@@ -27,9 +28,13 @@ def main() -> None:
             print(adapter_id)
         return
 
-    adapter = build_adapter(args.adapter, config)
-    snapshot = adapter.fetch_snapshot()
-    packet = OpportunityPacketBuilder().build(snapshot)
+    try:
+        adapter = build_adapter(args.adapter, config)
+        snapshot = adapter.fetch_snapshot()
+        packet = OpportunityPacketBuilder().build(snapshot)
+    except MarketDataAdapterError as exc:
+        print(f"Market data collection failed: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
     payload = packet.model_dump(mode="json")
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     if args.output:
