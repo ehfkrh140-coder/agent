@@ -85,6 +85,7 @@ class GenericGeminiAgent:
                 output_dir=self.config.output_dir,
                 agent_id=self.config.agent_id,
                 model=self.config.model,
+                approval_mode=self.config.approval_mode,
             )
         return self.cli_client.generate_structured(
             prompt=cli_prompt,
@@ -92,4 +93,5 @@ class GenericGeminiAgent:
             gemini_cli_home=self.config.gemini_cli_home,
             working_dir=self.config.working_dir,
             model=self.config.model,
+            approval_mode=self.config.approval_mode,
         )

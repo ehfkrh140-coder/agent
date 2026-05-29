@@ -103,13 +103,68 @@ class StdinPolicySafetyTests(unittest.TestCase):
         for tool_name in ["update_topic", "list_directory", "google_web_search"]:
             self.assertIn(f'toolName = "{tool_name}"', text)
 
-    def test_safety_validator_detects_unsafe_trade_suggestion(self):
+    def test_safety_validator_allows_risk_check_phrases(self):
+        allowed_phrases = [
+            "전송 비용 리스크 확인",
+            "전송 시간 확인",
+            "입출금 가능 여부 확인",
+            "수수료 확인",
+            "호가 깊이 확인",
+            "실행 중단 조건 설정",
+            "리스크 게이트",
+            "BEP 계산",
+            "순수익 시뮬레이션",
+            "데이터 수집",
+            "API 상태 확인",
+        ]
         response = AgentResponse(
-            summary="거래소 A에서 매수 후 B로 전송해 매도하는 방안",
+            summary="리스크 검토",
+            key_points=allowed_phrases,
+            concerns=[],
+            questions=[],
+            suggested_next_steps=allowed_phrases,
+            confidence=0.2,
+        )
+
+        warnings = validate_agent_response_safety(response, "BTC 가격 차이")
+
+        self.assertNotIn("unsafe_trade_suggestion", warnings)
+
+    def test_safety_validator_detects_unsafe_trade_suggestion(self):
+        unsafe_phrases = [
+            "거래소 A에서 매수 후 B로 전송해 매도",
+            "즉시 매수",
+            "즉시 매도",
+            "전량 매도",
+            "주문 실행",
+            "실제 실행",
+            "자동매매 실행",
+            "선물 포지션 진입",
+            "헤지 포지션 진입",
+            "execute the trade",
+            "buy on A and sell on B",
+            "transfer BTC then sell",
+        ]
+        for phrase in unsafe_phrases:
+            with self.subTest(phrase=phrase):
+                response = AgentResponse(
+                    summary=phrase,
+                    key_points=[],
+                    concerns=[],
+                    questions=[],
+                    suggested_next_steps=[],
+                    confidence=0.2,
+                )
+                warnings = validate_agent_response_safety(response, "BTC 가격 차이")
+                self.assertIn("unsafe_trade_suggestion", warnings)
+
+    def test_safety_validator_detects_unsafe_suggested_step(self):
+        response = AgentResponse(
+            summary="검토 요약",
             key_points=[],
             concerns=[],
             questions=[],
-            suggested_next_steps=["즉시 실행"],
+            suggested_next_steps=["즉시 주문 실행"],
             confidence=0.2,
         )
         warnings = validate_agent_response_safety(response, "BTC 가격 차이")
@@ -129,6 +184,48 @@ class StdinPolicySafetyTests(unittest.TestCase):
             "수수료, 호가 깊이, 체결량, 타임스탬프 정보는 아직 없습니다.",
         )
         self.assertIn("unverified_market_assumption", warnings)
+
+    def test_generic_agent_passes_approval_mode_to_generate_structured(self):
+        from src.agent_config import AgentConfig
+        from src.agents.generic_gemini_agent import GenericGeminiAgent
+
+        cfg = AgentConfig(
+            agent_id="agent_approval",
+            name="Agent Approval",
+            provider="gemini_cli",
+            model="flash",
+            approval_mode="plan",
+            gemini_cli_home="C:/tmp/home",
+            system_prompt_path="prompts/agent_01.md",
+            run_mode="direct",
+        )
+        agent = GenericGeminiAgent(cfg)
+        with patch.object(agent.cli_client, "generate_structured") as mocked:
+            mocked.return_value = AgentResponse(summary="ok", confidence=0.1)
+            agent.run("hello")
+
+        self.assertEqual(mocked.call_args.kwargs["approval_mode"], "plan")
+
+    def test_generic_agent_passes_approval_mode_to_interactive_file(self):
+        from src.agent_config import AgentConfig
+        from src.agents.generic_gemini_agent import GenericGeminiAgent
+
+        cfg = AgentConfig(
+            agent_id="agent_approval_file",
+            name="Agent Approval File",
+            provider="gemini_cli",
+            model="flash",
+            approval_mode="plan",
+            gemini_cli_home="C:/tmp/home",
+            system_prompt_path="prompts/agent_01.md",
+            run_mode="interactive_file",
+        )
+        agent = GenericGeminiAgent(cfg)
+        with patch.object(agent.cli_client, "generate_structured_interactive_file") as mocked:
+            mocked.return_value = AgentResponse(summary="ok", confidence=0.1)
+            agent.run("hello")
+
+        self.assertEqual(mocked.call_args.kwargs["approval_mode"], "plan")
 
 
 if __name__ == "__main__":
