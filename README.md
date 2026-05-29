@@ -61,6 +61,8 @@ python main.py --list-scenarios
 python main.py --council --scenario missing_data_gap --dry-run-context
 python main.py --council --scenario multi_exchange_best_edge --parallel --max-workers 2
 python main.py --council --scenario mark_orderbook_gap_long_watch --dry-run-context
+python tools/collect_market_data.py --list-adapters
+python tools/collect_market_data.py --adapter replay_mark_orderbook_gap --output data/test_scenarios/replay_mark_orderbook_gap.json
 ```
 
 실행 중 preflight에서 각 agent의 active/expected 계정을 마스킹해서 확인합니다.
