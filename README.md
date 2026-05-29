@@ -49,7 +49,7 @@ foreach ($n in 1..5) {
     Get-Content "$profileHome\.gemini\google_accounts.json" -ErrorAction SilentlyContinue
 
     $prompt = '반드시 다음 JSON만 출력하세요: {"summary":"ok","key_points":[],"concerns":[],"questions":[],"suggested_next_steps":[],"confidence":1.0}'
-    gemini.cmd --skip-trust -p $prompt --output-format json
+    $prompt | gemini.cmd --skip-trust --approval-mode=plan --policy "$(Resolve-Path configs/gemini_cli_targeted_policy.toml)" -o json --model flash
 }
 ```
 
@@ -82,8 +82,8 @@ python -m unittest tests/test_gemini_cli_client.py
 - timeout 발생 시 해당 프로필로 수동 테스트:
 
 ```powershell
-$env:GEMINI_CLI_HOME="C:\gemini-profilesgent_01"
-gemini.cmd --skip-trust -p '반드시 JSON만 출력' --output-format json
+$env:GEMINI_CLI_HOME="C:\gemini-profiles\agent_01"
+'반드시 JSON만 출력' | gemini.cmd --skip-trust --approval-mode=plan --policy "$(Resolve-Path configs/gemini_cli_targeted_policy.toml)" -o json --model flash
 ```
 
 
