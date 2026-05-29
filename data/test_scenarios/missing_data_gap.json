@@ -88,12 +88,12 @@
   "candidates": [
     {
       "candidate_id": "c1",
-      "candidate_type": "buy_low_sell_high",
+      "candidate_type": "spot_executable_spread_candidate",
       "source_observation_id": "upbit_1",
       "target_observation_id": "bithumb_1",
       "source_venue_id": "upbit",
       "target_venue_id": "bithumb",
-      "direction": "buy_source_sell_target_candidate",
+      "direction": "buy_source_ask_sell_target_bid_candidate",
       "gross_gap_absolute": 700000,
       "gross_gap_pct": 0.7,
       "estimated_net_gap_pct": null,
@@ -106,7 +106,9 @@
       "assumptions": [
         "raw last_price gap only"
       ],
-      "extensions": {}
+      "extensions": {},
+      "strategy_family": "cross_exchange_spot_spread",
+      "strategy_id": "cross_exchange_spot_spread_v0"
     }
   ],
   "human_context": null,
@@ -132,5 +134,7 @@
     ],
     "extensions": {}
   },
-  "extensions": {}
+  "extensions": {},
+  "strategy_family": "cross_exchange_spot_spread",
+  "strategy_id": "cross_exchange_spot_spread_v0"
 }

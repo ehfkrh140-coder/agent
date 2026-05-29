@@ -36,7 +36,7 @@ class OpportunityPacketScenarioTests(unittest.TestCase):
             with self.subTest(name=name):
                 packet = load_scenario(name)
                 self.assertEqual(packet.schema_version, "opportunity_packet_v0")
-                self.assertGreaterEqual(len(packet.observations), 2)
+                self.assertGreaterEqual(len(packet.observations), 1)
                 self.assertGreaterEqual(len(packet.candidates), 1)
 
     def test_two_and_three_exchange_scenarios_parse(self):

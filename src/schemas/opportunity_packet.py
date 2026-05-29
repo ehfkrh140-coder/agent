@@ -74,6 +74,13 @@ class MarketObservation(ExtensionModel):
     instrument_type: Optional[str] = None
     region: Optional[str] = None
     last_price: Optional[float] = None
+    mark_price: Optional[float] = None
+    index_price: Optional[float] = None
+    leverage: Optional[float] = None
+    max_leverage: Optional[float] = None
+    unit: Optional[float] = None
+    tick: Optional[float] = None
+    step: Optional[float] = None
     bid: Optional[float] = None
     ask: Optional[float] = None
     bid_size: Optional[float] = None
@@ -92,6 +99,9 @@ class MarketObservation(ExtensionModel):
 class OpportunityCandidate(ExtensionModel):
     candidate_id: Optional[str] = None
     candidate_type: str
+    strategy_family: Optional[str] = None
+    strategy_id: Optional[str] = None
+    side_candidate: Optional[str] = None
     source_observation_id: Optional[str] = None
     target_observation_id: Optional[str] = None
     source_venue_id: Optional[str] = None
@@ -100,6 +110,18 @@ class OpportunityCandidate(ExtensionModel):
     gross_gap_absolute: Optional[float] = None
     gross_gap_pct: Optional[float] = None
     estimated_net_gap_pct: Optional[float] = None
+    target_gap_pct: Optional[float] = None
+    long_gap_pct: Optional[float] = None
+    short_gap_pct: Optional[float] = None
+    long_notional: Optional[float] = None
+    short_notional: Optional[float] = None
+    liquidity_pass: Optional[bool] = None
+    gap_pass: Optional[bool] = None
+    freshness_pass: Optional[bool] = None
+    guard_pass: Optional[bool] = None
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    guards: dict[str, Any] = Field(default_factory=dict)
+    thresholds: dict[str, Any] = Field(default_factory=dict)
     required_missing_fields: list[str] = Field(default_factory=list)
     assumptions: list[str] = Field(default_factory=list)
 
@@ -144,6 +166,8 @@ class OpportunityPacket(ExtensionModel):
     asset: str
     quote: str
     signal_type: str
+    strategy_family: Optional[str] = None
+    strategy_id: Optional[str] = None
     observations: list[MarketObservation] = Field(default_factory=list)
     candidates: list[OpportunityCandidate] = Field(default_factory=list)
     human_context: Optional[HumanContext] = None
