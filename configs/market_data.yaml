@@ -1,0 +1,9 @@
+# Read-only market data adapter registry for fixture/replay based v0 collection.
+# This file must not contain private credentials or trading permissions.
+adapters:
+  replay_mark_orderbook_gap:
+    type: replay
+    fixture_path: data/fixtures/market_data/mark_orderbook_gap_snapshot.json
+  replay_cross_exchange_spot_spread:
+    type: replay
+    fixture_path: data/fixtures/market_data/cross_exchange_spot_snapshot.json
