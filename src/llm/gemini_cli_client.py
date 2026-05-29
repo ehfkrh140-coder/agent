@@ -31,6 +31,7 @@ class CliCallResult:
     warning: Optional[str] = None
     stdout_preview: Optional[str] = None
     stderr_preview: Optional[str] = None
+    cli_session_id: Optional[str] = None
 
 
 class GeminiCliClient:
@@ -182,6 +183,25 @@ class GeminiCliClient:
         }
         return response_schema.model_validate(fallback), warning
 
+
+    @classmethod
+    def extract_cli_session_id(cls, stdout: str) -> Optional[str]:
+        try:
+            outer = json.loads(cls._extract_first_json_object(stdout or ""))
+        except Exception:
+            return None
+        if not isinstance(outer, dict):
+            return None
+        session_id = outer.get("session_id")
+        return str(session_id) if session_id else None
+
+    def _build_generate_command(self, prompt: str, model: Optional[str] = None) -> list[str]:
+        cmd = [self.cli_command, "--skip-trust"]
+        if model:
+            cmd.extend(["--model", model])
+        cmd.extend(["-p", prompt, "--output-format", "json"])
+        return cmd
+
     def _build_env(self, gemini_cli_home: str) -> dict:
         env = os.environ.copy()
         env.update(
@@ -231,14 +251,14 @@ class GeminiCliClient:
             return ProfilePreflightResult("FAILED", f"healthcheck failed code={code}")
         return ProfilePreflightResult("OK", "healthcheck ok")
 
-    def generate_structured_interactive_file(self, *, prompt: str, response_schema: Type[BaseModel], gemini_cli_home: str, working_dir: Optional[str] = None, output_dir: Optional[str] = None, agent_id: str = "agent") -> CliCallResult:
+    def generate_structured_interactive_file(self, *, prompt: str, response_schema: Type[BaseModel], gemini_cli_home: str, working_dir: Optional[str] = None, output_dir: Optional[str] = None, agent_id: str = "agent", model: Optional[str] = None) -> CliCallResult:
         wd = Path(working_dir) if working_dir else Path.cwd()
         wd.mkdir(parents=True, exist_ok=True)
         out_dir = Path(output_dir) if output_dir else (wd / "outputs")
         out_dir.mkdir(parents=True, exist_ok=True)
         output_path = out_dir / f"{agent_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-        cmd = [self.cli_command, "--skip-trust", "-p", prompt, "--output-format", "json"]
+        cmd = self._build_generate_command(prompt, model=model)
         returncode, stdout, stderr = self._run_cli_command(
             cmd=cmd,
             env=self._build_env(gemini_cli_home),
@@ -256,12 +276,18 @@ class GeminiCliClient:
             raise RuntimeError(f"Interactive output file empty: {output_path}")
 
         response, warning = self.parse_agent_response_from_stdout(stdout or "", response_schema)
-        return CliCallResult(response=response, warning=warning, stdout_preview=self._preview(stdout), stderr_preview=self._preview(stderr))
+        return CliCallResult(
+            response=response,
+            warning=warning,
+            stdout_preview=self._preview(stdout),
+            stderr_preview=self._preview(stderr),
+            cli_session_id=self.extract_cli_session_id(stdout),
+        )
 
-    def generate_structured(self, *, prompt: str, response_schema: Type[BaseModel], gemini_cli_home: str, working_dir: Optional[str] = None) -> CliCallResult:
+    def generate_structured(self, *, prompt: str, response_schema: Type[BaseModel], gemini_cli_home: str, working_dir: Optional[str] = None, model: Optional[str] = None) -> CliCallResult:
         wd = Path(working_dir) if working_dir else Path.cwd()
         wd.mkdir(parents=True, exist_ok=True)
-        cmd = [self.cli_command, "--skip-trust", "-p", prompt, "--output-format", "json"]
+        cmd = self._build_generate_command(prompt, model=model)
         returncode, stdout, stderr = self._run_cli_command(cmd=cmd, env=self._build_env(gemini_cli_home), cwd=wd, timeout_seconds=self.timeout_seconds)
 
         if self._detect_auth_required((stdout or "") + "\n" + (stderr or "")):
@@ -272,4 +298,10 @@ class GeminiCliClient:
         if returncode != 0:
             raise RuntimeError(f"Gemini CLI failed with code {returncode}. stderr={err_prev}")
         response, warning = self.parse_agent_response_from_stdout(stdout, response_schema)
-        return CliCallResult(response=response, warning=warning, stdout_preview=out_prev, stderr_preview=err_prev)
+        return CliCallResult(
+            response=response,
+            warning=warning,
+            stdout_preview=out_prev,
+            stderr_preview=err_prev,
+            cli_session_id=self.extract_cli_session_id(stdout),
+        )

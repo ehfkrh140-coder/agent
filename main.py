@@ -22,6 +22,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--warmup", action="store_true", help="Run account check/repair tool before execution")
     parser.add_argument("--skip-warmup", action="store_true")
+    parser.add_argument("--parallel", action="store_true", help="Run agents concurrently for speed tests")
+    parser.add_argument("--max-workers", type=int, default=2, help="Parallel worker count (2 recommended)")
     args = parser.parse_args()
 
     if not maybe_warmup(skip_warmup=args.skip_warmup, force_warmup=args.warmup):
@@ -34,7 +36,7 @@ def main() -> None:
         return
 
     runner = AgentRunner(agent_configs)
-    results = runner.run_all(user_message)
+    results = runner.run_all(user_message, parallel=args.parallel, max_workers=args.max_workers)
 
     store = SessionStore("data/sessions")
     saved_path = store.save(user_message=user_message, results=results)

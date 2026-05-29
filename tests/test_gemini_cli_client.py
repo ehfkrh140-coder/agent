@@ -85,10 +85,9 @@ class GeminiCliClientParsingTests(unittest.TestCase):
         proc.pid = 1234
         proc.communicate.side_effect = [subprocess.TimeoutExpired(cmd=["gemini.cmd"], timeout=30, output="out", stderr="err"), ("", "")]
 
-        cwd = Path.cwd()
         with patch("subprocess.Popen", return_value=proc), patch("os.name", "posix"):
             with self.assertRaises(TimeoutError) as cm:
-                client._run_cli_command(["gemini.cmd"], env={}, cwd=cwd, timeout_seconds=30)
+                client._run_cli_command(["gemini.cmd"], env={}, cwd=Path.cwd(), timeout_seconds=30)
             msg = str(cm.exception)
             self.assertIn("stdout_preview=out", msg)
             self.assertIn("stderr_preview=err", msg)
@@ -101,10 +100,9 @@ class GeminiCliClientParsingTests(unittest.TestCase):
         first_exc = subprocess.TimeoutExpired(cmd=["gemini.cmd"], timeout=30, output="", stderr="")
         proc.communicate.side_effect = [first_exc, ("", "")]
 
-        cwd = Path.cwd()
         with patch("subprocess.Popen", return_value=proc), patch("os.name", "nt"), patch("subprocess.run") as mock_run:
             with self.assertRaises(TimeoutError):
-                client._run_cli_command(["gemini.cmd"], env={}, cwd=cwd, timeout_seconds=30)
+                client._run_cli_command(["gemini.cmd"], env={}, cwd=Path.cwd(), timeout_seconds=30)
             mock_run.assert_called()
             args = mock_run.call_args[0][0]
             self.assertEqual(args[:3], ["taskkill", "/F", "/T"])
@@ -411,6 +409,105 @@ class GeminiCliClientParsingTests(unittest.TestCase):
     def test_generic_agent_no_gemini_client_import(self):
         t = Path('src/agents/generic_gemini_agent.py').read_text(encoding='utf-8')
         self.assertNotIn('GeminiClient', t)
+
+
+    def test_agent_run_result_performance_fields_exist(self):
+        from src.schemas.session_record import AgentRunResult
+        fields = AgentRunResult.model_fields
+        for name in ["elapsed_seconds", "rate_429_detected", "auth_prompt_detected", "timed_out", "cli_session_id"]:
+            self.assertIn(name, fields)
+
+    def test_cli_call_result_stores_outer_session_id(self):
+        client = GeminiCliClient(cli_command="gemini.cmd")
+        payload = {
+            "summary": "ok",
+            "key_points": [],
+            "concerns": [],
+            "questions": [],
+            "suggested_next_steps": [],
+            "confidence": 1.0,
+        }
+        stdout = json.dumps({"session_id": "sess-123", "response": json.dumps(payload)})
+        with patch.object(client, "_run_cli_command", return_value=(0, stdout, "")):
+            result = client.generate_structured(
+                prompt="hello",
+                response_schema=AgentResponse,
+                gemini_cli_home="C:/tmp/home",
+                working_dir=".",
+            )
+        self.assertEqual(result.cli_session_id, "sess-123")
+
+    def test_model_option_added_to_generate_command(self):
+        client = GeminiCliClient(cli_command="gemini.cmd")
+        cmd = client._build_generate_command("prompt", model="gemini-3-flash-preview")
+        self.assertIn("--model", cmd)
+        self.assertIn("gemini-3-flash-preview", cmd)
+
+    def test_model_option_absent_when_none(self):
+        client = GeminiCliClient(cli_command="gemini.cmd")
+        cmd = client._build_generate_command("prompt", model=None)
+        self.assertNotIn("--model", cmd)
+
+    def test_runner_detection_helpers(self):
+        from src.agents.agent_runner import AgentRunner
+        self.assertTrue(AgentRunner.detect_rate_429("No capacity available 429 rateLimitExceeded"))
+        self.assertTrue(AgentRunner.detect_auth_prompt("Opening authentication page. Do you want to continue?"))
+        self.assertTrue(AgentRunner.detect_timeout("Gemini CLI timed out after 30s"))
+
+    def test_agent_runner_sequential_default_order_and_metadata(self):
+        from src.agent_config import AgentConfig
+        from src.agents.agent_runner import AgentRunner
+        from src.llm.gemini_cli_client import CliCallResult
+
+        cfgs = [
+            AgentConfig(agent_id="a1", name="A1", gemini_cli_home="C:/x", system_prompt_path="prompts/agent_01.md"),
+            AgentConfig(agent_id="a2", name="A2", gemini_cli_home="C:/x", system_prompt_path="prompts/agent_01.md"),
+        ]
+        response = AgentResponse(
+            summary="ok",
+            key_points=[],
+            concerns=[],
+            questions=[],
+            suggested_next_steps=[],
+            confidence=1.0,
+        )
+
+        class FakeAgent:
+            def preflight(self):
+                return types.SimpleNamespace(status="OK", active_account_masked="a****@x.com", expected_account_masked="a****@x.com")
+            def run(self, user_message):
+                return CliCallResult(response=response, stdout_preview='{"session_id":"s"}', cli_session_id="s")
+
+        with patch("src.agents.agent_runner.build_agent", return_value=FakeAgent()):
+            results = AgentRunner(cfgs).run_all("hello")
+        self.assertEqual([r.agent_id for r in results], ["a1", "a2"])
+        self.assertTrue(all(r.elapsed_seconds is not None for r in results))
+        self.assertEqual(results[0].cli_session_id, "s")
+
+    def test_agent_runner_parallel_uses_executor_and_preserves_order(self):
+        from src.agent_config import AgentConfig
+        from src.agents.agent_runner import AgentRunner
+        cfgs = [
+            AgentConfig(agent_id="a1", name="A1", gemini_cli_home="C:/x", system_prompt_path="prompts/agent_01.md"),
+            AgentConfig(agent_id="a2", name="A2", gemini_cli_home="C:/x", system_prompt_path="prompts/agent_01.md"),
+        ]
+        with patch("src.agents.agent_runner.ThreadPoolExecutor") as executor_cls:
+            executor = executor_cls.return_value.__enter__.return_value
+            futures = []
+            for cfg in cfgs:
+                future = MagicMock()
+                future.result.return_value = types.SimpleNamespace(agent_id=cfg.agent_id)
+                futures.append(future)
+            executor.submit.side_effect = futures
+            with patch("src.agents.agent_runner.as_completed", return_value=futures):
+                results = AgentRunner(cfgs).run_all("hello", parallel=True, max_workers=2)
+        executor_cls.assert_called_once_with(max_workers=2)
+        self.assertEqual([r.agent_id for r in results], ["a1", "a2"])
+
+    def test_main_argparse_has_parallel_options(self):
+        text = Path("main.py").read_text(encoding="utf-8")
+        self.assertIn("--parallel", text)
+        self.assertIn("--max-workers", text)
 
 
 if __name__ == "__main__":

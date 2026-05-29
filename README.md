@@ -136,3 +136,22 @@ python tools/auth_warmup.py --all --verify
 - verify timeout은 계정 실패가 아닐 수 있습니다(용량/지연 이슈 가능).
 - PowerShell에서는 `$home` 대신 `$profileHome`을 사용하세요.
 - OAuth token/credential 내용은 출력/공유하지 마세요.
+
+## Council-ready runtime speed/session groundwork
+- 현재 runtime은 AI Council 회의 시스템을 위한 **기초 런타임 단계**이며, 아직 실제 회의 라운드 구현은 아닙니다.
+- 기본 실행은 기존과 동일하게 sequential입니다.
+- 속도 개선 테스트는 아래처럼 실행할 수 있습니다.
+
+```powershell
+python main.py --parallel --max-workers 2
+```
+
+- `max_workers=2`를 권장합니다.
+- `max_workers=5`는 개별 agent latency가 늘거나 `429` / capacity 문제가 생길 수 있어 권장하지 않습니다.
+- 현재 `-p` / `--prompt` headless 실행은 자동화와 JSON 파싱에는 안정적이지만, 매번 새 Gemini CLI 프로세스를 시작하므로 느릴 수 있습니다.
+- `--prompt-interactive`는 빠를 수 있지만 persistent process/TUI 관리가 복잡하므로 이번 단계에서는 구현하지 않습니다.
+- `--resume latest`는 일부 환경에서 속도 개선 가능성이 있었지만, 맥락 오염 위험이 있어 이번 단계에서는 자동 적용하지 않습니다.
+- 이번 단계에서는 Gemini CLI outer JSON의 `session_id`를 `cli_session_id`로 저장만 합니다. 나중에 회의 라운드 구현 시 resume 실험에 사용할 수 있습니다.
+- `configs/agents.yaml`의 `model` 필드는 실험용 CLI model 직접 지정 옵션입니다. 비워두면 기본 Gemini CLI 설정을 사용합니다.
+- 이 시스템은 매매 실행부가 아니라 AI Council 판단부 기반입니다.
+- 거래소 API, 주문, 출금, 이체, 자동매매 기능은 아직 구현하지 않습니다.

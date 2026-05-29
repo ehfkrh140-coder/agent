@@ -21,6 +21,11 @@ class AgentRunResult(BaseModel):
     expected_account_masked: Optional[str] = None
     gemini_cli_home: Optional[str] = None
     preflight_status: Optional[str] = None
+    elapsed_seconds: Optional[float] = None
+    rate_429_detected: Optional[bool] = None
+    auth_prompt_detected: Optional[bool] = None
+    timed_out: Optional[bool] = None
+    cli_session_id: Optional[str] = None
 
 
 class SessionRecord(BaseModel):
