@@ -73,7 +73,7 @@ class SingleRoundCouncilRunnerTests(unittest.TestCase):
             self.assertEqual(payload["chair_brief"]["response"]["summary"], "chair brief")
         self.assertEqual([r.agent_id for r in council_results], ["agent_01", "agent_02", "agent_03", "agent_04", "agent_05"])
         self.assertEqual(flow.mode, "single_round_v1")
-        self.assertEqual(chair_context["chair_brief"]["response"]["summary"], "chair brief")
+        self.assertEqual(chair_context["stage"], "chair")
         self.assertEqual(set(review_contexts.keys()), {"agent_02", "agent_03", "agent_04"})
         self.assertEqual(final_context["agent_01_chair"]["response"]["summary"], "chair brief")
 
