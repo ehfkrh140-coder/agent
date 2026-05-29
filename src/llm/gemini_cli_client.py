@@ -47,6 +47,10 @@ class GeminiCliClient:
         return Path(__file__).resolve().parents[2] / "configs" / "gemini_cli_targeted_policy.toml"
 
     @staticmethod
+    def _is_windows() -> bool:
+        return os.name == "nt"
+
+    @staticmethod
     def _preview(text: str, limit: int = 4000) -> str:
         return (text or "")[:limit]
 
@@ -64,7 +68,7 @@ class GeminiCliClient:
         return any(p.lower() in t for p in AUTH_PROMPT_PATTERNS)
 
     def _run_cli_command(self, cmd: list[str], env: dict, cwd: Path, timeout_seconds: int, input_text: Optional[str] = None) -> tuple[int, str, str]:
-        creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
+        creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if self._is_windows() else 0
         process = subprocess.Popen(
             cmd,
             stdin=subprocess.PIPE if input_text is not None else subprocess.DEVNULL,
@@ -84,7 +88,7 @@ class GeminiCliClient:
         except subprocess.TimeoutExpired as exc:
             stdout = exc.stdout or ""
             stderr = exc.stderr or ""
-            if os.name == "nt":
+            if self._is_windows():
                 try:
                     subprocess.run(
                         ["taskkill", "/F", "/T", "/PID", str(process.pid)],

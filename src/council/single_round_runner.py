@@ -18,6 +18,38 @@ REVIEW_INSTRUCTIONS = {
 }
 FINAL_INSTRUCTION = "agent_01~04 결과를 종합해 ENTER/WATCH/REJECT/NEED_DATA 성향을 정리하라. readiness_report를 우선 참고하라. readiness_pass=false이면 ENTER를 금지한다. last_price_only_candidate이면 수익 기회로 과장하지 말라. active strategy가 아니면 experimental로 취급하라. mark_orderbook_gap은 현재 active v1 전략이 아니므로 실험 전략으로만 논의하라. 실행 지시는 금지한다. 여러 candidates가 있으면 가장 안전하고 데이터 품질이 높은 후보와 제외할 후보를 분리하라. human_context가 있으면 데이터 기반 판단과 사용자 의견 반영분을 분리하라. human_context.veto=true이면 진입 강제는 불가하고 보류/거부 성향을 강하게 반영하라."
 
+ACTIVE_SPOT_SCOPE_INSTRUCTION = (
+    "현재 active v1은 public spot bid/ask/orderbook 기반 분석이다. "
+    "last_price 차이만으로 수익 기회 판단 금지. "
+    "source ask와 target bid 또는 VWAP 기준으로만 검토하라. "
+    "readiness_report를 우선 참고하고 readiness_pass=false이면 ENTER 금지. "
+    "private endpoint, 잔고 조회, 주문, 출금, 이체, 자동매매는 현재 범위 밖이다. "
+    "suggested_next_steps는 public market data 재검증, fee config 확인, depth/VWAP/slippage, "
+    "timestamp/data_age/latency 확인으로 제한한다. "
+    "입출금/전송/잔고는 현재 active v1의 required data가 아니며 execution 단계 전에는 "
+    "필수 next step으로 제안하지 말 것. 실제 실행 지시는 금지한다."
+)
+
+EXPERIMENTAL_MARK_SCOPE_INSTRUCTION = (
+    "mark_orderbook_gap은 experimental/disabled 전략이다. "
+    "현재 active v1 전략이 아니므로 실험 전략으로만 논의하고 기본 판단 흐름에 사용하지 말 것."
+)
+
+
+def _strategy_scope_instruction(opportunity_packet: Optional[OpportunityPacket]) -> str:
+    if not opportunity_packet:
+        return ""
+    if opportunity_packet.strategy_family == "cross_exchange_spot_spread":
+        return ACTIVE_SPOT_SCOPE_INSTRUCTION
+    if opportunity_packet.strategy_family == "mark_orderbook_gap":
+        return EXPERIMENTAL_MARK_SCOPE_INSTRUCTION
+    return "active strategy가 아닌 strategy_family는 experimental 또는 future로 취급하라."
+
+
+def _with_strategy_scope(instruction: str, opportunity_packet: Optional[OpportunityPacket]) -> str:
+    scope = _strategy_scope_instruction(opportunity_packet)
+    return f"{instruction} {scope}" if scope else instruction
+
 
 def _response_to_dict(response: Optional[AgentResponse]) -> Optional[dict]:
     return response.model_dump() if response is not None else None
@@ -70,7 +102,7 @@ class SingleRoundCouncilRunner:
         context = {
             "council_mode": self.flow.mode,
             "stage": "chair",
-            "instruction": CHAIR_INSTRUCTION,
+            "instruction": _with_strategy_scope(CHAIR_INSTRUCTION, opportunity_packet),
             "original_user_message": original_user_message,
         }
         if opportunity_packet:
@@ -84,7 +116,7 @@ class SingleRoundCouncilRunner:
             "council_mode": self.flow.mode,
             "stage": "review",
             "review_role": role,
-            "instruction": instruction,
+            "instruction": _with_strategy_scope(instruction, opportunity_packet),
             "original_user_message": original_user_message,
             "chair_brief": _result_to_context(chair_result),
         }
@@ -97,7 +129,7 @@ class SingleRoundCouncilRunner:
         context = {
             "council_mode": self.flow.mode,
             "stage": "final",
-            "instruction": FINAL_INSTRUCTION,
+            "instruction": _with_strategy_scope(FINAL_INSTRUCTION, opportunity_packet),
             "original_user_message": original_user_message,
             "agent_01_chair": _result_to_context(results_by_id[self.flow.chair_agent_id]),
             "agent_02_pro": _result_to_context(results_by_id["agent_02"]),

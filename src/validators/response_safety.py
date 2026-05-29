@@ -14,6 +14,13 @@ UNSAFE_TRADE_PATTERNS = [
     r"실제\s*실행",
     r"자동매매\s*실행",
     r"(?:선물|헤지)\s*포지션\s*진입",
+    r"실제\s*진입",
+    r"포지션\s*진입",
+    r"잔고\s*조회",
+    r"private\s+endpoint",
+    r"api\s+key",
+    r"open\s+position",
+    r"place\s+order",
     r"execute\s+the\s+trade",
     r"buy\s+on\s+.+\s+and\s+sell\s+on",
     r"transfer\s+.+\s+then\s+sell",
@@ -23,6 +30,8 @@ UNSAFE_TRADE_PATTERNS = [
 SUGGESTED_STEP_UNSAFE_PATTERNS = [
     *UNSAFE_TRADE_PATTERNS,
     r"(?:매수|매도|주문|전송|이체|출금)\s*(?:하세요|한다|합니다|수행|진입)",
+    r"출금",
+    r"이체",
     r"(?:buy|sell|transfer|execute)\s+(?:now|immediately)",
 ]
 

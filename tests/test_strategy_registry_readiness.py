@@ -126,6 +126,24 @@ class StrategyRegistryReadinessTests(unittest.TestCase):
         self.assertFalse(final_context["readiness_report"]["readiness_pass"])
         self.assertNotIn("expected_behavior", final_context["opportunity_packet"])
 
+    def test_active_spot_context_instruction_blocks_private_execution_scope(self):
+        packet = load_scenario("spot_executable_spread_watch")
+        runner = SingleRoundCouncilRunner(make_configs())
+        _, review_contexts, final_context = runner.build_dry_run_contexts(packet.summary_message(), opportunity_packet=packet)
+        for instruction in [review_contexts["agent_02"]["instruction"], final_context["instruction"]]:
+            self.assertIn("public spot bid/ask/orderbook", instruction)
+            self.assertIn("last_price 차이만으로 수익 기회 판단 금지", instruction)
+            self.assertIn("source ask와 target bid 또는 VWAP", instruction)
+            self.assertIn("private endpoint", instruction)
+            self.assertIn("잔고 조회", instruction)
+            self.assertIn("주문", instruction)
+            self.assertIn("출금", instruction)
+            self.assertIn("이체", instruction)
+            self.assertIn("public market data 재검증", instruction)
+            self.assertIn("fee config 확인", instruction)
+            self.assertIn("depth/VWAP/slippage", instruction)
+            self.assertIn("timestamp/data_age/latency", instruction)
+
     def test_batch_evaluate_only_does_not_call_gemini(self):
         with patch.object(sys, "argv", ["run_strategy_scenarios.py", "--all", "--evaluate-only"]), \
              patch("src.council.single_round_runner.AgentRunner.run_all", side_effect=AssertionError("Gemini should not run")), \

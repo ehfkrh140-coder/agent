@@ -107,7 +107,6 @@ class StdinPolicySafetyTests(unittest.TestCase):
         allowed_phrases = [
             "전송 비용 리스크 확인",
             "전송 시간 확인",
-            "입출금 가능 여부 확인",
             "수수료 확인",
             "호가 깊이 확인",
             "실행 중단 조건 설정",
@@ -116,6 +115,17 @@ class StdinPolicySafetyTests(unittest.TestCase):
             "순수익 시뮬레이션",
             "데이터 수집",
             "API 상태 확인",
+            "실시간 API 재검증",
+            "orderbook 재검증",
+            "VWAP 계산",
+            "slippage 시뮬레이션",
+            "fee config 확인",
+            "readiness_report",
+            "source ask / target bid",
+            "실행 가능성 검토",
+            "체결 가능성 검토",
+            "후보",
+            "WATCH",
         ]
         response = AgentResponse(
             summary="리스크 검토",
@@ -144,6 +154,13 @@ class StdinPolicySafetyTests(unittest.TestCase):
             "execute the trade",
             "buy on A and sell on B",
             "transfer BTC then sell",
+            "실제 진입",
+            "포지션 진입",
+            "잔고 조회",
+            "private endpoint",
+            "API key",
+            "open position",
+            "place order",
         ]
         for phrase in unsafe_phrases:
             with self.subTest(phrase=phrase):
@@ -169,6 +186,20 @@ class StdinPolicySafetyTests(unittest.TestCase):
         )
         warnings = validate_agent_response_safety(response, "BTC 가격 차이")
         self.assertIn("unsafe_trade_suggestion", warnings)
+
+    def test_safety_validator_detects_active_spot_blocked_scope_steps(self):
+        for phrase in ["잔고 조회", "출금", "이체", "주문 실행", "즉시 매수"]:
+            with self.subTest(phrase=phrase):
+                response = AgentResponse(
+                    summary="검토 요약",
+                    key_points=[],
+                    concerns=[],
+                    questions=[],
+                    suggested_next_steps=[phrase],
+                    confidence=0.2,
+                )
+                warnings = validate_agent_response_safety(response, "cross_exchange_spot_spread")
+                self.assertIn("unsafe_trade_suggestion", warnings)
 
     def test_safety_validator_detects_unverified_market_assumption(self):
         response = AgentResponse(
