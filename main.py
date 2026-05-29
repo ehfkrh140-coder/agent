@@ -5,6 +5,8 @@ from pathlib import Path
 
 from src.agents.agent_runner import AgentRunner
 from src.config_loader import load_agent_configs
+from src.council.single_round_runner import SingleRoundCouncilRunner
+from src.storage.council_session_store import CouncilSessionStore
 from src.storage.session_store import SessionStore
 
 
@@ -23,6 +25,7 @@ def main() -> None:
     parser.add_argument("--warmup", action="store_true", help="Run account check/repair tool before execution")
     parser.add_argument("--skip-warmup", action="store_true")
     parser.add_argument("--parallel", action="store_true", help="Run agents concurrently for speed tests")
+    parser.add_argument("--council", action="store_true", help="Run Single Round Council v1 flow")
     parser.add_argument("--max-workers", type=int, default=2, help="Parallel worker count (2 recommended)")
     args = parser.parse_args()
 
@@ -35,11 +38,28 @@ def main() -> None:
         print("Input message is empty. Exit.")
         return
 
-    runner = AgentRunner(agent_configs)
-    results = runner.run_all(user_message, parallel=args.parallel, max_workers=args.max_workers)
+    if args.council:
+        council_runner = SingleRoundCouncilRunner(agent_configs)
+        results, council_flow, chair_context, review_contexts, final_context = council_runner.run(
+            user_message,
+            parallel=args.parallel,
+            max_workers=args.max_workers,
+        )
+        store = CouncilSessionStore("data/council_sessions")
+        saved_path = store.save(
+            user_message=user_message,
+            results=results,
+            council_flow=council_flow,
+            chair_context=chair_context,
+            review_contexts=review_contexts,
+            final_context=final_context,
+        )
+    else:
+        runner = AgentRunner(agent_configs)
+        results = runner.run_all(user_message, parallel=args.parallel, max_workers=args.max_workers)
 
-    store = SessionStore("data/sessions")
-    saved_path = store.save(user_message=user_message, results=results)
+        store = SessionStore("data/sessions")
+        saved_path = store.save(user_message=user_message, results=results)
 
     print("\n=== Agent run summary ===")
     for result in results:
@@ -52,7 +72,8 @@ def main() -> None:
             err = (result.error or "")[:140]
             print(f"- [failed] {result.name}: {err}")
 
-    print(f"\nSession saved to: {saved_path}")
+    label = "Council session" if args.council else "Session"
+    print(f"\n{label} saved to: {saved_path}")
 
 
 if __name__ == "__main__":
