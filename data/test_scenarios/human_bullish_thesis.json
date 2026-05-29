@@ -1,0 +1,150 @@
+{
+  "schema_version": "opportunity_packet_v0",
+  "packet_id": "human_bullish_thesis",
+  "created_at_utc": "2026-05-29T00:00:00Z",
+  "asset": "BTC",
+  "quote": "KRW",
+  "signal_type": "cross_exchange_price_gap",
+  "observations": [
+    {
+      "observation_id": "upbit_1",
+      "venue_id": "upbit",
+      "venue_name": "Upbit",
+      "market_symbol": "BTC/KRW",
+      "instrument_type": "spot",
+      "region": "KR",
+      "last_price": 100000000,
+      "bid": null,
+      "ask": null,
+      "bid_size": null,
+      "ask_size": null,
+      "base_volume_24h": null,
+      "quote_volume_24h": null,
+      "timestamp_utc": null,
+      "fees": null,
+      "liquidity": {
+        "orderbook_depth_available": false,
+        "volume_available": false,
+        "estimated_executable_notional": null,
+        "estimated_slippage_pct": null,
+        "depth_levels": []
+      },
+      "transfer": {
+        "status_known": false
+      },
+      "data_quality": {
+        "timestamps_available": false,
+        "timestamps_aligned": null,
+        "max_data_age_ms": null,
+        "source": "manual_scenario",
+        "latency_ms": null,
+        "is_realtime": false
+      },
+      "health": {
+        "api_status_known": false
+      },
+      "extensions": {}
+    },
+    {
+      "observation_id": "bithumb_1",
+      "venue_id": "bithumb",
+      "venue_name": "Bithumb",
+      "market_symbol": "BTC/KRW",
+      "instrument_type": "spot",
+      "region": "KR",
+      "last_price": 100700000,
+      "bid": null,
+      "ask": null,
+      "bid_size": null,
+      "ask_size": null,
+      "base_volume_24h": null,
+      "quote_volume_24h": null,
+      "timestamp_utc": null,
+      "fees": null,
+      "liquidity": {
+        "orderbook_depth_available": false,
+        "volume_available": false,
+        "estimated_executable_notional": null,
+        "estimated_slippage_pct": null,
+        "depth_levels": []
+      },
+      "transfer": {
+        "status_known": false
+      },
+      "data_quality": {
+        "timestamps_available": false,
+        "timestamps_aligned": null,
+        "max_data_age_ms": null,
+        "source": "manual_scenario",
+        "latency_ms": null,
+        "is_realtime": false
+      },
+      "health": {
+        "api_status_known": false
+      },
+      "extensions": {}
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "c1",
+      "candidate_type": "buy_low_sell_high",
+      "source_observation_id": "upbit_1",
+      "target_observation_id": "bithumb_1",
+      "source_venue_id": "upbit",
+      "target_venue_id": "bithumb",
+      "direction": "buy_source_sell_target_candidate",
+      "gross_gap_absolute": 700000,
+      "gross_gap_pct": 0.7,
+      "estimated_net_gap_pct": null,
+      "required_missing_fields": [
+        "fees",
+        "depth",
+        "timestamps"
+      ],
+      "assumptions": [
+        "human thesis: source venue lag"
+      ],
+      "extensions": {}
+    }
+  ],
+  "human_context": {
+    "provided": true,
+    "blocking": false,
+    "thesis": "A거래소 가격 반영 지연으로 보인다",
+    "preference": "aggressive",
+    "constraints": [],
+    "veto": false,
+    "questions_for_council": [
+      "가격 반영 지연 thesis가 성립하려면 무엇이 필요한가?"
+    ],
+    "authority": {
+      "can_block_trade": true,
+      "can_force_trade": false,
+      "can_tighten_risk": true,
+      "can_loosen_risk": false
+    }
+  },
+  "expected_behavior": {
+    "preferred_final_decision": "NEED_DATA",
+    "acceptable_final_decisions": [
+      "NEED_DATA",
+      "WATCH"
+    ],
+    "must_not_include": [
+      "확실한 수익"
+    ],
+    "max_confidence": 0.65,
+    "notes": "user thesis must be separated from data"
+  },
+  "detector_metadata": {
+    "detector_name": "manual_scenario",
+    "detector_version": "v0",
+    "generated_from": "manual_scenario",
+    "source_files": [
+      "data/test_scenarios/human_bullish_thesis.json"
+    ],
+    "extensions": {}
+  },
+  "extensions": {}
+}

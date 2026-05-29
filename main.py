@@ -5,6 +5,10 @@ from pathlib import Path
 
 from src.agents.agent_runner import AgentRunner
 from src.config_loader import load_agent_configs
+from src.council.evaluation import build_scenario_evaluation
+from src.council.scenarios import list_scenarios, load_opportunity_file, load_scenario, scenario_path
+from src.council.single_round_runner import SingleRoundCouncilRunner
+from src.storage.council_session_store import CouncilSessionStore
 from src.storage.session_store import SessionStore
 
 
@@ -23,23 +27,101 @@ def main() -> None:
     parser.add_argument("--warmup", action="store_true", help="Run account check/repair tool before execution")
     parser.add_argument("--skip-warmup", action="store_true")
     parser.add_argument("--parallel", action="store_true", help="Run agents concurrently for speed tests")
+    parser.add_argument("--council", action="store_true", help="Run Single Round Council v1 flow")
     parser.add_argument("--max-workers", type=int, default=2, help="Parallel worker count (2 recommended)")
+    parser.add_argument("--scenario", help="Load data/test_scenarios/<name>.json as OpportunityPacket input")
+    parser.add_argument("--opportunity-file", help="Load an OpportunityPacket JSON file as Council input")
+    parser.add_argument("--list-scenarios", action="store_true", help="List available scenario names and exit")
+    parser.add_argument("--dry-run-context", action="store_true", help="Build and save Council contexts without Gemini CLI calls")
     args = parser.parse_args()
+
+    if args.list_scenarios:
+        for name in list_scenarios():
+            print(name)
+        return
+
+    if (args.scenario or args.opportunity_file or args.dry_run_context) and not args.council:
+        print("--scenario, --opportunity-file, and --dry-run-context require --council.")
+        return
+
+    if args.scenario and args.opportunity_file:
+        print("Use only one of --scenario or --opportunity-file.")
+        return
 
     if not maybe_warmup(skip_warmup=args.skip_warmup, force_warmup=args.warmup):
         return
 
     agent_configs = load_agent_configs("configs/agents.yaml")
-    user_message = input("Enter your message for all agents: ").strip()
-    if not user_message:
-        print("Input message is empty. Exit.")
-        return
+    opportunity_packet = None
+    scenario_name = None
+    opportunity_file_path = None
+    if args.scenario:
+        scenario_name = args.scenario
+        opportunity_file_path = str(scenario_path(args.scenario))
+        opportunity_packet = load_scenario(args.scenario)
+    elif args.opportunity_file:
+        opportunity_file_path = args.opportunity_file
+        opportunity_packet = load_opportunity_file(args.opportunity_file)
 
-    runner = AgentRunner(agent_configs)
-    results = runner.run_all(user_message, parallel=args.parallel, max_workers=args.max_workers)
+    if opportunity_packet is not None:
+        user_message = opportunity_packet.summary_message()
+    else:
+        user_message = input("Enter your message for all agents: ").strip()
+        if not user_message:
+            print("Input message is empty. Exit.")
+            return
 
-    store = SessionStore("data/sessions")
-    saved_path = store.save(user_message=user_message, results=results)
+    if args.council:
+        council_runner = SingleRoundCouncilRunner(agent_configs)
+        store = CouncilSessionStore("data/council_sessions")
+        opportunity_dict = opportunity_packet.model_dump(mode="json") if opportunity_packet else None
+        expected_behavior = opportunity_packet.expected_behavior_dict() if opportunity_packet else None
+        if args.dry_run_context:
+            chair_context, review_contexts, final_context = council_runner.build_dry_run_contexts(
+                user_message,
+                opportunity_packet=opportunity_packet,
+            )
+            scenario_evaluation = build_scenario_evaluation(opportunity_packet, results=None)
+            saved_path = store.save_dry_run_context(
+                chair_context=chair_context,
+                review_contexts=review_contexts,
+                final_context=final_context,
+                opportunity_packet=opportunity_dict,
+                expected_behavior=expected_behavior,
+                scenario_name=scenario_name,
+                opportunity_file_path=opportunity_file_path,
+                scenario_evaluation=scenario_evaluation,
+            )
+            print(f"Dry-run context saved to: {saved_path}")
+            return
+
+        results, council_flow, chair_context, review_contexts, final_context = council_runner.run(
+            user_message,
+            parallel=args.parallel,
+            max_workers=args.max_workers,
+            opportunity_packet=opportunity_packet,
+            scenario_name=scenario_name,
+        )
+        scenario_evaluation = build_scenario_evaluation(opportunity_packet, results=results)
+        saved_path = store.save(
+            user_message=user_message,
+            results=results,
+            council_flow=council_flow,
+            chair_context=chair_context,
+            review_contexts=review_contexts,
+            final_context=final_context,
+            opportunity_packet=opportunity_dict,
+            scenario_name=scenario_name,
+            opportunity_file_path=opportunity_file_path,
+            expected_behavior=expected_behavior,
+            scenario_evaluation=scenario_evaluation,
+        )
+    else:
+        runner = AgentRunner(agent_configs)
+        results = runner.run_all(user_message, parallel=args.parallel, max_workers=args.max_workers)
+
+        store = SessionStore("data/sessions")
+        saved_path = store.save(user_message=user_message, results=results)
 
     print("\n=== Agent run summary ===")
     for result in results:
@@ -52,7 +134,8 @@ def main() -> None:
             err = (result.error or "")[:140]
             print(f"- [failed] {result.name}: {err}")
 
-    print(f"\nSession saved to: {saved_path}")
+    label = "Council session" if args.council else "Session"
+    print(f"\n{label} saved to: {saved_path}")
 
 
 if __name__ == "__main__":
