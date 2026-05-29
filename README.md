@@ -56,6 +56,7 @@ foreach ($n in 1..5) {
 ## 실행
 ```powershell
 python main.py
+python main.py --council --parallel --max-workers 2
 ```
 
 실행 중 preflight에서 각 agent의 active/expected 계정을 마스킹해서 확인합니다.
