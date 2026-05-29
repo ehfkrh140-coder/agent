@@ -226,7 +226,8 @@ class GeminiCliClientParsingTests(unittest.TestCase):
             }
             stdout_wrapper = json.dumps({"response": json.dumps(payload)})
 
-            def fake_run(cmd, env, cwd, timeout_seconds):
+            def fake_run(cmd, env, cwd, timeout_seconds, input_text=None):
+                self.assertEqual(input_text, "x")
                 self.assertEqual(cmd[0], "gemini.cmd")
                 self.assertNotIn("powershell.exe", " ".join(cmd).lower())
                 self.assertNotIn("tee-object", " ".join(cmd).lower())

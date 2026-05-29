@@ -1,0 +1,161 @@
+{
+  "schema_version": "opportunity_packet_v0",
+  "packet_id": "human_conservative_constraints",
+  "created_at_utc": "2026-05-29T00:00:00Z",
+  "asset": "BTC",
+  "quote": "KRW",
+  "signal_type": "cross_exchange_price_gap",
+  "observations": [
+    {
+      "observation_id": "upbit_1",
+      "venue_id": "upbit",
+      "venue_name": "Upbit",
+      "market_symbol": "BTC/KRW",
+      "instrument_type": "spot",
+      "region": "KR",
+      "last_price": 100000000,
+      "bid": 99980000,
+      "ask": 100000000,
+      "bid_size": null,
+      "ask_size": null,
+      "base_volume_24h": null,
+      "quote_volume_24h": null,
+      "timestamp_utc": "2026-05-29T00:00:01Z",
+      "fees": {
+        "trading_fee_pct": 0.05,
+        "maker_fee_pct": 0.03,
+        "taker_fee_pct": 0.05,
+        "fee_source": "scenario",
+        "extensions": {}
+      },
+      "liquidity": {
+        "orderbook_depth_available": true,
+        "volume_available": true,
+        "estimated_executable_notional": 50000000,
+        "estimated_slippage_pct": 0.08,
+        "depth_levels": []
+      },
+      "transfer": {
+        "status_known": false
+      },
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": null,
+        "max_data_age_ms": 500,
+        "source": "manual_scenario",
+        "latency_ms": null,
+        "is_realtime": true
+      },
+      "health": {
+        "api_status_known": false
+      },
+      "extensions": {}
+    },
+    {
+      "observation_id": "bithumb_1",
+      "venue_id": "bithumb",
+      "venue_name": "Bithumb",
+      "market_symbol": "BTC/KRW",
+      "instrument_type": "spot",
+      "region": "KR",
+      "last_price": 100900000,
+      "bid": 100900000,
+      "ask": 100920000,
+      "bid_size": null,
+      "ask_size": null,
+      "base_volume_24h": null,
+      "quote_volume_24h": null,
+      "timestamp_utc": "2026-05-29T00:00:01Z",
+      "fees": {
+        "trading_fee_pct": 0.05,
+        "maker_fee_pct": 0.03,
+        "taker_fee_pct": 0.05,
+        "fee_source": "scenario",
+        "extensions": {}
+      },
+      "liquidity": {
+        "orderbook_depth_available": true,
+        "volume_available": true,
+        "estimated_executable_notional": 50000000,
+        "estimated_slippage_pct": 0.08,
+        "depth_levels": []
+      },
+      "transfer": {
+        "status_known": false
+      },
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": null,
+        "max_data_age_ms": 500,
+        "source": "manual_scenario",
+        "latency_ms": null,
+        "is_realtime": true
+      },
+      "health": {
+        "api_status_known": false
+      },
+      "extensions": {}
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "c1",
+      "candidate_type": "buy_low_sell_high",
+      "source_observation_id": "upbit_1",
+      "target_observation_id": "bithumb_1",
+      "source_venue_id": "upbit",
+      "target_venue_id": "bithumb",
+      "direction": "buy_source_sell_target_candidate",
+      "gross_gap_absolute": 900000,
+      "gross_gap_pct": 0.9,
+      "estimated_net_gap_pct": 0.42,
+      "required_missing_fields": [],
+      "assumptions": [
+        "depth snapshot available but no execution engine"
+      ],
+      "extensions": {}
+    }
+  ],
+  "human_context": {
+    "provided": true,
+    "blocking": false,
+    "thesis": null,
+    "preference": "conservative",
+    "constraints": [
+      "3분 이상 가격차가 유지될 때만 검토",
+      "입출금 지연 가능성이 있으면 보류"
+    ],
+    "veto": false,
+    "questions_for_council": [
+      "보수적 제한 조건을 risk gate에 반영할 수 있는가?"
+    ],
+    "authority": {
+      "can_block_trade": true,
+      "can_force_trade": false,
+      "can_tighten_risk": true,
+      "can_loosen_risk": false
+    }
+  },
+  "expected_behavior": {
+    "preferred_final_decision": "WATCH",
+    "acceptable_final_decisions": [
+      "WATCH",
+      "NEED_DATA"
+    ],
+    "must_not_include": [
+      "즉시 실행"
+    ],
+    "max_confidence": 0.7,
+    "notes": "conservative constraints"
+  },
+  "detector_metadata": {
+    "detector_name": "manual_scenario",
+    "detector_version": "v0",
+    "generated_from": "manual_scenario",
+    "source_files": [
+      "data/test_scenarios/human_conservative_constraints.json"
+    ],
+    "extensions": {}
+  },
+  "extensions": {}
+}
