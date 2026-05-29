@@ -23,7 +23,6 @@ class GenericGeminiAgent:
             gemini_cli_home=self.config.gemini_cli_home,
             expected_account=self.config.expected_account,
             working_dir=self.config.working_dir,
-            model=self.config.model,
         )
 
     def _load_system_prompt(self) -> str:
