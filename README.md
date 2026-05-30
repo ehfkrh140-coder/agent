@@ -179,3 +179,10 @@ python main.py --council --opportunity-file data/generated_packets/upbit_bithumb
 
 ## Depth VWAP/slippage evaluation
 - Cross-exchange spot spread candidates now evaluate configured target notionals with orderbook-depth VWAP, side-specific slippage, executable notional, and fee/safety-buffer-adjusted net gap metrics before Council review.
+
+## Repeated market sampling (read-only)
+- Public market-data adapters can be sampled repeatedly to verify spread persistence before any Council handoff recommendation is considered.
+
+```powershell
+python tools/sample_market_data.py --adapter live_upbit_bithumb_spot_spread --samples 5 --interval 1 --output data/market_samples/upbit_bithumb_sample.json
+```
