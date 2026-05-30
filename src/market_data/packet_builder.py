@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from src.market_data.vwap import compute_buy_vwap_from_asks, compute_sell_vwap_from_bids
 from src.schemas.opportunity_packet import (
     DataQualitySnapshot,
     DerivativesSnapshot,
@@ -176,9 +177,10 @@ class OpportunityPacketBuilder:
 
     def _spot_candidates(self, observations: list[MarketObservation], snapshot: dict[str, Any]) -> list[OpportunityCandidate]:
         thresholds = snapshot.get("thresholds", {})
-        min_notional = float(thresholds.get("min_notional", 0.0))
+        min_notional = float(thresholds.get("min_notional") or thresholds.get("min_executable_notional") or 0.0)
         min_net_gap_pct = thresholds.get("min_net_gap_pct")
         safety_buffer_pct = float(thresholds.get("safety_buffer_pct", 0.0))
+        target_notionals = self._target_notionals(snapshot, thresholds, min_notional)
         candidates: list[OpportunityCandidate] = []
         for source in observations:
             for target in observations:
@@ -188,31 +190,30 @@ class OpportunityPacketBuilder:
                 if gross_spread <= 0:
                     continue
                 gross_spread_pct = gross_spread / source.ask * 100
-                source_notional = source.ask * (source.ask_size or 0)
-                target_notional = target.bid * (target.bid_size or 0)
-                executable_notional = min(source_notional, target_notional)
+                source_depth = self._depth_levels_for_side(source, side="buy")
+                target_depth = self._depth_levels_for_side(target, side="sell")
                 source_fee_pct = self._fee_pct(source)
                 target_fee_pct = self._fee_pct(target)
-                source_slippage_pct = self._slippage_pct(source)
-                target_slippage_pct = self._slippage_pct(target)
-                estimated_slippage_pct = None
-                if source_slippage_pct is not None and target_slippage_pct is not None:
-                    estimated_slippage_pct = source_slippage_pct + target_slippage_pct
-                estimated_net_gap_pct = None
-                if source_fee_pct is not None and target_fee_pct is not None and estimated_slippage_pct is not None:
-                    estimated_net_gap_pct = (
-                        gross_spread_pct
-                        - source_fee_pct
-                        - target_fee_pct
-                        - estimated_slippage_pct
-                        - safety_buffer_pct
+                vwap_results = [
+                    self._spot_vwap_result(
+                        source_depth=source_depth,
+                        target_depth=target_depth,
+                        target_notional=target_notional,
+                        source_fee_pct=source_fee_pct,
+                        target_fee_pct=target_fee_pct,
+                        safety_buffer_pct=safety_buffer_pct,
+                        min_net_gap_pct=min_net_gap_pct,
                     )
+                    for target_notional in target_notionals
+                ]
+                default_result = vwap_results[0] if vwap_results else {}
+                executable_notional = default_result.get("executable_notional")
+                estimated_net_gap_pct = default_result.get("estimated_net_gap_pct")
+                liquidity_pass = default_result.get("liquidity_pass")
+                net_gap_pass = default_result.get("net_gap_pass")
                 freshness_pass = self._freshness_pass(source, thresholds.get("max_data_age_ms")) and self._freshness_pass(
                     target, thresholds.get("max_data_age_ms")
                 )
-                net_gap_pass = None
-                if estimated_net_gap_pct is not None and min_net_gap_pct is not None:
-                    net_gap_pass = estimated_net_gap_pct >= float(min_net_gap_pct)
                 candidates.append(
                     OpportunityCandidate(
                         candidate_id=f"{source.venue_id}_to_{target.venue_id}",
@@ -228,25 +229,116 @@ class OpportunityPacketBuilder:
                         gross_gap_absolute=round(gross_spread, 8),
                         gross_gap_pct=round(gross_spread_pct, 8),
                         estimated_net_gap_pct=round(estimated_net_gap_pct, 8) if estimated_net_gap_pct is not None else None,
-                        liquidity_pass=executable_notional >= min_notional,
+                        liquidity_pass=bool(liquidity_pass) if liquidity_pass is not None else None,
                         freshness_pass=freshness_pass,
-                        gap_pass=True,
+                        gap_pass=True if net_gap_pass is None else bool(net_gap_pass),
                         guard_pass=True,
                         metrics={
                             "source_ask": source.ask,
                             "target_bid": target.bid,
                             "source_fee_pct": source_fee_pct,
                             "target_fee_pct": target_fee_pct,
-                            "estimated_slippage_pct": estimated_slippage_pct,
                             "safety_buffer_pct": safety_buffer_pct,
+                            "top_of_book_gross_gap_pct": round(gross_spread_pct, 8),
                             "executable_notional": executable_notional,
                             "net_gap_pass": net_gap_pass,
+                            "vwap_results": vwap_results,
                         },
                         thresholds=thresholds,
                         required_missing_fields=self._missing_spot_fields(source, target),
                     )
                 )
         return candidates
+
+    def _target_notionals(self, snapshot: dict[str, Any], thresholds: dict[str, Any], min_notional: float) -> list[float]:
+        raw_values = snapshot.get("target_notionals") or thresholds.get("target_notionals") or []
+        notionals: list[float] = []
+        if isinstance(raw_values, list):
+            for value in raw_values:
+                try:
+                    notional = float(value)
+                except (TypeError, ValueError):
+                    continue
+                if notional > 0:
+                    notionals.append(notional)
+        if not notionals:
+            notionals.append(min_notional if min_notional > 0 else 1_000_000.0)
+        return notionals
+
+    def _spot_vwap_result(
+        self,
+        *,
+        source_depth: list[dict[str, Any]],
+        target_depth: list[dict[str, Any]],
+        target_notional: float,
+        source_fee_pct: float | None,
+        target_fee_pct: float | None,
+        safety_buffer_pct: float,
+        min_net_gap_pct: Any,
+    ) -> dict[str, Any]:
+        buy = compute_buy_vwap_from_asks(source_depth, target_notional)
+        sell = compute_sell_vwap_from_bids(target_depth, target_notional)
+        executable_notional = min(float(buy.get("filled_notional") or 0.0), float(sell.get("filled_notional") or 0.0))
+        source_vwap = buy.get("vwap_price")
+        target_vwap = sell.get("vwap_price")
+        source_slippage_pct = buy.get("slippage_pct")
+        target_slippage_pct = sell.get("slippage_pct")
+        combined_slippage_pct = None
+        if source_slippage_pct is not None and target_slippage_pct is not None:
+            combined_slippage_pct = float(source_slippage_pct) + float(target_slippage_pct)
+        vwap_gross_gap_pct = None
+        if source_vwap and target_vwap:
+            vwap_gross_gap_pct = ((float(target_vwap) - float(source_vwap)) / float(source_vwap)) * 100
+        estimated_net_gap_pct = None
+        if (
+            vwap_gross_gap_pct is not None
+            and source_fee_pct is not None
+            and target_fee_pct is not None
+            and combined_slippage_pct is not None
+        ):
+            estimated_net_gap_pct = vwap_gross_gap_pct - source_fee_pct - target_fee_pct - combined_slippage_pct - safety_buffer_pct
+        net_gap_pass = None
+        if estimated_net_gap_pct is not None and min_net_gap_pct is not None:
+            net_gap_pass = estimated_net_gap_pct >= float(min_net_gap_pct)
+        liquidity_pass = bool(buy.get("fully_filled")) and bool(sell.get("fully_filled"))
+        return {
+            "target_notional": round(float(target_notional), 8),
+            "source_vwap_ask": self._round_optional(source_vwap),
+            "target_vwap_bid": self._round_optional(target_vwap),
+            "source_slippage_pct": self._round_optional(source_slippage_pct),
+            "target_slippage_pct": self._round_optional(target_slippage_pct),
+            "combined_slippage_pct": self._round_optional(combined_slippage_pct),
+            "vwap_gross_gap_pct": self._round_optional(vwap_gross_gap_pct),
+            "estimated_net_gap_pct": self._round_optional(estimated_net_gap_pct),
+            "fully_filled_source": bool(buy.get("fully_filled")),
+            "fully_filled_target": bool(sell.get("fully_filled")),
+            "source_filled_notional": self._round_optional(buy.get("filled_notional")),
+            "target_filled_notional": self._round_optional(sell.get("filled_notional")),
+            "executable_notional": self._round_optional(executable_notional),
+            "source_levels_consumed": buy.get("levels_consumed"),
+            "target_levels_consumed": sell.get("levels_consumed"),
+            "source_top_ask": self._round_optional(buy.get("top_price")),
+            "target_top_bid": self._round_optional(sell.get("top_price")),
+            "net_gap_pass": net_gap_pass,
+            "liquidity_pass": liquidity_pass,
+        }
+
+    def _depth_levels_for_side(self, obs: MarketObservation, *, side: str) -> list[dict[str, Any]]:
+        if obs.liquidity and obs.liquidity.depth_levels:
+            return obs.liquidity.depth_levels
+        if side == "buy" and obs.ask is not None and obs.ask_size is not None:
+            return [{"level": 1, "ask_price": obs.ask, "ask_size": obs.ask_size}]
+        if side == "sell" and obs.bid is not None and obs.bid_size is not None:
+            return [{"level": 1, "bid_price": obs.bid, "bid_size": obs.bid_size}]
+        return []
+
+    def _round_optional(self, value: Any) -> float | None:
+        if value is None:
+            return None
+        try:
+            return round(float(value), 8)
+        except (TypeError, ValueError):
+            return None
 
 
     def _fee_pct(self, obs: MarketObservation) -> float | None:

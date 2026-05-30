@@ -95,6 +95,12 @@ class StrategyRegistryReadinessTests(unittest.TestCase):
         self.assertEqual(report["recommended_default_decision"], "REJECT")
         self.assertIn("non_positive_estimated_net_gap", report["warnings"])
 
+
+    def test_readiness_warns_when_vwap_results_missing(self):
+        report = build_readiness_report(load_scenario("spot_executable_spread_high_fee_reject"))
+        self.assertIn("vwap_results_missing", report["warnings"])
+        self.assertIn("candidate.metrics.vwap_results", report["missing_required_fields"])
+
     def test_readiness_stale_and_low_liquidity_reject(self):
         stale = build_readiness_report(load_scenario("spot_executable_spread_stale_reject"))
         low_liquidity = build_readiness_report(load_scenario("spot_executable_spread_low_liquidity_reject"))
@@ -107,7 +113,7 @@ class StrategyRegistryReadinessTests(unittest.TestCase):
         report = build_readiness_report(load_scenario("spot_executable_spread_watch"))
         self.assertTrue(report["readiness_pass"])
         self.assertEqual(report["recommended_default_decision"], "WATCH")
-        self.assertEqual(report["basis"], "source ask / target bid executable spread readiness")
+        self.assertEqual(report["basis"], "source ask / target bid VWAP executable spread readiness")
 
     def test_mark_orderbook_is_experimental_disabled(self):
         report = build_readiness_report(load_scenario("mark_orderbook_gap_long_watch"))

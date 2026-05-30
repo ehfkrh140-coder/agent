@@ -56,6 +56,18 @@ def _cross_exchange_report(packet: OpportunityPacket, strategy: dict[str, Any], 
         target = _find_observation(candidate.target_observation_id, candidate.target_venue_id, obs_by_id, packet.observations)
         _check_spot_side("source", source, missing, warnings)
         _check_spot_side("target", target, missing, warnings)
+        vwap_results = candidate.metrics.get("vwap_results") if isinstance(candidate.metrics, dict) else None
+        default_vwap = vwap_results[0] if isinstance(vwap_results, list) and vwap_results else None
+        if not default_vwap:
+            missing.append("candidate.metrics.vwap_results")
+            warnings.append("vwap_results_missing")
+        else:
+            if default_vwap.get("fully_filled_source") is False or default_vwap.get("fully_filled_target") is False:
+                recommended = "REJECT"
+                warnings.append("low_liquidity_candidate")
+            if default_vwap.get("net_gap_pass") is False:
+                recommended = "REJECT"
+                warnings.append("vwap_net_gap_below_threshold")
         if candidate.estimated_net_gap_pct is None:
             missing.append("candidate.estimated_net_gap_pct")
         elif candidate.estimated_net_gap_pct <= 0:
@@ -69,7 +81,7 @@ def _cross_exchange_report(packet: OpportunityPacket, strategy: dict[str, Any], 
             warnings.append("low_liquidity_candidate")
     missing = _dedupe(missing)
     warnings = _dedupe(warnings)
-    readiness_pass = not missing and recommended != "REJECT" and not any(w in warnings for w in ["last_price_only_candidate", "stale_candidate", "low_liquidity_candidate"])
+    readiness_pass = not missing and recommended != "REJECT" and not any(w in warnings for w in ["last_price_only_candidate", "stale_candidate", "low_liquidity_candidate", "vwap_results_missing", "vwap_net_gap_below_threshold"])
     if readiness_pass:
         recommended = "WATCH"
     return {
@@ -82,7 +94,7 @@ def _cross_exchange_report(packet: OpportunityPacket, strategy: dict[str, Any], 
         "warnings": warnings,
         "readiness_pass": readiness_pass,
         "recommended_default_decision": recommended,
-        "basis": "source ask / target bid executable spread readiness",
+        "basis": "source ask / target bid VWAP executable spread readiness",
     }
 
 

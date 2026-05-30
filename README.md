@@ -176,3 +176,6 @@ python tools/collect_market_data.py --list-adapters
 python tools/collect_market_data.py --adapter live_upbit_bithumb_spot_spread --output data/generated_packets/upbit_bithumb_spot_packet.json
 python main.py --council --opportunity-file data/generated_packets/upbit_bithumb_spot_packet.json --parallel --max-workers 2
 ```
+
+## Depth VWAP/slippage evaluation
+- Cross-exchange spot spread candidates now evaluate configured target notionals with orderbook-depth VWAP, side-specific slippage, executable notional, and fee/safety-buffer-adjusted net gap metrics before Council review.

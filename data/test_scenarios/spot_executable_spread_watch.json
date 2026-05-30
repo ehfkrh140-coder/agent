@@ -137,7 +137,35 @@
       "metrics": {
         "source_ask": 100000000,
         "target_bid": 100600000,
-        "safety_buffer_pct": 0.05
+        "safety_buffer_pct": 0.05,
+        "source_fee_pct": 0.05,
+        "target_fee_pct": 0.05,
+        "top_of_book_gross_gap_pct": 0.6,
+        "executable_notional": 5000000,
+        "net_gap_pass": true,
+        "vwap_results": [
+          {
+            "target_notional": 1000000,
+            "source_vwap_ask": 100000000,
+            "target_vwap_bid": 100600000,
+            "source_slippage_pct": 0.0,
+            "target_slippage_pct": 0.0,
+            "combined_slippage_pct": 0.0,
+            "vwap_gross_gap_pct": 0.6,
+            "estimated_net_gap_pct": 0.42,
+            "fully_filled_source": true,
+            "fully_filled_target": true,
+            "source_filled_notional": 1000000,
+            "target_filled_notional": 1000000,
+            "executable_notional": 1000000,
+            "source_levels_consumed": 1,
+            "target_levels_consumed": 1,
+            "source_top_ask": 100000000,
+            "target_top_bid": 100600000,
+            "net_gap_pass": true,
+            "liquidity_pass": true
+          }
+        ]
       },
       "guards": {},
       "thresholds": {

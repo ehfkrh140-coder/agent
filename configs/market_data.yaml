@@ -82,4 +82,7 @@ adapters:
       max_latency_ms: 1000
       min_notional: 1000000
       min_executable_notional: 1000000
+      target_notionals:
+        - 1000000
+        - 5000000
       safety_buffer_pct: 0.05

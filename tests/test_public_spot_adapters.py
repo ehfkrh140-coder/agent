@@ -11,6 +11,7 @@ from src.market_data.adapters.composite import CompositeSpotSpreadAdapter
 from src.market_data.adapters.upbit import UpbitPublicSpotAdapter
 from src.market_data.packet_builder import OpportunityPacketBuilder
 from src.market_data.registry import build_adapter, load_market_data_config
+from src.strategy.readiness import build_readiness_report
 
 
 @dataclass
@@ -183,8 +184,56 @@ class PublicSpotAdapterTests(unittest.TestCase):
         self.assertEqual(candidate.metrics["target_bid"], 100_650_000)
         self.assertEqual(candidate.metrics["source_fee_pct"], 0.05)
         self.assertEqual(candidate.metrics["target_fee_pct"], 0.05)
-        self.assertEqual(candidate.metrics["estimated_slippage_pct"], 0.0)
+        self.assertEqual(candidate.metrics["vwap_results"][0]["target_notional"], 1_000_000)
+        self.assertEqual(candidate.metrics["vwap_results"][0]["source_vwap_ask"], 100_000_000)
+        self.assertEqual(candidate.metrics["vwap_results"][0]["target_vwap_bid"], 100_650_000)
+        self.assertEqual(candidate.metrics["vwap_results"][0]["combined_slippage_pct"], 0.0)
+        self.assertTrue(candidate.metrics["vwap_results"][0]["fully_filled_source"])
+        self.assertTrue(candidate.metrics["vwap_results"][0]["fully_filled_target"])
         self.assertTrue(candidate.metrics["net_gap_pass"])
+
+
+    def test_vwap_fee_adjusted_negative_net_gap_is_rejected_by_readiness(self):
+        snapshot = {
+            "asset": "BTC",
+            "quote": "KRW",
+            "strategy_family": "cross_exchange_spot_spread",
+            "strategy_id": "cross_exchange_spot_spread_v1",
+            "thresholds": {"min_notional": 1_000_000, "min_net_gap_pct": 0.2, "safety_buffer_pct": 0.05, "max_data_age_ms": 3000},
+            "observations": [
+                self._spot_observation("upbit", ask=100_000_000, bid=99_990_000, ask_size=0.6, bid_size=0.4),
+                self._spot_observation("bithumb", ask=100_200_000, bid=100_050_000, ask_size=0.3, bid_size=0.5),
+            ],
+        }
+
+        packet = OpportunityPacketBuilder().build(snapshot)
+        report = build_readiness_report(packet)
+
+        self.assertEqual(len(packet.candidates), 1)
+        self.assertLessEqual(packet.candidates[0].estimated_net_gap_pct, 0)
+        self.assertEqual(report["status"], "REJECT")
+        self.assertIn("non_positive_estimated_net_gap", report["warnings"])
+
+    def test_target_notional_shortfall_sets_liquidity_false(self):
+        snapshot = {
+            "asset": "BTC",
+            "quote": "KRW",
+            "strategy_family": "cross_exchange_spot_spread",
+            "strategy_id": "cross_exchange_spot_spread_v1",
+            "thresholds": {"min_notional": 1_000_000, "target_notionals": [1_000_000], "min_net_gap_pct": 0.2, "safety_buffer_pct": 0.05, "max_data_age_ms": 3000},
+            "observations": [
+                self._spot_observation("upbit", ask=100_000_000, bid=99_990_000, ask_size=0.002, bid_size=0.002),
+                self._spot_observation("bithumb", ask=100_700_000, bid=100_650_000, ask_size=0.002, bid_size=0.002),
+            ],
+        }
+
+        packet = OpportunityPacketBuilder().build(snapshot)
+        result = packet.candidates[0].metrics["vwap_results"][0]
+
+        self.assertFalse(result["fully_filled_source"])
+        self.assertFalse(result["fully_filled_target"])
+        self.assertFalse(packet.candidates[0].liquidity_pass)
+        self.assertFalse(build_readiness_report(packet)["readiness_pass"])
 
     def test_packet_builder_allows_zero_candidates_when_bid_ask_spread_absent(self):
         snapshot = {
