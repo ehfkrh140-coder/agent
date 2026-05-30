@@ -1,0 +1,281 @@
+strategies:
+- strategy_family: cross_exchange_spot_spread
+  strategy_id: cross_exchange_spot_spread_v1
+  status: active
+  priority: P0
+  description: Spot 거래소 간 source ask와 target bid 기반 executable spread 탐지
+  required_observation_fields:
+  - venue_id
+  - market_symbol
+  - instrument_type=spot
+  - bid
+  - ask
+  - bid_size
+  - ask_size
+  - timestamp_utc
+  - fees
+  - liquidity.orderbook_depth_available
+  - data_quality.max_data_age_ms
+  required_candidate_fields:
+  - candidate_type=spot_executable_spread_candidate
+  - direction=buy_source_ask_sell_target_bid_candidate
+  - source_observation_id
+  - target_observation_id
+  - estimated_net_gap_pct
+  - liquidity_pass
+  - freshness_pass
+  required_data_quality_fields:
+  - timestamps_available
+  - max_data_age_ms
+  - latency_ms
+  optional_fields:
+  - depth_levels
+  - estimated_slippage_pct
+  - base_volume_24h
+  - quote_volume_24h
+  forbidden_for_active_if_any:
+  - last_price_only_candidate
+  - private_endpoint
+  - order_execution
+  readiness_rules:
+  - observations >= 2
+  - source ask and target bid required
+  - fees required
+  - orderbook depth required
+  - estimated_net_gap_pct required
+  - estimated_net_gap_pct <= 0 => REJECT
+  - stale or low liquidity => REJECT or NEED_DATA
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: mark_orderbook_gap
+  strategy_id: mark_orderbook_gap_hunt_v0
+  status: experimental
+  priority: experimental
+  description: Mark price와 orderbook top-of-book 괴리 탐지. current active v1 strategy
+    does not use mark/index/leverage
+  required_observation_fields:
+  - mark_price
+  - bid
+  - ask
+  - bid_size
+  - ask_size
+  - leverage_or_max_leverage
+  - unit
+  - timestamp_utc
+  required_candidate_fields:
+  - target_gap_pct
+  - long_gap_pct_or_short_gap_pct
+  - long_notional_or_short_notional
+  - guard_pass
+  required_data_quality_fields:
+  - timestamps_available
+  - max_data_age_ms
+  - latency_ms
+  optional_fields:
+  - index_price
+  - funding_rate
+  - open_interest
+  - depth_levels
+  forbidden_for_active_if_any:
+  - current_active_v1_strategy_does_not_use_mark_index_leverage
+  readiness_rules:
+  - experimental only
+  - disabled by active strategy config
+  - do not elevate beyond WATCH/NEED_DATA in active v1
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: kimchi_premium
+  strategy_id: kimchi_premium_v0
+  status: future
+  priority: P1
+  description: Future strategy placeholder for kimchi_premium
+  required_observation_fields: []
+  required_candidate_fields: []
+  required_data_quality_fields: []
+  optional_fields: []
+  forbidden_for_active_if_any:
+  - not_active_v1
+  readiness_rules:
+  - future strategy; not active
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: reverse_premium
+  strategy_id: reverse_premium_v0
+  status: future
+  priority: P1
+  description: Future strategy placeholder for reverse_premium
+  required_observation_fields: []
+  required_candidate_fields: []
+  required_data_quality_fields: []
+  optional_fields: []
+  forbidden_for_active_if_any:
+  - not_active_v1
+  readiness_rules:
+  - future strategy; not active
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: spot_futures_basis
+  strategy_id: spot_futures_basis_v0
+  status: future
+  priority: P1
+  description: Future strategy placeholder for spot_futures_basis
+  required_observation_fields: []
+  required_candidate_fields: []
+  required_data_quality_fields: []
+  optional_fields: []
+  forbidden_for_active_if_any:
+  - not_active_v1
+  readiness_rules:
+  - future strategy; not active
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: funding_rate
+  strategy_id: funding_rate_v0
+  status: future
+  priority: P1
+  description: Future strategy placeholder for funding_rate
+  required_observation_fields: []
+  required_candidate_fields: []
+  required_data_quality_fields: []
+  optional_fields: []
+  forbidden_for_active_if_any:
+  - not_active_v1
+  readiness_rules:
+  - future strategy; not active
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: orderbook_imbalance
+  strategy_id: orderbook_imbalance_v0
+  status: future
+  priority: P2
+  description: Future strategy placeholder for orderbook_imbalance
+  required_observation_fields: []
+  required_candidate_fields: []
+  required_data_quality_fields: []
+  optional_fields: []
+  forbidden_for_active_if_any:
+  - not_active_v1
+  readiness_rules:
+  - future strategy; not active
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: trade_flow_momentum
+  strategy_id: trade_flow_momentum_v0
+  status: future
+  priority: P2
+  description: Future strategy placeholder for trade_flow_momentum
+  required_observation_fields: []
+  required_candidate_fields: []
+  required_data_quality_fields: []
+  optional_fields: []
+  forbidden_for_active_if_any:
+  - not_active_v1
+  readiness_rules:
+  - future strategy; not active
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: volatility_breakout
+  strategy_id: volatility_breakout_v0
+  status: future
+  priority: P2
+  description: Future strategy placeholder for volatility_breakout
+  required_observation_fields: []
+  required_candidate_fields: []
+  required_data_quality_fields: []
+  optional_fields: []
+  forbidden_for_active_if_any:
+  - not_active_v1
+  readiness_rules:
+  - future strategy; not active
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: mean_reversion
+  strategy_id: mean_reversion_v0
+  status: future
+  priority: P2
+  description: Future strategy placeholder for mean_reversion
+  required_observation_fields: []
+  required_candidate_fields: []
+  required_data_quality_fields: []
+  optional_fields: []
+  forbidden_for_active_if_any:
+  - not_active_v1
+  readiness_rules:
+  - future strategy; not active
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: liquidation_open_interest
+  strategy_id: liquidation_open_interest_v0
+  status: future
+  priority: P2
+  description: Future strategy placeholder for liquidation_open_interest
+  required_observation_fields: []
+  required_candidate_fields: []
+  required_data_quality_fields: []
+  optional_fields: []
+  forbidden_for_active_if_any:
+  - not_active_v1
+  readiness_rules:
+  - future strategy; not active
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: news_event
+  strategy_id: news_event_v0
+  status: future
+  priority: P3
+  description: Future strategy placeholder for news_event
+  required_observation_fields: []
+  required_candidate_fields: []
+  required_data_quality_fields: []
+  optional_fields: []
+  forbidden_for_active_if_any:
+  - not_active_v1
+  readiness_rules:
+  - future strategy; not active
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: onchain
+  strategy_id: onchain_v0
+  status: future
+  priority: P3
+  description: Future strategy placeholder for onchain
+  required_observation_fields: []
+  required_candidate_fields: []
+  required_data_quality_fields: []
+  optional_fields: []
+  forbidden_for_active_if_any:
+  - not_active_v1
+  readiness_rules:
+  - future strategy; not active
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: grid
+  strategy_id: grid_v0
+  status: future
+  priority: P3
+  description: Future strategy placeholder for grid
+  required_observation_fields: []
+  required_candidate_fields: []
+  required_data_quality_fields: []
+  optional_fields: []
+  forbidden_for_active_if_any:
+  - not_active_v1
+  readiness_rules:
+  - future strategy; not active
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: market_making
+  strategy_id: market_making_v0
+  status: future
+  priority: P3
+  description: Future strategy placeholder for market_making
+  required_observation_fields: []
+  required_candidate_fields: []
+  required_data_quality_fields: []
+  optional_fields: []
+  forbidden_for_active_if_any:
+  - not_active_v1
+  readiness_rules:
+  - future strategy; not active
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY

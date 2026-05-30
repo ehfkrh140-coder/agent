@@ -1,0 +1,88 @@
+# Read-only market data adapter registry. No private credentials or trading permissions.
+adapters:
+  replay_mark_orderbook_gap:
+    type: replay
+    fixture_path: data/fixtures/market_data/mark_orderbook_gap_snapshot.json
+    enabled: false
+    experimental: true
+    strategy_family: mark_orderbook_gap
+    note: Not part of active v1 strategy
+  replay_cross_exchange_spot_spread:
+    type: replay
+    fixture_path: data/fixtures/market_data/cross_exchange_spot_snapshot.json
+    enabled: true
+    strategy_family: cross_exchange_spot_spread
+  live_bybit_mark_orderbook_gap:
+    type: bybit_public
+    base_url: https://api.bybit.com
+    category: linear
+    symbol: BTCUSDT
+    display_symbol: BTC/USDT-PERP
+    orderbook_limit: 25
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    unit: 1
+    thresholds:
+      base_percent: 2.0
+      min_gap_floor_pct: 0.2
+      min_notional: 500.0
+      max_data_age_ms: 3000
+    guards:
+      manual_blacklisted: false
+      runtime_blocked: false
+      open_position: false
+      pending_duplicate: false
+    enabled: false
+    experimental: true
+    strategy_family: mark_orderbook_gap
+    note: Not part of active v1 strategy
+  live_upbit_spot:
+    type: upbit_public_spot
+    enabled: true
+    base_url: https://api.upbit.com
+    market: KRW-BTC
+    display_symbol: BTC/KRW
+    ticker_path: /v1/ticker
+    orderbook_path: /v1/orderbook
+    orderbook_limit: 15
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_config_path: configs/spot_fees.yaml
+  live_bithumb_spot:
+    type: bithumb_public_spot
+    enabled: true
+    base_url: https://api.bithumb.com
+    market: KRW-BTC
+    api_symbol: BTC_KRW
+    display_symbol: BTC/KRW
+    # Public Bithumb endpoint paths are kept configurable because public API versions may differ.
+    ticker_path: /public/ticker/{symbol}
+    orderbook_path: /public/orderbook/{symbol}
+    orderbook_limit: 15
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_config_path: configs/spot_fees.yaml
+  live_upbit_bithumb_spot_spread:
+    type: composite_spot_spread
+    enabled: true
+    strategy_family: cross_exchange_spot_spread
+    strategy_id: cross_exchange_spot_spread_v1
+    signal_type: cross_exchange_spot_spread
+    asset: BTC
+    quote: KRW
+    venues:
+      - live_upbit_spot
+      - live_bithumb_spot
+    thresholds:
+      min_net_gap_pct: 0.2
+      max_data_age_ms: 3000
+      max_latency_ms: 1000
+      min_notional: 1000000
+      min_executable_notional: 1000000
+      target_notionals:
+        - 1000000
+        - 5000000
+      safety_buffer_pct: 0.05
