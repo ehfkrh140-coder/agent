@@ -80,17 +80,23 @@ def summarize_persistence(
     }
 
 
-def council_handoff_metadata(summary: dict[str, Any], *, output_path: str | None = None) -> dict[str, Any]:
-    recommended = summary.get("persistence_status") == "PERSISTENT_READY_EDGE"
+def council_handoff_metadata(
+    summary: dict[str, Any],
+    *,
+    sampling_output_file: str | None = None,
+    council_input_file: str | None = None,
+) -> dict[str, Any]:
+    recommended = summary.get("persistence_status") == "PERSISTENT_READY_EDGE" and bool(council_input_file)
     reason = (
-        "PERSISTENT_READY_EDGE: repeated samples met readiness criteria"
+        "PERSISTENT_READY_EDGE: handoff OpportunityPacket is available"
         if recommended
-        else f"{summary.get('persistence_status')}: persistent ready edge not confirmed"
+        else f"{summary.get('persistence_status')}: persistent ready edge handoff packet not available"
     )
     return {
         "council_recommended": recommended,
         "council_reason": reason,
-        "council_input_file": output_path if recommended else None,
+        "council_input_file": council_input_file if recommended else None,
+        "sampling_output_file": sampling_output_file,
     }
 
 

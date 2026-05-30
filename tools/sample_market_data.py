@@ -10,8 +10,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from src.market_data.handoff import build_handoff_packet_from_sampling_result, write_handoff_packet
 from src.market_data.registry import build_adapter, load_market_data_config
 from src.market_data.sampling import run_market_sampling
+from src.storage.opportunity_journal import DEFAULT_JOURNAL_PATH, append_journal_record
 
 
 def main() -> None:
@@ -23,6 +25,9 @@ def main() -> None:
     parser.add_argument("--output", required=True)
     parser.add_argument("--also-save-packets", action="store_true")
     parser.add_argument("--max-errors", type=int, default=3)
+    parser.add_argument("--handoff-output", help="Optional OpportunityPacket output path for PERSISTENT_READY_EDGE only")
+    parser.add_argument("--journal", action="store_true", help="Append a sampling summary record to the opportunity journal")
+    parser.add_argument("--journal-path", default=str(DEFAULT_JOURNAL_PATH))
     args = parser.parse_args()
 
     config = load_market_data_config(args.config)
@@ -39,8 +44,20 @@ def main() -> None:
         packet_output_dir=packet_dir,
         output_path=output_path,
     )
+    if args.handoff_output:
+        handoff_packet = build_handoff_packet_from_sampling_result(result)
+        if handoff_packet is not None:
+            handoff_path = write_handoff_packet(handoff_packet, args.handoff_output)
+            result["council_recommended"] = True
+            result["council_reason"] = "PERSISTENT_READY_EDGE: handoff OpportunityPacket is available"
+            result["council_input_file"] = str(handoff_path)
+        else:
+            result["council_recommended"] = False
+            result["council_input_file"] = None
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if args.journal:
+        append_journal_record(result, journal_path=args.journal_path, sampling_output=str(output_path))
     print(f"Market sampling saved to: {output_path}")
     print(
         "summary: "

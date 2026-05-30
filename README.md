@@ -186,3 +186,10 @@ python main.py --council --opportunity-file data/generated_packets/upbit_bithumb
 ```powershell
 python tools/sample_market_data.py --adapter live_upbit_bithumb_spot_spread --samples 5 --interval 1 --output data/market_samples/upbit_bithumb_sample.json
 ```
+
+## Council handoff packet and opportunity journal
+- Sampling output is `market_sampling_v1`; use `--handoff-output` to write a Council-compatible `opportunity_packet_v0` only when persistence is `PERSISTENT_READY_EDGE`, and use `--journal` to append an audit record.
+
+```powershell
+python tools/sample_market_data.py --adapter live_upbit_bithumb_spot_spread --samples 10 --interval 1 --output data/market_samples/upbit_bithumb_sample.json --handoff-output data/generated_packets/upbit_bithumb_handoff_packet.json --journal
+```

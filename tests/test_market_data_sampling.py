@@ -41,7 +41,7 @@ class MarketDataSamplingTests(unittest.TestCase):
         self.assertEqual(len(result["samples"]), 5)
         self.assertEqual(result["summary"]["samples_ok"], 5)
         self.assertEqual(result["summary"]["persistence_status"], "PERSISTENT_READY_EDGE")
-        self.assertTrue(result["council_recommended"])
+        self.assertFalse(result["council_recommended"])
         self.assertEqual(sleeps, [])
 
     def test_sampler_records_partial_errors_and_continues(self):

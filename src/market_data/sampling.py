@@ -81,7 +81,7 @@ def run_market_sampling(
         "samples": records,
         "summary": summary,
     }
-    result.update(council_handoff_metadata(summary, output_path=str(output_path) if output_path else None))
+    result.update(council_handoff_metadata(summary, sampling_output_file=str(output_path) if output_path else None))
     return result
 
 
@@ -98,6 +98,7 @@ def _sample_record(index: int, collected_at: str, packet: OpportunityPacket, rea
         "recommended_default_decision": readiness.get("recommended_default_decision"),
         "best_candidate": _best_candidate(packet.candidates),
         "latency": _latency_summary(packet),
+        "opportunity_packet": packet.model_dump(mode="json"),
     }
 
 
