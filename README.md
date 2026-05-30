@@ -49,13 +49,25 @@ foreach ($n in 1..5) {
     Get-Content "$profileHome\.gemini\google_accounts.json" -ErrorAction SilentlyContinue
 
     $prompt = '반드시 다음 JSON만 출력하세요: {"summary":"ok","key_points":[],"concerns":[],"questions":[],"suggested_next_steps":[],"confidence":1.0}'
-    gemini.cmd --skip-trust -p $prompt --output-format json
+    $prompt | gemini.cmd --skip-trust --approval-mode=plan --policy "$(Resolve-Path configs/gemini_cli_targeted_policy.toml)" -o json --model flash
 }
 ```
 
 ## 실행
 ```powershell
 python main.py
+python main.py --council --parallel --max-workers 2
+python main.py --list-scenarios
+python main.py --council --scenario missing_data_gap --dry-run-context
+python main.py --council --scenario multi_exchange_best_edge --parallel --max-workers 2
+python main.py --council --scenario mark_orderbook_gap_long_watch --dry-run-context
+python tools/collect_market_data.py --list-adapters
+python tools/collect_market_data.py --adapter replay_mark_orderbook_gap --output data/test_scenarios/replay_mark_orderbook_gap.json
+python tools/collect_market_data.py --adapter live_bybit_mark_orderbook_gap --output data/generated_packets/bybit_live_packet.json
+python main.py --council --opportunity-file data/generated_packets/bybit_live_packet.json --parallel --max-workers 2
+python tools/run_strategy_scenarios.py --all --evaluate-only
+python tools/run_strategy_scenarios.py --strategy cross_exchange_spot_spread --evaluate-only
+python tools/run_strategy_scenarios.py --scenario spot_executable_spread_watch --dry-run-context
 ```
 
 실행 중 preflight에서 각 agent의 active/expected 계정을 마스킹해서 확인합니다.
@@ -82,8 +94,8 @@ python -m unittest tests/test_gemini_cli_client.py
 - timeout 발생 시 해당 프로필로 수동 테스트:
 
 ```powershell
-$env:GEMINI_CLI_HOME="C:\gemini-profilesgent_01"
-gemini.cmd --skip-trust -p '반드시 JSON만 출력' --output-format json
+$env:GEMINI_CLI_HOME="C:\gemini-profiles\agent_01"
+'반드시 JSON만 출력' | gemini.cmd --skip-trust --approval-mode=plan --policy "$(Resolve-Path configs/gemini_cli_targeted_policy.toml)" -o json --model flash
 ```
 
 
@@ -155,3 +167,15 @@ python main.py --parallel --max-workers 2
 - `configs/agents.yaml`의 `model` 필드는 실험용 CLI model 직접 지정 옵션입니다. 비워두면 기본 Gemini CLI 설정을 사용합니다.
 - 이 시스템은 매매 실행부가 아니라 AI Council 판단부 기반입니다.
 - 거래소 API, 주문, 출금, 이체, 자동매매 기능은 아직 구현하지 않습니다.
+
+## Public spot market-data collection (read-only)
+- Active v1 spot spread packets can be generated from public Upbit/Bithumb ticker and orderbook data only; no API key, balance, order, withdrawal, transfer, or private endpoint is used.
+
+```powershell
+python tools/collect_market_data.py --list-adapters
+python tools/collect_market_data.py --adapter live_upbit_bithumb_spot_spread --output data/generated_packets/upbit_bithumb_spot_packet.json
+python main.py --council --opportunity-file data/generated_packets/upbit_bithumb_spot_packet.json --parallel --max-workers 2
+```
+
+## Depth VWAP/slippage evaluation
+- Cross-exchange spot spread candidates now evaluate configured target notionals with orderbook-depth VWAP, side-specific slippage, executable notional, and fee/safety-buffer-adjusted net gap metrics before Council review.
