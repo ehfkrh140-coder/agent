@@ -1,0 +1,24 @@
+# Development placeholders only. These thresholds are not live trading rules.
+# Do not add private keys, secrets, account IDs, balance checks, or order settings here.
+active_strategy:
+  strategy_family: cross_exchange_spot_spread
+  strategy_id: cross_exchange_spot_spread_v1
+  status: active
+  instrument_type: spot
+  quote: KRW
+  symbols:
+    - BTC/KRW
+  venues:
+    - upbit
+    - bithumb
+  target_notionals:
+    - 1000000
+    - 5000000
+  thresholds:
+    min_net_gap_pct: 0.2
+    max_data_age_ms: 3000
+    max_latency_ms: 1000
+    min_executable_notional: 1000000
+    safety_buffer_pct: 0.05
+  disabled_strategy_families:
+    - mark_orderbook_gap
