@@ -193,3 +193,10 @@ python tools/sample_market_data.py --adapter live_upbit_bithumb_spot_spread --sa
 ```powershell
 python tools/sample_market_data.py --adapter live_upbit_bithumb_spot_spread --samples 10 --interval 1 --output data/market_samples/upbit_bithumb_sample.json --handoff-output data/generated_packets/upbit_bithumb_handoff_packet.json --journal
 ```
+
+## Sampling alerts (console/file only)
+- Sampling results can be rendered as read-only console/file alerts; Telegram and Discord remain disabled skeletons with no token or network sending implementation.
+
+```powershell
+python tools/notify_sampling_result.py --sampling-output data/market_samples/replay_spot_sample.json --log
+```
