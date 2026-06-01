@@ -5,7 +5,7 @@ This playbook defines how future strategies move from registry/catalog ideas int
 ## Current baseline
 - Active strategy remains `cross_exchange_spot_spread_v1`.
 - `mark_orderbook_gap` remains experimental/disabled.
-- All other strategies remain future backlog items until they pass the promotion steps below.
+- `orderbook_imbalance` has experimental scaffolding only; remaining unscaffolded strategies stay future backlog items until they pass the promotion steps below.
 - Every strategy starts read-only and public-data-only unless a future gated phase explicitly changes the policy.
 
 ## 1. Strategy state definitions
@@ -120,8 +120,8 @@ A strategy cannot move from future to experimental until it has:
 ### orderbook_imbalance
 - Purpose: Measure bid/ask depth imbalance as a market pressure signal using existing public orderbook depth.
 - Likely public data required: multi-level bid/ask prices and sizes, spread, depth notional, timestamp, latency and venue health.
-- First safe implementation step: strategy brief plus manual scenarios based on current Upbit/Bithumb depth fixtures.
-- Why not active yet: imbalance is a signal, not an executable spread; it needs separate readiness thresholds and false-positive controls.
+- First safe implementation step: experimental scaffolding with registry metadata, manual scenarios and non-active readiness rules.
+- Why not active yet: imbalance is a signal, not an executable spread; readiness_pass remains false to avoid Council handoff confusion.
 
 ### trade_flow_momentum
 - Purpose: Observe public trade prints or tick data to estimate short-term aggressive buy/sell flow.

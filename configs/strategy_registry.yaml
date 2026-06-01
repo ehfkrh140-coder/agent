@@ -146,17 +146,56 @@ strategies:
   execution_policy: NO_TRADE_ONLY
 - strategy_family: orderbook_imbalance
   strategy_id: orderbook_imbalance_v0
-  status: future
-  priority: P2
-  description: Future strategy placeholder for orderbook_imbalance
-  required_observation_fields: []
-  required_candidate_fields: []
-  required_data_quality_fields: []
-  optional_fields: []
+  status: experimental
+  priority: P1
+  description: Experimental read-only signal that compares bid-side and ask-side notional
+    across orderbook depth levels to detect short-term pressure or thin-book illusion.
+    It is not active and is not an executable spread strategy.
+  required_observation_fields:
+  - venue_id
+  - market_symbol
+  - instrument_type=spot
+  - bid
+  - ask
+  - bid_size
+  - ask_size
+  - liquidity.depth_levels
+  - timestamp_utc_or_data_quality_timestamp
+  - data_quality.max_data_age_ms
+  - data_quality.latency_ms
+  required_candidate_fields:
+  - candidate_type=orderbook_imbalance_signal
+  - direction=bid_heavy_orderbook_signal_or_ask_heavy_orderbook_signal_or_balanced_orderbook_signal
+  - metrics.bid_depth_notional
+  - metrics.ask_depth_notional
+  - metrics.imbalance_ratio
+  - metrics.spread_pct
+  - metrics.depth_levels_used
+  - metrics.target_notional
+  - metrics.imbalance_side
+  - freshness_pass
+  - liquidity_pass
+  required_data_quality_fields:
+  - timestamps_available
+  - max_data_age_ms
+  - latency_ms
+  optional_fields:
+  - health.api_ok
+  - base_volume_24h
+  - quote_volume_24h
   forbidden_for_active_if_any:
   - not_active_v1
+  - not_executable_spread
+  - order_execution
+  - private_endpoint
   readiness_rules:
-  - future strategy; not active
+  - experimental only; active strategy remains cross_exchange_spot_spread_v1
+  - depth_levels required
+  - timestamp/data_age/latency required
+  - stale data => REJECT or NEED_DATA
+  - imbalance_ratio above threshold => WATCH only
+  - balanced depth => REJECT or NEED_DATA
+  - readiness_pass remains false to prevent active handoff
   default_decision_when_missing_data: NEED_DATA
   execution_policy: NO_TRADE_ONLY
 - strategy_family: trade_flow_momentum

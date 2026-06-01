@@ -62,6 +62,35 @@
 - execution_policy: `NO_TRADE_ONLY`
 - notes: 삭제하지 않고 experimental/archived 후보로 유지한다.
 
+## Experimental Strategy: Orderbook Imbalance
+
+- strategy_id: `orderbook_imbalance_v0`
+- strategy_family: `orderbook_imbalance`
+- status: `experimental`
+- priority: `P1`
+- description: 여러 public spot orderbook depth level에서 bid-side notional과 ask-side notional 비율을 계산해 단기 수급 압력 또는 얇은 호가 착시를 감지하는 분석용 신호다. executable spread가 아니며 active strategy가 아니다.
+- required_observation_fields:
+  - `venue_id`, `market_symbol`, `instrument_type=spot`
+  - `bid`, `ask`, `bid_size`, `ask_size`
+  - `liquidity.depth_levels`
+  - `timestamp_utc` 또는 `data_quality.timestamps_available`
+  - `data_quality.max_data_age_ms`, `data_quality.latency_ms`
+  - `health.api_ok` optional
+- required_candidate_metrics:
+  - `bid_depth_notional`, `ask_depth_notional`
+  - `imbalance_ratio`, `spread_pct`, `depth_levels_used`, `target_notional`
+  - `imbalance_side = BID_HEAVY | ASK_HEAVY | BALANCED`
+  - `freshness_pass`, `liquidity_pass`, `imbalance_pass`
+- required_data_quality_fields:
+  - `timestamps_available`, `max_data_age_ms`, `latency_ms`
+- council_validation_points:
+  - orderbook_imbalance는 그 자체로 executable spread가 아니다.
+  - WATCH/NEED_DATA/REJECT 분석 신호로만 취급하고 `ENTER`를 금지한다.
+  - active strategy는 계속 `cross_exchange_spot_spread_v1`이다.
+- allowed_decisions: `WATCH`, `REJECT`, `NEED_DATA`
+- execution_policy: `NO_TRADE_ONLY`
+- notes: live adapter 추가 없이 기존 public orderbook depth fixture/scenario 기반 experimental scaffolding으로 유지한다.
+
 ## Future Strategies
 
 아래 전략은 registry에 future로 남기며 현재 active v1 판단 입력으로 사용하지 않는다.
@@ -73,7 +102,6 @@
 - `funding_rate`
 
 ### P2 Future
-- `orderbook_imbalance`
 - `trade_flow_momentum`
 - `volatility_breakout`
 - `mean_reversion`
