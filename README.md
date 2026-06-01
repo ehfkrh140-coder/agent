@@ -217,3 +217,11 @@ python tools/notify_sampling_result.py --sampling-output data/market_samples/rep
 python tools/collect_market_data.py --adapter replay_orderbook_imbalance --output data/generated_packets/replay_orderbook_imbalance_packet.json
 python tools/run_strategy_scenarios.py --strategy orderbook_imbalance --evaluate-only
 ```
+
+## Experimental live orderbook imbalance composite
+- `live_upbit_bithumb_orderbook_imbalance` reuses the existing public Upbit/Bithumb spot child adapters to build an experimental, non-active `orderbook_imbalance` OpportunityPacket. It is read-only and not a Council handoff or execution signal.
+
+```powershell
+python tools/collect_market_data.py --adapter live_upbit_bithumb_orderbook_imbalance --output data/generated_packets/live_orderbook_imbalance_packet.json
+python main.py --council --opportunity-file data/generated_packets/live_orderbook_imbalance_packet.json --dry-run-context
+```

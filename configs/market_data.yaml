@@ -73,6 +73,23 @@ adapters:
     max_retries: 2
     user_agent: agent-council-market-data-v1
     fee_config_path: configs/spot_fees.yaml
+  live_upbit_bithumb_orderbook_imbalance:
+    type: composite_orderbook_imbalance
+    enabled: true
+    experimental: true
+    strategy_family: orderbook_imbalance
+    strategy_id: orderbook_imbalance_v0
+    signal_type: orderbook_imbalance
+    asset: BTC
+    quote: KRW
+    venues:
+      - live_upbit_spot
+      - live_bithumb_spot
+    thresholds:
+      imbalance_ratio_threshold: 1.5
+      max_data_age_ms: 3000
+      target_notional: 1000000
+    note: "Experimental/non-active signal. Not executable spread. No Council handoff."
   live_upbit_bithumb_spot_spread:
     type: composite_spot_spread
     enabled: true

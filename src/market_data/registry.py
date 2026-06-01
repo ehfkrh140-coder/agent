@@ -8,7 +8,7 @@ import yaml
 from src.market_data.adapters.base import MarketDataAdapter
 from src.market_data.adapters.bithumb import BithumbPublicSpotAdapter
 from src.market_data.adapters.bybit import BybitPublicMarketDataAdapter
-from src.market_data.adapters.composite import CompositeSpotSpreadAdapter
+from src.market_data.adapters.composite import CompositeOrderbookImbalanceAdapter, CompositeSpotSpreadAdapter
 from src.market_data.adapters.replay import ReplayMarketDataAdapter
 from src.market_data.adapters.upbit import UpbitPublicSpotAdapter
 
@@ -41,11 +41,13 @@ def build_adapter(adapter_id: str, config: dict[str, Any] | None = None) -> Mark
         return UpbitPublicSpotAdapter(adapter_id, config=adapter_config)
     if adapter_type == "bithumb_public_spot":
         return BithumbPublicSpotAdapter(adapter_id, config=adapter_config)
-    if adapter_type == "composite_spot_spread":
+    if adapter_type in {"composite_spot_spread", "composite_orderbook_imbalance"}:
         child_ids = adapter_config.get("venues") or []
         if not isinstance(child_ids, list) or not child_ids:
             raise ValueError(f"Composite adapter {adapter_id} requires venues")
         child_adapters = [build_adapter(child_id, config) for child_id in child_ids]
+        if adapter_type == "composite_orderbook_imbalance":
+            return CompositeOrderbookImbalanceAdapter(adapter_id, config=adapter_config, child_adapters=child_adapters)
         return CompositeSpotSpreadAdapter(adapter_id, config=adapter_config, child_adapters=child_adapters)
     raise ValueError(f"Unsupported adapter type for v0: {adapter_type!r}")
 
