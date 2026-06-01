@@ -7,6 +7,14 @@ adapters:
     experimental: true
     strategy_family: mark_orderbook_gap
     note: Not part of active v1 strategy
+
+  replay_orderbook_imbalance:
+    type: replay
+    fixture_path: data/fixtures/market_data/orderbook_imbalance_snapshot.json
+    enabled: true
+    experimental: true
+    strategy_family: orderbook_imbalance
+    note: Experimental non-active orderbook imbalance replay fixture
   replay_cross_exchange_spot_spread:
     type: replay
     fixture_path: data/fixtures/market_data/cross_exchange_spot_snapshot.json

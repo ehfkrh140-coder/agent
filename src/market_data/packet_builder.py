@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from src.market_data.orderbook_imbalance import compute_orderbook_imbalance
 from src.market_data.vwap import compute_buy_vwap_from_asks, compute_sell_vwap_from_bids
 from src.schemas.opportunity_packet import (
     DataQualitySnapshot,
@@ -26,6 +27,8 @@ class OpportunityPacketBuilder:
             return self.build_mark_orderbook_gap(snapshot)
         if strategy_family == "cross_exchange_spot_spread":
             return self.build_cross_exchange_spot_spread(snapshot)
+        if strategy_family == "orderbook_imbalance":
+            return self.build_orderbook_imbalance(snapshot)
         raise ValueError(f"Unsupported strategy_family: {strategy_family!r}")
 
     def build_mark_orderbook_gap(self, snapshot: dict[str, Any]) -> OpportunityPacket:
@@ -58,6 +61,25 @@ class OpportunityPacketBuilder:
             signal_type="cross_exchange_price_gap",
             strategy_family="cross_exchange_spot_spread",
             strategy_id=snapshot.get("strategy_id") or "cross_exchange_spot_spread_v0",
+            observations=observations,
+            candidates=candidates,
+            detector_metadata=self._metadata(snapshot),
+            extensions=snapshot.get("extensions", {}),
+        )
+
+
+    def build_orderbook_imbalance(self, snapshot: dict[str, Any]) -> OpportunityPacket:
+        raw_observations = snapshot.get("observations") or []
+        observations = [self._observation(raw) for raw in raw_observations]
+        candidates = self._orderbook_imbalance_candidates(observations, snapshot)
+        return OpportunityPacket(
+            packet_id=snapshot.get("packet_id") or self._packet_id("orderbook_imbalance"),
+            created_at_utc=self._created_at(snapshot),
+            asset=snapshot["asset"],
+            quote=snapshot["quote"],
+            signal_type="orderbook_imbalance",
+            strategy_family="orderbook_imbalance",
+            strategy_id=snapshot.get("strategy_id") or "orderbook_imbalance_v0",
             observations=observations,
             candidates=candidates,
             detector_metadata=self._metadata(snapshot),
@@ -249,6 +271,75 @@ class OpportunityPacketBuilder:
                     )
                 )
         return candidates
+
+
+    def _orderbook_imbalance_candidates(self, observations: list[MarketObservation], snapshot: dict[str, Any]) -> list[OpportunityCandidate]:
+        thresholds = snapshot.get("thresholds", {})
+        threshold = float(thresholds.get("imbalance_ratio_threshold", 1.5))
+        target_notional = self._optional_float(thresholds.get("target_notional"))
+        max_data_age_ms = thresholds.get("max_data_age_ms")
+        candidates: list[OpportunityCandidate] = []
+        for obs in observations:
+            freshness_pass = self._freshness_pass(obs, max_data_age_ms)
+            metrics = compute_orderbook_imbalance(
+                obs,
+                threshold=threshold,
+                target_notional=target_notional,
+                max_data_age_ms=max_data_age_ms,
+                freshness_pass=freshness_pass,
+            )
+            direction = metrics["direction"]
+            candidates.append(
+                OpportunityCandidate(
+                    candidate_id=f"{obs.observation_id or obs.venue_id}_orderbook_imbalance",
+                    candidate_type="orderbook_imbalance_signal",
+                    strategy_family="orderbook_imbalance",
+                    strategy_id=snapshot.get("strategy_id") or "orderbook_imbalance_v0",
+                    source_observation_id=obs.observation_id,
+                    source_venue_id=obs.venue_id,
+                    direction=direction,
+                    estimated_net_gap_pct=None,
+                    liquidity_pass=metrics.get("liquidity_pass"),
+                    freshness_pass=freshness_pass,
+                    gap_pass=bool(metrics.get("imbalance_pass")),
+                    guard_pass=True,
+                    metrics=metrics,
+                    thresholds={
+                        "imbalance_ratio_threshold": threshold,
+                        "max_data_age_ms": max_data_age_ms,
+                        "target_notional": target_notional,
+                    },
+                    required_missing_fields=self._missing_orderbook_imbalance_fields(obs),
+                    assumptions=[
+                        "experimental non-active orderbook imbalance signal",
+                        "not an executable spread and not a trade instruction",
+                    ],
+                )
+            )
+        return candidates
+
+    def _missing_orderbook_imbalance_fields(self, obs: MarketObservation) -> list[str]:
+        missing: list[str] = []
+        for field_name in ["bid", "ask", "bid_size", "ask_size"]:
+            if getattr(obs, field_name) is None:
+                missing.append(field_name)
+        if obs.liquidity is None or not obs.liquidity.depth_levels:
+            missing.append("liquidity.depth_levels")
+        if obs.timestamp_utc is None and (obs.data_quality is None or not obs.data_quality.timestamps_available):
+            missing.append("timestamp")
+        if obs.data_quality is None or obs.data_quality.max_data_age_ms is None:
+            missing.append("data_quality.max_data_age_ms")
+        if obs.data_quality is None or obs.data_quality.latency_ms is None:
+            missing.append("data_quality.latency_ms")
+        return missing
+
+    def _optional_float(self, value: Any) -> float | None:
+        if value in (None, ""):
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
 
     def _target_notionals(self, snapshot: dict[str, Any], thresholds: dict[str, Any], min_notional: float) -> list[float]:
         raw_values = snapshot.get("target_notionals") or thresholds.get("target_notionals") or []

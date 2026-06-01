@@ -209,3 +209,11 @@ python tools/notify_sampling_result.py --sampling-output data/market_samples/rep
 - Codex task template: [docs/codex_task_template.md](docs/codex_task_template.md)
 - Architecture status: [docs/architecture_status.md](docs/architecture_status.md)
 - Strategy expansion playbook: [docs/strategy_expansion_playbook.md](docs/strategy_expansion_playbook.md)
+
+## Experimental orderbook imbalance replay
+- `orderbook_imbalance` remains experimental/non-active, but replay depth snapshots can now build read-only OpportunityPackets for evaluate-only checks.
+
+```powershell
+python tools/collect_market_data.py --adapter replay_orderbook_imbalance --output data/generated_packets/replay_orderbook_imbalance_packet.json
+python tools/run_strategy_scenarios.py --strategy orderbook_imbalance --evaluate-only
+```
