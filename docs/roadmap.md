@@ -19,7 +19,7 @@
 4. Multi-venue expansion.
 5. WebSocket data freshness upgrade.
 6. Council auto-review option, default off.
-7. Strategy expansion one-by-one.
+7. Strategy expansion one-by-one using `docs/strategy_expansion_playbook.md`.
 
 ## Guardrails for all TODOs
 - Every TODO starts as read-only by default.

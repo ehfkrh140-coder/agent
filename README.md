@@ -208,3 +208,4 @@ python tools/notify_sampling_result.py --sampling-output data/market_samples/rep
 - Roadmap: [docs/roadmap.md](docs/roadmap.md)
 - Codex task template: [docs/codex_task_template.md](docs/codex_task_template.md)
 - Architecture status: [docs/architecture_status.md](docs/architecture_status.md)
+- Strategy expansion playbook: [docs/strategy_expansion_playbook.md](docs/strategy_expansion_playbook.md)
