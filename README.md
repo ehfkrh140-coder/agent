@@ -200,3 +200,11 @@ python tools/sample_market_data.py --adapter live_upbit_bithumb_spot_spread --sa
 ```powershell
 python tools/notify_sampling_result.py --sampling-output data/market_samples/replay_spot_sample.json --log
 ```
+
+## Project guardrails and workflow docs
+- Repository guardrails: [AGENTS.md](AGENTS.md)
+- No-trade policy: [docs/no_trade_policy.md](docs/no_trade_policy.md)
+- Active strategy: [docs/active_strategy.md](docs/active_strategy.md)
+- Roadmap: [docs/roadmap.md](docs/roadmap.md)
+- Codex task template: [docs/codex_task_template.md](docs/codex_task_template.md)
+- Architecture status: [docs/architecture_status.md](docs/architecture_status.md)
