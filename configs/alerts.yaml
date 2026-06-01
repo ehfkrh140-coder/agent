@@ -1,0 +1,17 @@
+alerts:
+  emit_info_for_no_candidate: false
+  alert_on_persistent_net_gap: true
+  alert_on_sample_errors: true
+  alert_on_persistent_ready_edge: true
+channels:
+  console:
+    enabled: true
+  file:
+    enabled: true
+    path: data/alerts/alert_log.jsonl
+  telegram:
+    enabled: false
+    note: "Not implemented. Do not store tokens."
+  discord:
+    enabled: false
+    note: "Not implemented. Do not store webhook URLs."
