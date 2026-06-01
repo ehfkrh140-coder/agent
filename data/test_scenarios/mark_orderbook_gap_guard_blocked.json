@@ -1,0 +1,134 @@
+{
+  "schema_version": "opportunity_packet_v0",
+  "packet_id": "mark_orderbook_gap_guard_blocked",
+  "created_at_utc": "2026-05-29T00:00:00Z",
+  "asset": "BTC",
+  "quote": "USDT",
+  "signal_type": "mark_orderbook_gap",
+  "strategy_family": "mark_orderbook_gap",
+  "strategy_id": "mark_orderbook_gap_hunt_v0",
+  "observations": [
+    {
+      "observation_id": "bybit_obs_1",
+      "venue_id": "bybit",
+      "venue_name": "Bybit",
+      "market_symbol": "BTC/USDT-PERP",
+      "instrument_type": "perpetual",
+      "region": "GLOBAL",
+      "last_price": null,
+      "mark_price": 100.0,
+      "index_price": 99.9,
+      "leverage": 10,
+      "max_leverage": 50,
+      "unit": 1,
+      "tick": 0.1,
+      "step": 0.001,
+      "bid": 99.3,
+      "ask": 99.4,
+      "bid_size": 10,
+      "ask_size": 20,
+      "base_volume_24h": 10000,
+      "quote_volume_24h": 1000000000,
+      "timestamp_utc": "2026-05-29T00:00:01Z",
+      "fees": {
+        "trading_fee_pct": 0.04,
+        "maker_fee_pct": 0.02,
+        "taker_fee_pct": 0.04,
+        "fee_source": "scenario",
+        "extensions": {}
+      },
+      "liquidity": {
+        "orderbook_depth_available": true,
+        "volume_available": true,
+        "estimated_executable_notional": 1988.0,
+        "estimated_slippage_pct": null,
+        "depth_levels": []
+      },
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": true,
+        "max_data_age_ms": 500,
+        "source": "manual_scenario",
+        "latency_ms": 500,
+        "is_realtime": true
+      },
+      "health": {
+        "api_status_known": true,
+        "api_ok": true,
+        "maintenance": false,
+        "trading_enabled": true,
+        "message": null
+      },
+      "extensions": {}
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "m1",
+      "candidate_type": "mark_orderbook_gap_candidate",
+      "strategy_family": "mark_orderbook_gap",
+      "strategy_id": "mark_orderbook_gap_hunt_v0",
+      "side_candidate": "LONG",
+      "source_observation_id": "bybit_obs_1",
+      "target_observation_id": null,
+      "source_venue_id": "bybit",
+      "target_venue_id": null,
+      "direction": "mark_orderbook_gap_long_candidate",
+      "gross_gap_absolute": null,
+      "gross_gap_pct": 0.6,
+      "estimated_net_gap_pct": null,
+      "target_gap_pct": 0.2,
+      "long_gap_pct": 0.6,
+      "short_gap_pct": null,
+      "long_notional": 1988.0,
+      "short_notional": null,
+      "liquidity_pass": true,
+      "gap_pass": true,
+      "freshness_pass": true,
+      "guard_pass": false,
+      "metrics": {
+        "base_percent": 2.0,
+        "min_gap_floor_pct": 0.2,
+        "computed_formula_version": "mark_gap_v0"
+      },
+      "guards": {
+        "manual_blacklisted": true,
+        "runtime_blocked": true,
+        "open_position": false,
+        "pending_duplicate": false
+      },
+      "thresholds": {
+        "target_gap_pct": 0.2,
+        "min_notional": 500.0,
+        "max_data_age_ms": 3000
+      },
+      "required_missing_fields": [],
+      "assumptions": [],
+      "extensions": {}
+    }
+  ],
+  "human_context": null,
+  "expected_behavior": {
+    "preferred_final_decision": "REJECT",
+    "acceptable_final_decisions": [
+      "REJECT"
+    ],
+    "must_not_include": [
+      "진입"
+    ],
+    "max_confidence": 0.6,
+    "notes": "guard blocked"
+  },
+  "detector_metadata": {
+    "detector_name": "manual_mark_orderbook_gap_scenario",
+    "detector_version": "v0",
+    "generated_from": "manual_scenario",
+    "source_files": [
+      "data/test_scenarios/mark_orderbook_gap_guard_blocked.json"
+    ],
+    "extensions": {}
+  },
+  "extensions": {
+    "strategy_catalog_ref": "docs/strategy_catalog.md#strategy-01-mark-orderbook-gap-hunt"
+  }
+}
