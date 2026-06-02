@@ -30,6 +30,7 @@ Define a read-only strategy plan that observes domestic `USDT/KRW` markets on Ko
 ## Probe alignment status
 - Prior probe result: Upbit `domestic_usdt_krw` was `ok / available`; treat it as the confirmed primary domestic public source for planning.
 - Prior probe result: Bithumb `domestic_usdt_krw` was `ok / unknown`; keep it as domestic v0 secondary candidate and re-check its public pair availability/response shape.
+- Bithumb must be confirmed before domestic cross-exchange executable spread scaffolding; if Bithumb remains unknown, use the Upbit-only domestic reference fallback instead of executable spread scaffolding.
 - Prior probe result: Coinone and Korbit were `skipped / unknown`; they are future domestic expansion only, not v0.
 - Prior probe result: Binance, Bybit, and OKX `global_usdt_reference` were `ok / available`; keep them as the initial global USDT reference basket.
 - FX candidates are out-of-scope for current strategy and must not block the no-FX Tether cross-market path.

@@ -71,6 +71,11 @@ class UsdtKrwPublicProbeTests(unittest.TestCase):
                 "fx_date_or_time_value",
                 "requires_api_key",
                 "suitable_for_mode_b_candidate",
+                "bithumb_pair_symbol_detected",
+                "bithumb_market_style_detected",
+                "bithumb_ticker_shape_detected",
+                "bithumb_orderbook_shape_detected",
+                "confidence",
             },
         )
         self.assertEqual(result["status"], "skipped")
@@ -114,7 +119,12 @@ class UsdtKrwPublicProbeTests(unittest.TestCase):
             self.assertNotIn("x-api-key", lowered)
 
     def test_bithumb_mocked_public_responses_mark_usdt_krw_available(self) -> None:
+        seen_headers: list[dict[str, str]] = []
+
         def fake_get(url: str, *, timeout_seconds: float, headers: dict[str, str]) -> ProbeHttpResponse:
+            seen_headers.append(headers)
+            if "/public/ticker/ALL_KRW" in url:
+                return ProbeHttpResponse({"status": "0000", "data": {"USDT": {"closing_price": "1391"}}}, 200, 2, url)
             if "/public/ticker/USDT_KRW" in url:
                 return ProbeHttpResponse(
                     {"status": "0000", "data": {"closing_price": "1391", "date": "1780000000000", "symbol": "USDT_KRW"}},
@@ -145,6 +155,66 @@ class UsdtKrwPublicProbeTests(unittest.TestCase):
         self.assertEqual(result["pair_availability"], "available")
         self.assertTrue(result["public_ticker_shape_detected"])
         self.assertTrue(result["public_orderbook_shape_detected"])
+        self.assertTrue(result["bithumb_pair_symbol_detected"])
+        self.assertTrue(result["bithumb_ticker_shape_detected"])
+        self.assertTrue(result["bithumb_orderbook_shape_detected"])
+        self.assertEqual(result["confidence"], "high")
+        for headers in seen_headers:
+            lowered = {key.lower() for key in headers}
+            self.assertNotIn("authorization", lowered)
+            self.assertNotIn("x-api-key", lowered)
+
+    def test_bithumb_ambiguous_public_response_remains_unknown(self) -> None:
+        def fake_get(url: str, *, timeout_seconds: float, headers: dict[str, str]) -> ProbeHttpResponse:
+            if "/public/ticker/ALL_KRW" in url:
+                return ProbeHttpResponse({"status": "0000", "data": {"BTC": {"closing_price": "90000000"}}}, 200, 2, url)
+            if "/public/ticker/USDT_KRW" in url:
+                return ProbeHttpResponse({"status": "0000", "data": {"unexpected": "ok"}}, 200, 3, url)
+            if "/public/orderbook/USDT_KRW" in url:
+                return ProbeHttpResponse({"status": "0000", "data": {"message": "generic ok"}}, 200, 4, url)
+            raise AssertionError(f"unexpected URL {url}")
+
+        result = probe_source(_source("bithumb"), http_get_json=fake_get, created_at_utc="2026-06-02T00:00:00+00:00")
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["pair_availability"], "unknown")
+        self.assertFalse(result["public_ticker_shape_detected"])
+        self.assertFalse(result["public_orderbook_shape_detected"])
+        self.assertFalse(result["bithumb_ticker_shape_detected"])
+        self.assertFalse(result["bithumb_orderbook_shape_detected"])
+        self.assertEqual(result["confidence"], "low")
+
+    def test_bithumb_unavailable_response_is_not_false_positive(self) -> None:
+        def fake_get(url: str, *, timeout_seconds: float, headers: dict[str, str]) -> ProbeHttpResponse:
+            if "/public/ticker/ALL_KRW" in url:
+                return ProbeHttpResponse({"status": "0000", "data": {"BTC": {"closing_price": "90000000"}}}, 200, 2, url)
+            return ProbeHttpResponse({"status": "5600", "message": "invalid symbol not found"}, 200, 3, url)
+
+        result = probe_source(_source("bithumb"), http_get_json=fake_get, created_at_utc="2026-06-02T00:00:00+00:00")
+        self.assertEqual(result["status"], "ok")
+        self.assertIn(result["pair_availability"], {"unavailable", "unknown"})
+        self.assertNotEqual(result["pair_availability"], "available")
+        self.assertEqual(result["confidence"], "medium")
+
+    def test_bithumb_recheck_summary_fields_are_present(self) -> None:
+        def fake_get(url: str, *, timeout_seconds: float, headers: dict[str, str]) -> ProbeHttpResponse:
+            if "/public/ticker/ALL_KRW" in url:
+                return ProbeHttpResponse({"status": "0000", "data": {"BTC": {"closing_price": "90000000"}}}, 200, 2, url)
+            if "/public/ticker/USDT_KRW" in url:
+                return ProbeHttpResponse({"status": "0000", "data": {"unexpected": "ok"}}, 200, 3, url)
+            if "/public/orderbook/USDT_KRW" in url:
+                return ProbeHttpResponse({"status": "0000", "data": {"message": "generic ok"}}, 200, 4, url)
+            raise AssertionError(f"unexpected URL {url}")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "probe.yaml"
+            config_path.write_text(
+                yaml.safe_dump({"schema_version": "usdt_krw_probe_sources_v0", "sources": [_source("bithumb")]}),
+                encoding="utf-8",
+            )
+            report = run_probe_report(config_path=config_path, http_get_json=fake_get, now_fn=lambda: "2026-06-02T00:00:00+00:00")
+        self.assertEqual(report["summary"]["domestic_bithumb_recheck_status"], "ok")
+        self.assertEqual(report["summary"]["domestic_bithumb_pair_availability"], "unknown")
+        self.assertIn("Bithumb USDT/KRW exact public pair availability remains unknown", report["summary"]["domestic_bithumb_blocker_reason"])
 
     def test_uncertain_source_is_skipped_without_false_positive(self) -> None:
         result = probe_source(_source("korbit"), created_at_utc="2026-06-02T00:00:00+00:00")

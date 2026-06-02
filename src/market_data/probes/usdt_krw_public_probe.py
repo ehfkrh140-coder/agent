@@ -174,6 +174,14 @@ def probe_source(
         orderbook_detected=orderbook_detected,
         market_list_checked=market_list_checked,
     )
+    if source_id == "bithumb" and role == "domestic_usdt_krw":
+        _apply_bithumb_detection(
+            result,
+            data_by_endpoint=data_by_endpoint,
+            endpoints=endpoints,
+            pair_candidates=pair_candidates,
+            http_status=result.get("http_status"),
+        )
     if role == "fx_reference":
         _apply_fx_detection(result, data_by_endpoint.values(), source=source)
     result["status"] = "ok" if not errors else "error"
@@ -208,6 +216,11 @@ def empty_probe_result(*, source_id: str, role: str, created_at_utc: str, notes:
         "fx_date_or_time_value": None,
         "requires_api_key": None,
         "suitable_for_mode_b_candidate": None,
+        "bithumb_pair_symbol_detected": None,
+        "bithumb_market_style_detected": None,
+        "bithumb_ticker_shape_detected": None,
+        "bithumb_orderbook_shape_detected": None,
+        "confidence": "unknown",
     }
 
 
@@ -254,6 +267,7 @@ def summarize_results(results: list[dict[str, Any]]) -> dict[str, Any]:
             if fx_unresolved
             else None
         ),
+        **_bithumb_summary_fields(results),
     }
 
 
@@ -327,6 +341,115 @@ def _pair_availability(
         return "unavailable"
     return "unknown"
 
+
+
+def _apply_bithumb_detection(
+    result: dict[str, Any],
+    *,
+    data_by_endpoint: dict[str, Any],
+    endpoints: dict[str, Any],
+    pair_candidates: list[str],
+    http_status: int | None,
+) -> None:
+    """Conservatively re-check Bithumb USDT/KRW public response shape.
+
+    Bithumb availability is high-confidence only when an exact pair symbol is present
+    or an exact configured pair endpoint returns valid ticker/orderbook data. Weak or
+    unrelated KRW/USDT evidence remains unknown.
+    """
+    ticker_payload = data_by_endpoint.get("ticker")
+    orderbook_payload = data_by_endpoint.get("orderbook")
+    market_payload = data_by_endpoint.get("market_list")
+    normalized_candidates = {_normalize_pair(candidate) for candidate in pair_candidates if candidate}
+    exact_endpoint_names = {
+        name
+        for name, endpoint in endpoints.items()
+        if isinstance(endpoint, dict)
+        and endpoint.get("symbol") is not None
+        and _normalize_pair(str(endpoint.get("symbol"))) in normalized_candidates
+    }
+
+    symbol_detected = any(_contains_any_pair(data, pair_candidates) for data in data_by_endpoint.values())
+    market_style_detected = bool(market_payload is not None and _bithumb_market_list_has_pair(market_payload, pair_candidates))
+    ticker_shape = _detect_bithumb_ticker_shape(ticker_payload)
+    orderbook_shape = _detect_bithumb_orderbook_shape(orderbook_payload)
+    exact_ticker = ticker_shape and (symbol_detected or "ticker" in exact_endpoint_names)
+    exact_orderbook = orderbook_shape and (symbol_detected or "orderbook" in exact_endpoint_names)
+    explicit_unavailable = _bithumb_explicit_unavailable(data_by_endpoint.values(), http_status=http_status)
+
+    result["bithumb_pair_symbol_detected"] = bool(symbol_detected)
+    result["bithumb_market_style_detected"] = bool(market_style_detected)
+    result["bithumb_ticker_shape_detected"] = bool(ticker_shape and exact_ticker)
+    result["bithumb_orderbook_shape_detected"] = bool(orderbook_shape and exact_orderbook)
+    result["public_ticker_shape_detected"] = bool(ticker_shape and exact_ticker)
+    result["public_orderbook_shape_detected"] = bool(orderbook_shape and exact_orderbook)
+
+    if market_style_detected or exact_ticker or exact_orderbook:
+        result["pair_availability"] = "available"
+        result["confidence"] = "high"
+        result["notes"].append("Bithumb exact USDT/KRW public response shape was detected with high confidence.")
+    elif explicit_unavailable:
+        result["pair_availability"] = "unavailable"
+        result["confidence"] = "medium"
+        result["notes"].append("Bithumb public response explicitly indicated the exact pair is unavailable or invalid.")
+    else:
+        result["pair_availability"] = "unknown"
+        result["confidence"] = "low" if any(data is not None for data in data_by_endpoint.values()) else "unknown"
+        result["notes"].append("Bithumb recheck remains ambiguous; exact USDT/KRW availability was not inferred from weak evidence.")
+
+
+def _detect_bithumb_ticker_shape(data: Any) -> bool:
+    if data is None or not _has_success_status(data):
+        return False
+    keys = {key.lower() for key in _walk_keys(data)}
+    price_keys = {"closing_price", "opening_price", "max_price", "min_price", "trade_price", "prev_closing_price"}
+    bid_ask_keys = {"buy_price", "sell_price", "bid", "ask", "bid_price", "ask_price"}
+    return bool(keys & (price_keys | bid_ask_keys))
+
+
+def _detect_bithumb_orderbook_shape(data: Any) -> bool:
+    if data is None or not _has_success_status(data):
+        return False
+    keys = {key.lower() for key in _walk_keys(data)}
+    return bool({"bids", "asks"}.issubset(keys) or {"bid", "ask"}.issubset(keys))
+
+
+def _bithumb_market_list_has_pair(data: Any, pair_candidates: Iterable[str]) -> bool:
+    return _contains_any_pair(data, pair_candidates)
+
+
+def _bithumb_explicit_unavailable(payloads: Iterable[Any], *, http_status: int | None) -> bool:
+    if http_status == 404:
+        return True
+    unavailable_terms = ("not found", "invalid", "not exist", "not supported", "unavailable", "없는", "존재하지")
+    for payload in payloads:
+        text = json.dumps(payload, ensure_ascii=False).lower() if payload is not None else ""
+        status_values = [str(value).lower() for path, value in _walk_paths(payload) if path and path[-1].lower() in {"status", "code"}]
+        if any(value not in {"0000", "0", "ok", "success"} for value in status_values) and any(term in text for term in unavailable_terms):
+            return True
+    return False
+
+
+def _bithumb_summary_fields(results: list[dict[str, Any]]) -> dict[str, Any]:
+    bithumb = next((result for result in results if result.get("source_id") == "bithumb"), None)
+    if not bithumb:
+        return {
+            "domestic_bithumb_recheck_status": "not_checked",
+            "domestic_bithumb_pair_availability": "unknown",
+            "domestic_bithumb_blocker_reason": "Bithumb source was not included in this probe report.",
+        }
+    availability = str(bithumb.get("pair_availability") or "unknown")
+    if availability == "available":
+        blocker = None
+    elif availability == "unavailable":
+        blocker = "Bithumb USDT/KRW public response indicated unavailable or invalid exact pair."
+    else:
+        blocker = "Bithumb USDT/KRW exact public pair availability remains unknown after conservative recheck."
+    return {
+        "domestic_bithumb_recheck_status": bithumb.get("status"),
+        "domestic_bithumb_pair_availability": availability,
+        "domestic_bithumb_blocker_reason": blocker,
+    }
 
 def _contains_any_pair(data: Any, pair_candidates: Iterable[str]) -> bool:
     normalized_candidates = {_normalize_pair(candidate) for candidate in pair_candidates if candidate}

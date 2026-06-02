@@ -44,15 +44,21 @@ sources:
       - USDT_KRW
       - USDT/KRW
     endpoints:
+      market_list:
+        path: /public/ticker/ALL_KRW
       ticker:
         path: /public/ticker/{symbol}
         symbol: USDT_KRW
       orderbook:
         path: /public/orderbook/{symbol}
         symbol: USDT_KRW
+    confirmation_rule:
+      - Availability is confirmed only when public response clearly identifies USDT/KRW or returns valid ticker/orderbook data for the exact pair.
+      - Do not infer availability from unrelated KRW or USDT data.
     notes:
       - Uses known public Bithumb ticker and orderbook path candidates only.
-      - Availability is confirmed only when public responses clearly return data for USDT_KRW.
+      - Market-list style candidate is public ticker ALL_KRW only; it must clearly identify USDT_KRW before proving availability.
+      - Availability is confirmed only when public response clearly identifies USDT/KRW or returns valid ticker/orderbook data for the exact pair.
 
   - source_id: coinone
     role: domestic_usdt_krw

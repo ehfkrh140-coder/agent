@@ -55,6 +55,15 @@ FX v0 source is not needed for the near-term strategy.
 
 The earlier FX source work showed unresolved USD/KRW candidates, but the user clarified that USD/KRW FX is out of scope. Do not continue FX cadence work as the next step for the current user-intended strategy. Do not calculate `fair_usdt_krw_price`, and do not calculate `premium_pct` against USD/KRW in current scope.
 
+
+## Bithumb recheck status
+Bithumb USDT/KRW recheck is the current public-probe gate. The probe logic should report one of three conservative outcomes:
+- `available`: exact Bithumb `USDT/KRW` ticker/orderbook data or exact pair identity is clearly detected.
+- `unavailable`: public response explicitly indicates the exact pair is invalid, unavailable, or not found.
+- `unknown`: response is successful but ambiguous, incomplete, or not exact enough; do not infer availability from unrelated KRW or USDT data.
+
+This recheck must not promote `tether_cross_market_premium` to experimental or active by itself.
+
 ## Current blocker
 The previous FX blocker no longer blocks near-term work because FX is no longer a required source. The current blocker is Bithumb re-check after aligning public probe results with the reframed source set:
 - Keep Upbit `USDT/KRW` confirmed as the primary domestic public source.
