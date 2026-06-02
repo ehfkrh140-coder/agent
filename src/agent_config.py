@@ -8,6 +8,7 @@ class AgentConfig(BaseModel):
     name: str
     provider: str = "gemini_cli"
     model: Optional[str] = None
+    approval_mode: str = "plan"
     gemini_cli_home: str
     cli_command: str = "gemini.cmd"
     timeout_seconds: int = Field(default=120, ge=1, le=600)
