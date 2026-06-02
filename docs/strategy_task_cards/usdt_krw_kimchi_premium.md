@@ -235,10 +235,13 @@ None. This is a documentation-only strategy card.
 - The card clearly separates domestic USDT spread observation from USDT/KRW kimchi premium / FX basis analysis.
 - No active strategy change occurs.
 - No adapter, private API, or trading implementation is added.
-- The next card can be `USDT/KRW Data Availability Check v0`.
+- The multi-source matrix is linked at [`docs/data_availability/usdt_krw_multi_source_matrix.md`](../data_availability/usdt_krw_multi_source_matrix.md).
+- Experimental scaffolding requires the Multi-Source Data Availability Matrix and `USDT/KRW Public Probe v0` report first.
+- The earlier next-card label `USDT/KRW Data Availability Check v0` is now represented by the Multi-Source Matrix plus `USDT/KRW Public Probe v0`; the next implementation gate after the read-only probe report can be `USDT/KRW Experimental Scaffolding v0`.
 
 ## Non-goals
-- Do not implement data availability checks in this card.
+- Do not treat the public probe report as a live adapter or execution readiness check.
+- Do not implement persistent data availability adapters in this card.
 - Do not implement live or replay adapters.
 - Do not add scenario JSON files.
 - Do not implement readiness code.

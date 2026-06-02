@@ -163,7 +163,7 @@ Purpose:
 - Do no trading.
 - Add no persistent adapter yet.
 
-This work does not implement the public probe. It only prepares the matrix for that later documentation/probe task.
+`USDT/KRW Public Probe v0` now provides a read-only check tool that can write `data/probes/usdt_krw_public_probe.json` from candidate public endpoints. The probe is not a persistent adapter, does not create OpportunityPackets, and does not change strategy status. Review the probe report before any future experimental scaffolding card.
 
 ## No-trade compliance
 - No private API.

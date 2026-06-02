@@ -239,4 +239,11 @@ python tools/notify_sampling_result.py --sampling-output data/market_samples/rep
 - Card: [docs/strategy_task_cards/usdt_krw_kimchi_premium.md](docs/strategy_task_cards/usdt_krw_kimchi_premium.md)
 
 ## USDT/KRW multi-source data availability matrix
-- Planning matrix: [docs/data_availability/usdt_krw_multi_source_matrix.md](docs/data_availability/usdt_krw_multi_source_matrix.md) separates domestic venues, global USDT references, and USD/KRW FX sources before any public probe or adapter work.
+- Planning matrix: [docs/data_availability/usdt_krw_multi_source_matrix.md](docs/data_availability/usdt_krw_multi_source_matrix.md) separates domestic venues, global USDT references, and USD/KRW FX sources before any adapter or experimental scaffolding work.
+
+## USDT/KRW public source probe (read-only)
+- The public probe checks candidate source availability/response shape for the future `stablecoin_krw_premium` strategy. It writes a planning report only and does not create OpportunityPackets, adapters, orders, balances, transfers, or Council handoffs.
+
+```powershell
+python tools/probe_usdt_krw_sources.py --output data/probes/usdt_krw_public_probe.json
+```
