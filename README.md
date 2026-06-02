@@ -233,3 +233,7 @@ python main.py --council --opportunity-file data/generated_packets/live_orderboo
 python tools/sample_market_data.py --adapter replay_orderbook_imbalance --samples 3 --interval 0 --output data/market_samples/replay_orderbook_imbalance_sample.json --journal
 python tools/notify_sampling_result.py --sampling-output data/market_samples/replay_orderbook_imbalance_sample.json --log
 ```
+
+## Future USDT/KRW kimchi premium strategy card
+- `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0` is documented as a read-only future strategy card only; no adapter, private API, transfer, order, or auto-trading implementation is included.
+- Card: [docs/strategy_task_cards/usdt_krw_kimchi_premium.md](docs/strategy_task_cards/usdt_krw_kimchi_premium.md)

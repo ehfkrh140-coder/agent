@@ -99,6 +99,46 @@ strategies:
   - future strategy; not active
   default_decision_when_missing_data: NEED_DATA
   execution_policy: NO_TRADE_ONLY
+- strategy_family: stablecoin_krw_premium
+  strategy_id: usdt_krw_kimchi_premium_v0
+  status: future
+  priority: P1
+  description: Read-only strategy planning entry for reading premium/discount between domestic USDT/KRW public prices and fair USD/KRW or global USDT/USD reference pricing. Not active; Codex must not promote it to active by itself.
+  required_observation_fields:
+  - domestic_usdt_krw_bid_ask_depth
+  - public_usd_krw_reference_rate
+  - optional_global_usdt_usd_reference
+  - timestamp_alignment_metadata
+  - source_reliability_metadata
+  required_candidate_fields:
+  - candidate_type=usdt_krw_premium_signal_or_usdt_krw_discount_signal
+  - metrics.fair_usdt_krw_price
+  - metrics.premium_pct
+  - metrics.estimated_net_premium_pct
+  required_data_quality_fields:
+  - timestamps_available
+  - max_data_age_ms
+  - latency_ms
+  optional_fields:
+  - depeg_risk_flag
+  - global_usdt_reference_observation
+  - domestic_usdt_cross_exchange_spread_signal
+  forbidden_for_active_if_any:
+  - not_active_v1
+  - private_endpoint
+  - api_key_secret_token
+  - account_balance_lookup
+  - order_execution
+  - withdrawal_deposit_transfer
+  - bank_or_fiat_transfer
+  - auto_trading
+  readiness_rules:
+  - future strategy; not active
+  - execution_policy NO_TRADE_ONLY
+  - requires USDT/KRW data availability check before experimental scaffolding
+  - Codex must not promote to active by itself; active strategy remains cross_exchange_spot_spread_v1
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
 - strategy_family: reverse_premium
   strategy_id: reverse_premium_v0
   status: future

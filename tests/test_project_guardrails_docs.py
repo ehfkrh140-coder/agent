@@ -3,6 +3,8 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
+import yaml
+
 
 class ProjectGuardrailsDocsTests(unittest.TestCase):
     def test_required_guardrail_docs_exist(self):
@@ -214,6 +216,57 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
         self.assertIn("Active strategy remains `cross_exchange_spot_spread_v1`", playbook)
         self.assertIn("Codex must not change the active strategy by itself", playbook)
         self.assertIn("Strategy expansion one-by-one using `docs/strategy_expansion_playbook.md`", roadmap)
+
+    def test_usdt_krw_kimchi_premium_strategy_card_is_future_read_only(self):
+        path = Path("docs/strategy_task_cards/usdt_krw_kimchi_premium.md")
+        self.assertTrue(path.exists(), str(path))
+        text = path.read_text(encoding="utf-8")
+
+        for phrase in [
+            "stablecoin_krw_premium",
+            "usdt_krw_kimchi_premium_v0",
+            "read-only",
+            "no-trade",
+            "not auto-trading",
+            "Mode A: Domestic USDT/KRW executable spread",
+            "Mode B: USDT/KRW Kimchi Premium / FX Basis",
+            "Mode B is the user-intended core strategy",
+            "## Data forbidden",
+            "private API",
+            "API key / secret / token",
+            "account/balance lookup",
+            "order placement",
+            "withdrawal/deposit/transfer",
+            "bank account / fiat transfer",
+            "auto-trading",
+            "fair_usdt_krw_price = usd_krw_reference_rate * global_usdt_usd_reference",
+            "premium_pct = ((domestic_usdt_krw_price - fair_usdt_krw_price) / fair_usdt_krw_price) * 100",
+            "USDT/KRW Data Availability Check v0",
+        ]:
+            self.assertIn(phrase, text)
+
+    def test_stablecoin_krw_premium_registry_entry_is_future_and_active_strategy_unchanged(self):
+        registry = yaml.safe_load(Path("configs/strategy_registry.yaml").read_text(encoding="utf-8"))
+        strategies = registry["strategies"]
+        stablecoin = next(item for item in strategies if item["strategy_family"] == "stablecoin_krw_premium")
+        active = [item for item in strategies if item.get("status") == "active"]
+
+        self.assertEqual(stablecoin["strategy_id"], "usdt_krw_kimchi_premium_v0")
+        self.assertEqual(stablecoin["status"], "future")
+        self.assertEqual(stablecoin["execution_policy"], "NO_TRADE_ONLY")
+        self.assertIn("not active", " ".join(stablecoin["readiness_rules"]))
+        self.assertEqual([item["strategy_id"] for item in active], ["cross_exchange_spot_spread_v1"])
+
+    def test_stablecoin_krw_premium_is_in_playbook_and_catalog_backlog(self):
+        playbook = Path("docs/strategy_expansion_playbook.md").read_text(encoding="utf-8")
+        catalog = Path("docs/strategy_catalog.md").read_text(encoding="utf-8")
+
+        for text in [playbook, catalog]:
+            self.assertIn("stablecoin_krw_premium", text)
+            self.assertIn("usdt_krw_kimchi_premium", text)
+        self.assertIn("USDT/KRW Data Availability Check v0", playbook)
+        self.assertIn("orderbook_imbalance experimental path continues", playbook)
+        self.assertIn("funding_rate and spot_futures_basis remain later", playbook)
 
 
 if __name__ == "__main__":

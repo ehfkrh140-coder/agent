@@ -93,6 +93,12 @@ A strategy cannot move from future to experimental until it has:
 
 ## 5. Future strategy backlog
 
+### stablecoin_krw_premium / usdt_krw_kimchi_premium
+- Purpose: Read USDT/KRW kimchi premium or reverse-premium by comparing domestic USDT/KRW public bid/ask/depth with fair USD/KRW or global USDT/USD reference pricing.
+- Likely public data required: domestic USDT/KRW bid/ask/depth, public USD/KRW reference, optional global USDT/USD reference, timestamp alignment, source reliability, fees, liquidity and depeg-risk metadata. This includes domestic/global prices and FX or USDT-KRW reference assumptions that must be resolved before implementation.
+- First safe implementation step: `USDT/KRW Data Availability Check v0` to document Upbit/Bithumb pair availability and reference-source candidates; no live adapter changes initially.
+- Why not active yet: FX/reference reliability, timestamp alignment and depeg-risk controls are unresolved; this is a future read-only strategy, not auto-trading.
+
 ### kimchi_premium
 - Purpose: Compare domestic KRW crypto prices against global USD/USDT-referenced prices to detect premium or discount regimes.
 - Likely public data required: domestic spot bid/ask/depth, global spot bid/ask/depth, public FX or USDT/KRW reference, timestamps, fees, liquidity.
@@ -202,8 +208,9 @@ These are documentation-only planning cards. They do not authorize code, config,
 ## 8. Recommended implementation order
 
 1. `orderbook_imbalance` — existing Upbit/Bithumb orderbook depth makes this the safest next candidate.
-2. `kimchi_premium` — requires domestic/global prices and FX or USDT-KRW reference, so data requirements must be resolved first.
-3. `funding_rate` — requires public derivatives data and must remain separate from the active spot strategy.
-4. `spot_futures_basis` — combines spot and futures data, so it should follow funding-rate groundwork.
+2. `stablecoin_krw_premium` / `usdt_krw_kimchi_premium` — requires `USDT/KRW Data Availability Check v0` before experimental scaffolding.
+3. `kimchi_premium` — broader domestic/global premium work still requires data requirements and FX/reference policy first.
+4. `funding_rate` — requires public derivatives data and must remain separate from the active spot strategy.
+5. `spot_futures_basis` — combines spot and futures data, so it should follow funding-rate groundwork.
 
-All other strategies remain future backlog items until a dedicated task card promotes them through the playbook.
+The orderbook_imbalance experimental path continues; stablecoin_krw_premium requires data availability checks before experimental scaffolding; funding_rate and spot_futures_basis remain later. All other strategies remain future backlog items until a dedicated task card promotes them through the playbook.
