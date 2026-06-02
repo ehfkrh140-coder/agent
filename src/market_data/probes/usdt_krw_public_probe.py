@@ -15,6 +15,8 @@ import yaml
 SCHEMA_VERSION = "usdt_krw_public_probe_v0"
 REPORT_SCHEMA_VERSION = "usdt_krw_public_probe_report_v0"
 NEXT_RECOMMENDED_STEP = "review_probe_results_before_experimental_scaffolding"
+FX_HARDENING_NEXT_STEP = "review_harden_fx_source_candidates"
+FX_READY_NEXT_STEP = "review_fx_probe_results_before_experimental_scaffolding"
 ALLOWED_ROLES = {"domestic_usdt_krw", "global_usdt_reference", "fx_reference"}
 PUBLIC_HEADERS = {
     "User-Agent": "agent-council-usdt-krw-public-probe-v0",
@@ -77,12 +79,14 @@ def run_probe_report(
                 created_at_utc=created_at,
             )
         )
+    summary = summarize_results(results)
+    next_step = FX_READY_NEXT_STEP if not summary.get("fx_unresolved", True) else FX_HARDENING_NEXT_STEP
     return {
         "schema_version": REPORT_SCHEMA_VERSION,
         "created_at_utc": created_at,
         "results": results,
-        "summary": summarize_results(results),
-        "next_recommended_step": NEXT_RECOMMENDED_STEP,
+        "summary": summary,
+        "next_recommended_step": next_step,
     }
 
 
@@ -99,6 +103,7 @@ def probe_source(
     role = str(source.get("role") or "unknown")
     notes = [str(note) for note in source.get("notes", []) if note is not None]
     result = empty_probe_result(source_id=source_id, role=role, created_at_utc=created_at, notes=notes)
+    result["requires_api_key"] = _coerce_optional_bool(source.get("requires_api_key"))
 
     if role not in ALLOWED_ROLES:
         result.update(status="unknown", error=f"Unsupported role: {role}")
@@ -107,6 +112,10 @@ def probe_source(
     if not bool(source.get("no_private_api", False)):
         result.update(status="skipped", error="Source is not explicitly marked no_private_api=true")
         result["notes"].append("Skipped because the source is not explicitly public/no-private.")
+        return result
+    if role == "fx_reference" and result["requires_api_key"] is True:
+        result.update(status="skipped", pair_availability="unknown")
+        result["notes"].append("Skipped because this FX source is marked requires_api_key=true.")
         return result
     if not bool(source.get("safe_public_probe", False)):
         result.update(status="skipped", pair_availability="unknown")
@@ -165,6 +174,8 @@ def probe_source(
         orderbook_detected=orderbook_detected,
         market_list_checked=market_list_checked,
     )
+    if role == "fx_reference":
+        _apply_fx_detection(result, data_by_endpoint.values(), source=source)
     result["status"] = "ok" if not errors else "error"
     result["error"] = "; ".join(errors) if errors else None
     if result["pair_availability"] == "available":
@@ -191,6 +202,12 @@ def empty_probe_result(*, source_id: str, role: str, created_at_utc: str, notes:
         "http_status": None,
         "error": None,
         "notes": notes or [],
+        "fx_rate_detected": None,
+        "fx_pair_detected": None,
+        "fx_timestamp_detected": None,
+        "fx_date_or_time_value": None,
+        "requires_api_key": None,
+        "suitable_for_mode_b_candidate": None,
     }
 
 
@@ -213,6 +230,16 @@ def summarize_results(results: list[dict[str, Any]]) -> dict[str, Any]:
         for result in results
         if result.get("status") == "error"
     ]
+    fx_suitable_candidates = [
+        {
+            "source_id": result.get("source_id"),
+            "fx_pair_detected": result.get("fx_pair_detected"),
+            "fx_date_or_time_value": result.get("fx_date_or_time_value"),
+        }
+        for result in results
+        if result.get("role") == "fx_reference" and result.get("suitable_for_mode_b_candidate") is True
+    ]
+    fx_unresolved = not bool(fx_suitable_candidates)
     return {
         "domestic_sources_checked": count_role("domestic_usdt_krw"),
         "global_sources_checked": count_role("global_usdt_reference"),
@@ -220,6 +247,13 @@ def summarize_results(results: list[dict[str, Any]]) -> dict[str, Any]:
         "available_pairs": available_pairs,
         "unknown_pairs": unknown_pairs,
         "errors": errors,
+        "fx_suitable_candidates": fx_suitable_candidates,
+        "fx_unresolved": fx_unresolved,
+        "fx_blocker_reason": (
+            "No no-key public USD/KRW FX source exposed both rate and timestamp/freshness metadata."
+            if fx_unresolved
+            else None
+        ),
     }
 
 
@@ -341,6 +375,87 @@ def _detect_timestamp(data: Any) -> bool:
     keys = {key.lower() for key in _walk_keys(data)}
     timestamp_keys = {"timestamp", "timestamp_utc", "trade_timestamp", "time", "date", "updated_at", "server_time"}
     return bool(keys & timestamp_keys)
+
+
+def _apply_fx_detection(result: dict[str, Any], payloads: Iterable[Any], *, source: dict[str, Any]) -> None:
+    combined_payloads = list(payloads)
+    rate_detected, pair_detected = _detect_fx_rate(combined_payloads)
+    timestamp_detected, date_or_time_value = _detect_fx_timestamp_value(combined_payloads)
+    result["fx_rate_detected"] = rate_detected
+    result["fx_pair_detected"] = pair_detected
+    result["fx_timestamp_detected"] = timestamp_detected
+    result["fx_date_or_time_value"] = date_or_time_value
+    requires_api_key = result.get("requires_api_key")
+    no_key_public = bool(source.get("no_private_api")) and requires_api_key is False
+    suitable = bool(rate_detected and timestamp_detected and no_key_public)
+    result["suitable_for_mode_b_candidate"] = suitable
+    result["pair_availability"] = "available" if suitable else "unknown"
+    if suitable:
+        result["notes"].append("FX response exposed a no-key public USD/KRW rate plus timestamp/freshness metadata.")
+    elif rate_detected and not timestamp_detected:
+        result["notes"].append("FX rate was detected, but timestamp/freshness metadata was missing; not suitable for Mode B.")
+    else:
+        result["notes"].append("FX response did not prove a suitable USD/KRW rate plus timestamp/freshness shape.")
+
+
+def _detect_fx_rate(payloads: Iterable[Any]) -> tuple[bool, str | None]:
+    for payload in payloads:
+        for path, value in _walk_paths(payload):
+            normalized_path = ".".join(path).lower()
+            if _is_numeric_like(value) and (
+                path and path[-1].upper() == "KRW"
+                or "usdkrw" in normalized_path.replace("_", "").replace("/", "")
+                or normalized_path.endswith("rate") and "krw" in json.dumps(payload).lower()
+            ):
+                return True, "USD/KRW"
+            if isinstance(value, str) and _normalize_pair(value) == "USDKRW":
+                return True, "USD/KRW"
+    return False, None
+
+
+def _detect_fx_timestamp_value(payloads: Iterable[Any]) -> tuple[bool, str | None]:
+    timestamp_keys = {"date", "timestamp", "time", "updated_at", "as_of", "asof", "effective_date"}
+    for payload in payloads:
+        for path, value in _walk_paths(payload):
+            if path and path[-1].lower() in timestamp_keys and value not in (None, ""):
+                return True, str(value)
+    return False, None
+
+
+def _is_numeric_like(value: Any) -> bool:
+    if isinstance(value, bool) or value is None:
+        return False
+    try:
+        float(value)
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _coerce_optional_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return None
+    lowered = str(value).strip().lower()
+    if lowered == "true":
+        return True
+    if lowered == "false":
+        return False
+    return None
+
+
+def _walk_paths(data: Any, prefix: tuple[str, ...] = ()) -> Iterable[tuple[tuple[str, ...], Any]]:
+    if isinstance(data, dict):
+        for key, value in data.items():
+            path = prefix + (str(key),)
+            yield path, value
+            yield from _walk_paths(value, path)
+    elif isinstance(data, list):
+        for index, item in enumerate(data):
+            yield from _walk_paths(item, prefix + (str(index),))
+    else:
+        yield prefix, data
 
 
 def _has_success_status(data: Any) -> bool:

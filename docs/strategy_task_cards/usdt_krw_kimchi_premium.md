@@ -24,7 +24,7 @@ Design a read-only, no-trade future strategy for reading USDT/KRW kimchi premium
 - Data availability matrix: [`docs/data_availability/usdt_krw_multi_source_matrix.md`](../data_availability/usdt_krw_multi_source_matrix.md).
 - Public probe review: [`docs/data_availability/usdt_krw_probe_review.md`](../data_availability/usdt_krw_probe_review.md).
 - experimental scaffolding requires Multi-Source Data Availability Matrix and Public Probe first.
-- Experimental scaffolding is blocked until a reliable public `USD/KRW` FX source is confirmed.
+- Experimental scaffolding is blocked until a reliable public `USD/KRW` FX source is confirmed by hardened probe results (`suitable_for_mode_b_candidate=true`).
 
 ## Strategy concept
 
@@ -240,7 +240,7 @@ None. This is a documentation-only strategy card.
 - The multi-source matrix is linked at [`docs/data_availability/usdt_krw_multi_source_matrix.md`](../data_availability/usdt_krw_multi_source_matrix.md).
 - Experimental scaffolding requires the Multi-Source Data Availability Matrix and `USDT/KRW Public Probe v0` report first.
 - Probe review is linked at [`docs/data_availability/usdt_krw_probe_review.md`](../data_availability/usdt_krw_probe_review.md).
-- Experimental scaffolding is blocked until a reliable public `USD/KRW` FX source is confirmed.
+- Experimental scaffolding is blocked until a reliable public `USD/KRW` FX source is confirmed by hardened probe results (`suitable_for_mode_b_candidate=true`).
 - The earlier next-card label `USDT/KRW Data Availability Check v0` is now represented by the Multi-Source Matrix plus `USDT/KRW Public Probe v0`; the next implementation gate is `USDT/KRW FX Reference Probe Hardening v0`, followed only later by `USDT/KRW Experimental Scaffolding v0` if the FX blocker is resolved.
 
 ## Non-goals

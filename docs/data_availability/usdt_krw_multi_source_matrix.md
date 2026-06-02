@@ -49,7 +49,7 @@ Candidates:
 - official FX source candidate
 - no-key public source candidate if available
 
-FX sources are candidates only. The next public probe must verify response shape, timestamp availability, update frequency, reliability, and key requirements.
+FX sources are candidates only. The hardened public probe must verify response shape, timestamp availability, update frequency, reliability, and key requirements. A Mode B FX source must provide both a USD/KRW rate and timestamp/freshness metadata; rate-only responses are not suitable.
 
 ## Domestic executable/reference venues
 
@@ -164,7 +164,7 @@ Purpose:
 - Do no trading.
 - Add no persistent adapter yet.
 
-`USDT/KRW Public Probe v0` results are reviewed in [`docs/data_availability/usdt_krw_probe_review.md`](usdt_krw_probe_review.md). The next gate is `USDT/KRW FX Reference Probe Hardening v0` because Mode B cannot become experimental until a reliable USD/KRW FX source is confirmed. The probe is not a persistent adapter, does not create OpportunityPackets, and does not change strategy status.
+`USDT/KRW Public Probe v0` results are reviewed in [`docs/data_availability/usdt_krw_probe_review.md`](usdt_krw_probe_review.md). FX hardening adds suitability fields for rate + timestamp/freshness detection because Mode B cannot become experimental until a reliable USD/KRW FX source is confirmed. The probe is not a persistent adapter, does not create OpportunityPackets, and does not change strategy status.
 
 ## No-trade compliance
 - No private API.

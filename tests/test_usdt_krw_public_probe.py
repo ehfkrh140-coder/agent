@@ -32,8 +32,9 @@ class UsdtKrwPublicProbeTests(unittest.TestCase):
         self.assertIn("bithumb", source_ids)
         self.assertIn("binance", source_ids)
         serialized = json.dumps(config).lower()
-        for forbidden in ("api_key", "apikey", "secret", "token", "authorization", "password"):
+        for forbidden in ("apikey", "secret", "token", "authorization", "password"):
             self.assertNotIn(forbidden, serialized)
+        self.assertNotIn("api_key:", serialized)
         self.assertTrue(all(source.get("no_private_api") is True for source in config["sources"]))
 
     def test_probe_result_schema_is_stable(self) -> None:
@@ -64,6 +65,12 @@ class UsdtKrwPublicProbeTests(unittest.TestCase):
                 "http_status",
                 "error",
                 "notes",
+                "fx_rate_detected",
+                "fx_pair_detected",
+                "fx_timestamp_detected",
+                "fx_date_or_time_value",
+                "requires_api_key",
+                "suitable_for_mode_b_candidate",
             },
         )
         self.assertEqual(result["status"], "skipped")
@@ -187,7 +194,9 @@ class UsdtKrwPublicProbeTests(unittest.TestCase):
             report = json.loads(output_path.read_text(encoding="utf-8"))
         self.assertEqual(report["schema_version"], "usdt_krw_public_probe_report_v0")
         self.assertEqual(report["results"][0]["status"], "skipped")
-        self.assertEqual(report["next_recommended_step"], "review_probe_results_before_experimental_scaffolding")
+        self.assertEqual(report["next_recommended_step"], "review_harden_fx_source_candidates")
+        self.assertTrue(report["summary"]["fx_unresolved"])
+        self.assertEqual(report["summary"]["fx_suitable_candidates"], [])
 
     def test_report_summary_counts_roles_and_available_pairs(self) -> None:
         def fake_get(url: str, *, timeout_seconds: float, headers: dict[str, str]) -> ProbeHttpResponse:
@@ -202,6 +211,94 @@ class UsdtKrwPublicProbeTests(unittest.TestCase):
             report = run_probe_report(config_path=config_path, http_get_json=fake_get, now_fn=lambda: "2026-06-02T00:00:00+00:00")
         self.assertEqual(report["summary"]["global_sources_checked"], 1)
         self.assertEqual(report["summary"]["available_pairs"][0]["source_id"], "binance")
+
+    def test_fx_rate_with_timestamp_is_suitable_for_mode_b(self) -> None:
+        def fake_get(url: str, *, timeout_seconds: float, headers: dict[str, str]) -> ProbeHttpResponse:
+            return ProbeHttpResponse({"base": "USD", "date": "2026-06-02", "rates": {"KRW": 1390.25}}, 200, 9, url)
+
+        result = probe_source(
+            _source("frankfurter_or_no_key_public_fx_candidate"),
+            http_get_json=fake_get,
+            created_at_utc="2026-06-02T00:00:00+00:00",
+        )
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["pair_availability"], "available")
+        self.assertTrue(result["fx_rate_detected"])
+        self.assertEqual(result["fx_pair_detected"], "USD/KRW")
+        self.assertTrue(result["fx_timestamp_detected"])
+        self.assertEqual(result["fx_date_or_time_value"], "2026-06-02")
+        self.assertFalse(result["requires_api_key"])
+        self.assertTrue(result["suitable_for_mode_b_candidate"])
+
+    def test_fx_rate_without_timestamp_is_not_suitable(self) -> None:
+        def fake_get(url: str, *, timeout_seconds: float, headers: dict[str, str]) -> ProbeHttpResponse:
+            return ProbeHttpResponse({"base": "USD", "rates": {"KRW": 1390.25}}, 200, 9, url)
+
+        result = probe_source(
+            _source("frankfurter_or_no_key_public_fx_candidate"),
+            http_get_json=fake_get,
+            created_at_utc="2026-06-02T00:00:00+00:00",
+        )
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["pair_availability"], "unknown")
+        self.assertTrue(result["fx_rate_detected"])
+        self.assertFalse(result["fx_timestamp_detected"])
+        self.assertFalse(result["suitable_for_mode_b_candidate"])
+
+    def test_fx_source_requiring_api_key_is_skipped(self) -> None:
+        source = dict(_source("frankfurter_or_no_key_public_fx_candidate"))
+        source["source_id"] = "requires_key_fx"
+        source["requires_api_key"] = True
+        result = probe_source(source, created_at_utc="2026-06-02T00:00:00+00:00")
+        self.assertEqual(result["status"], "skipped")
+        self.assertEqual(result["pair_availability"], "unknown")
+        self.assertTrue(result["requires_api_key"])
+        self.assertIsNone(result["suitable_for_mode_b_candidate"])
+
+    def test_malformed_fx_response_is_unknown_without_crashing(self) -> None:
+        def fake_get(url: str, *, timeout_seconds: float, headers: dict[str, str]) -> ProbeHttpResponse:
+            return ProbeHttpResponse({"unexpected": {"payload": []}}, 200, 9, url)
+
+        result = probe_source(
+            _source("frankfurter_or_no_key_public_fx_candidate"),
+            http_get_json=fake_get,
+            created_at_utc="2026-06-02T00:00:00+00:00",
+        )
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["pair_availability"], "unknown")
+        self.assertFalse(result["fx_rate_detected"])
+        self.assertFalse(result["suitable_for_mode_b_candidate"])
+
+    def test_summary_fx_unresolved_true_without_suitable_candidate(self) -> None:
+        def fake_get(url: str, *, timeout_seconds: float, headers: dict[str, str]) -> ProbeHttpResponse:
+            return ProbeHttpResponse({"base": "USD", "rates": {"KRW": 1390.25}}, 200, 9, url)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "probe.yaml"
+            config_path.write_text(
+                yaml.safe_dump({"schema_version": "usdt_krw_probe_sources_v0", "sources": [_source("frankfurter_or_no_key_public_fx_candidate")]}),
+                encoding="utf-8",
+            )
+            report = run_probe_report(config_path=config_path, http_get_json=fake_get, now_fn=lambda: "2026-06-02T00:00:00+00:00")
+        self.assertTrue(report["summary"]["fx_unresolved"])
+        self.assertEqual(report["summary"]["fx_suitable_candidates"], [])
+        self.assertIn("No no-key public USD/KRW FX source", report["summary"]["fx_blocker_reason"])
+        self.assertEqual(report["next_recommended_step"], "review_harden_fx_source_candidates")
+
+    def test_summary_fx_unresolved_false_with_suitable_candidate(self) -> None:
+        def fake_get(url: str, *, timeout_seconds: float, headers: dict[str, str]) -> ProbeHttpResponse:
+            return ProbeHttpResponse({"base": "USD", "date": "2026-06-02", "rates": {"KRW": 1390.25}}, 200, 9, url)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "probe.yaml"
+            config_path.write_text(
+                yaml.safe_dump({"schema_version": "usdt_krw_probe_sources_v0", "sources": [_source("frankfurter_or_no_key_public_fx_candidate")]}),
+                encoding="utf-8",
+            )
+            report = run_probe_report(config_path=config_path, http_get_json=fake_get, now_fn=lambda: "2026-06-02T00:00:00+00:00")
+        self.assertFalse(report["summary"]["fx_unresolved"])
+        self.assertEqual(report["summary"]["fx_suitable_candidates"][0]["source_id"], "frankfurter_or_no_key_public_fx_candidate")
+        self.assertEqual(report["next_recommended_step"], "review_fx_probe_results_before_experimental_scaffolding")
 
     def test_active_strategy_remains_cross_exchange_spot_spread_v1(self) -> None:
         current = yaml.safe_load(STRATEGY_CURRENT_PATH.read_text(encoding="utf-8"))

@@ -58,6 +58,11 @@ The Frankfurter/no-key public FX candidate returned `ok / unknown`, and the offi
 
 Mode B cannot become experimental until USD/KRW FX source is confirmed.
 
+## FX hardening status
+`USDT/KRW FX Reference Probe Hardening v0` extends the public probe result shape with `fx_rate_detected`, `fx_pair_detected`, `fx_timestamp_detected`, `fx_date_or_time_value`, `requires_api_key`, and `suitable_for_mode_b_candidate` fields. A source is suitable for Mode B only when a no-key public JSON response clearly exposes a USD/KRW rate plus timestamp/date or freshness metadata.
+
+The FX blocker remains unresolved unless a probe report contains at least one `fx_suitable_candidates` entry and `fx_unresolved=false`. Even if a suitable candidate appears in a probe report, this strategy remains `future` until a later task explicitly adds experimental scaffolding.
+
 ## Current blocker
 The current blocker is the unresolved `usd_krw_reference_rate` source. Without `usd_krw_reference_rate`, `fair_usdt_krw_price` cannot be calculated reliably, and `premium_mid_pct`, `premium_sell_pct`, `premium_buy_pct`, or `estimated_net_premium_pct` would be incomplete or misleading.
 
@@ -78,7 +83,9 @@ Proposed future source set after the FX blocker is resolved:
 Without `usd_krw_reference_rate`, `fair_usdt_krw_price` cannot be calculated reliably; fair_usdt_krw_price cannot be calculated reliably from domestic/global crypto data alone.
 
 ## Next gate
-Next card: `USDT/KRW FX Reference Probe Hardening v0`
+Next card after this hardening step: choose one based on the hardened FX probe report.
+- If `fx_unresolved=true`: manually choose/review FX source candidates before another probe hardening pass.
+- If `fx_unresolved=false`: `USDT/KRW Experimental Scaffolding v0` may be proposed, but must still be a separate read-only task.
 
 Purpose:
 - Improve FX source candidates.

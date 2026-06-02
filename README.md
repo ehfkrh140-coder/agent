@@ -250,3 +250,10 @@ python tools/probe_usdt_krw_sources.py --output data/probes/usdt_krw_public_prob
 
 ## USDT/KRW public probe review
 - Probe review: [docs/data_availability/usdt_krw_probe_review.md](docs/data_availability/usdt_krw_probe_review.md) preserves the user-observed public probe results, identifies Upbit plus Binance/Bybit/OKX as v0 candidates, and keeps FX reference unresolved before any experimental scaffolding.
+
+## USDT/KRW FX reference probe hardening
+- Hardened FX probe output now distinguishes rate-only responses from public USD/KRW responses that include timestamp/freshness metadata and can be reviewed as Mode B candidates.
+
+```powershell
+python tools/probe_usdt_krw_sources.py --output data/probes/usdt_krw_public_probe_fx_hardened.json
+```

@@ -151,17 +151,48 @@ sources:
     no_private_api: true
     expected_public_only: true
     safe_public_probe: true
+    requires_api_key: false
+    timestamp_expected: true
     pair_candidates:
       - USD/KRW
+      - rates.KRW
     endpoints:
       ticker:
         path: /latest
         params:
           from: USD
           to: KRW
+    freshness_notes:
+      - Expected to expose a date field; probe must verify it before suitability.
+      - Daily FX cadence may be too stale for intraday premium analysis without additional guardrails.
+    reliability_notes:
+      - No official reliability is claimed by config; response metadata must be reviewed.
+      - Candidate only for future Mode B fair-value calculations.
     notes:
       - No-key public FX candidate; suitability and timestamp freshness must be reviewed from probe output.
       - Do not claim official reliability from this source.
+
+  - source_id: exchangerate_host_candidate
+    role: fx_reference
+    enabled_for_probe: false
+    base_url: https://api.exchangerate.host
+    no_private_api: true
+    expected_public_only: true
+    safe_public_probe: false
+    requires_api_key: unknown
+    timestamp_expected: unknown
+    pair_candidates:
+      - USD/KRW
+      - rates.KRW
+    endpoints:
+      placeholder: disabled_until_no_key_policy_confirmed
+    freshness_notes:
+      - Candidate retained only for manual review of no-key availability and timestamp metadata.
+    reliability_notes:
+      - Do not probe until no-key public status is confirmed; do not add credentials.
+    notes:
+      - Disabled candidate; no safe no-key endpoint is selected in this config.
+      - Keep skipped/unknown until source policy is reviewed.
 
   - source_id: official_fx_source_candidate
     role: fx_reference
@@ -170,10 +201,16 @@ sources:
     no_private_api: true
     expected_public_only: true
     safe_public_probe: false
+    requires_api_key: unknown
+    timestamp_expected: unknown
     pair_candidates:
       - USD/KRW
     endpoints:
       placeholder: no_safe_no_key_public_endpoint_selected_yet
+    freshness_notes:
+      - Official source freshness and timestamp behavior must be verified before use.
+    reliability_notes:
+      - Candidate official reference only; do not claim reliability without response metadata.
     notes:
       - Candidate only; no safe no-key endpoint has been selected in this config.
       - Probe records skipped/unknown rather than scraping or using credentials.
@@ -185,10 +222,16 @@ sources:
     no_private_api: true
     expected_public_only: true
     safe_public_probe: false
+    requires_api_key: unknown
+    timestamp_expected: unknown
     pair_candidates:
       - USD/KRW
     endpoints:
       placeholder: no_safe_public_endpoint_selected_yet
+    freshness_notes:
+      - Timestamp/freshness metadata must be proven by public JSON response before use.
+    reliability_notes:
+      - Candidate secondary source only; no reliability claim is made.
     notes:
       - Candidate only; no safe endpoint has been selected in this config.
       - Probe records skipped/unknown.
