@@ -49,13 +49,25 @@ foreach ($n in 1..5) {
     Get-Content "$profileHome\.gemini\google_accounts.json" -ErrorAction SilentlyContinue
 
     $prompt = '반드시 다음 JSON만 출력하세요: {"summary":"ok","key_points":[],"concerns":[],"questions":[],"suggested_next_steps":[],"confidence":1.0}'
-    gemini.cmd --skip-trust -p $prompt --output-format json
+    $prompt | gemini.cmd --skip-trust --approval-mode=plan --policy "$(Resolve-Path configs/gemini_cli_targeted_policy.toml)" -o json --model flash
 }
 ```
 
 ## 실행
 ```powershell
 python main.py
+python main.py --council --parallel --max-workers 2
+python main.py --list-scenarios
+python main.py --council --scenario missing_data_gap --dry-run-context
+python main.py --council --scenario multi_exchange_best_edge --parallel --max-workers 2
+python main.py --council --scenario mark_orderbook_gap_long_watch --dry-run-context
+python tools/collect_market_data.py --list-adapters
+python tools/collect_market_data.py --adapter replay_mark_orderbook_gap --output data/test_scenarios/replay_mark_orderbook_gap.json
+python tools/collect_market_data.py --adapter live_bybit_mark_orderbook_gap --output data/generated_packets/bybit_live_packet.json
+python main.py --council --opportunity-file data/generated_packets/bybit_live_packet.json --parallel --max-workers 2
+python tools/run_strategy_scenarios.py --all --evaluate-only
+python tools/run_strategy_scenarios.py --strategy cross_exchange_spot_spread --evaluate-only
+python tools/run_strategy_scenarios.py --scenario spot_executable_spread_watch --dry-run-context
 ```
 
 실행 중 preflight에서 각 agent의 active/expected 계정을 마스킹해서 확인합니다.
@@ -82,8 +94,8 @@ python -m unittest tests/test_gemini_cli_client.py
 - timeout 발생 시 해당 프로필로 수동 테스트:
 
 ```powershell
-$env:GEMINI_CLI_HOME="C:\gemini-profilesgent_01"
-gemini.cmd --skip-trust -p '반드시 JSON만 출력' --output-format json
+$env:GEMINI_CLI_HOME="C:\gemini-profiles\agent_01"
+'반드시 JSON만 출력' | gemini.cmd --skip-trust --approval-mode=plan --policy "$(Resolve-Path configs/gemini_cli_targeted_policy.toml)" -o json --model flash
 ```
 
 
@@ -155,3 +167,109 @@ python main.py --parallel --max-workers 2
 - `configs/agents.yaml`의 `model` 필드는 실험용 CLI model 직접 지정 옵션입니다. 비워두면 기본 Gemini CLI 설정을 사용합니다.
 - 이 시스템은 매매 실행부가 아니라 AI Council 판단부 기반입니다.
 - 거래소 API, 주문, 출금, 이체, 자동매매 기능은 아직 구현하지 않습니다.
+
+## Public spot market-data collection (read-only)
+- Active v1 spot spread packets can be generated from public Upbit/Bithumb ticker and orderbook data only; no API key, balance, order, withdrawal, transfer, or private endpoint is used.
+
+```powershell
+python tools/collect_market_data.py --list-adapters
+python tools/collect_market_data.py --adapter live_upbit_bithumb_spot_spread --output data/generated_packets/upbit_bithumb_spot_packet.json
+python main.py --council --opportunity-file data/generated_packets/upbit_bithumb_spot_packet.json --parallel --max-workers 2
+```
+
+## Depth VWAP/slippage evaluation
+- Cross-exchange spot spread candidates now evaluate configured target notionals with orderbook-depth VWAP, side-specific slippage, executable notional, and fee/safety-buffer-adjusted net gap metrics before Council review.
+
+## Repeated market sampling (read-only)
+- Public market-data adapters can be sampled repeatedly to verify spread persistence before any Council handoff recommendation is considered.
+
+```powershell
+python tools/sample_market_data.py --adapter live_upbit_bithumb_spot_spread --samples 5 --interval 1 --output data/market_samples/upbit_bithumb_sample.json
+```
+
+## Council handoff packet and opportunity journal
+- Sampling output is `market_sampling_v1`; use `--handoff-output` to write a Council-compatible `opportunity_packet_v0` only when persistence is `PERSISTENT_READY_EDGE`, and use `--journal` to append an audit record.
+
+```powershell
+python tools/sample_market_data.py --adapter live_upbit_bithumb_spot_spread --samples 10 --interval 1 --output data/market_samples/upbit_bithumb_sample.json --handoff-output data/generated_packets/upbit_bithumb_handoff_packet.json --journal
+```
+
+## Sampling alerts (console/file only)
+- Sampling results can be rendered as read-only console/file alerts; Telegram and Discord remain disabled skeletons with no token or network sending implementation.
+
+```powershell
+python tools/notify_sampling_result.py --sampling-output data/market_samples/replay_spot_sample.json --log
+```
+
+## Project guardrails and workflow docs
+- Repository guardrails: [AGENTS.md](AGENTS.md)
+- No-trade policy: [docs/no_trade_policy.md](docs/no_trade_policy.md)
+- Active strategy: [docs/active_strategy.md](docs/active_strategy.md)
+- Roadmap: [docs/roadmap.md](docs/roadmap.md)
+- Codex task template: [docs/codex_task_template.md](docs/codex_task_template.md)
+- Architecture status: [docs/architecture_status.md](docs/architecture_status.md)
+- Strategy expansion playbook: [docs/strategy_expansion_playbook.md](docs/strategy_expansion_playbook.md)
+
+## Experimental orderbook imbalance replay
+- `orderbook_imbalance` remains experimental/non-active, but replay depth snapshots can now build read-only OpportunityPackets for evaluate-only checks.
+
+```powershell
+python tools/collect_market_data.py --adapter replay_orderbook_imbalance --output data/generated_packets/replay_orderbook_imbalance_packet.json
+python tools/run_strategy_scenarios.py --strategy orderbook_imbalance --evaluate-only
+python tools/run_strategy_scenarios.py --strategy tether_cross_market_premium --evaluate-only
+python tools/collect_market_data.py --adapter replay_tether_cross_market_premium --output data/generated_packets/replay_tether_cross_market_packet.json
+python main.py --council --opportunity-file data/generated_packets/replay_tether_cross_market_packet.json --dry-run-context
+```
+
+## Experimental live orderbook imbalance composite
+- `live_upbit_bithumb_orderbook_imbalance` reuses the existing public Upbit/Bithumb spot child adapters to build an experimental, non-active `orderbook_imbalance` OpportunityPacket. It is read-only and not a Council handoff or execution signal.
+
+```powershell
+python tools/collect_market_data.py --adapter live_upbit_bithumb_orderbook_imbalance --output data/generated_packets/live_orderbook_imbalance_packet.json
+python main.py --council --opportunity-file data/generated_packets/live_orderbook_imbalance_packet.json --dry-run-context
+```
+
+## Experimental orderbook imbalance sampling alerts
+- `orderbook_imbalance` sampling remains experimental/non-active: persistence summaries and alerts are journal-review signals only, never Council handoff or execution instructions.
+
+```powershell
+python tools/sample_market_data.py --adapter replay_orderbook_imbalance --samples 3 --interval 0 --output data/market_samples/replay_orderbook_imbalance_sample.json --journal
+python tools/notify_sampling_result.py --sampling-output data/market_samples/replay_orderbook_imbalance_sample.json --log
+```
+
+## Future Tether cross-market premium strategy card
+- `tether_cross_market_premium` / `usdt_krw_global_reference_v0` reframes near-term USDT work around Upbit/Bithumb domestic `USDT/KRW` market state and Binance/Bybit/OKX global USDT reference health, with no USD/KRW FX requirement and no adapter/private API/transfer/order/auto-trading implementation.
+- The older `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0` FX-basis card is deferred for near-term implementation.
+- Near-term card: [docs/strategy_task_cards/tether_cross_market_premium.md](docs/strategy_task_cards/tether_cross_market_premium.md)
+- Deferred FX-basis card: [docs/strategy_task_cards/usdt_krw_kimchi_premium.md](docs/strategy_task_cards/usdt_krw_kimchi_premium.md)
+
+## USDT/KRW multi-source data availability matrix
+- Planning matrix: [docs/data_availability/usdt_krw_multi_source_matrix.md](docs/data_availability/usdt_krw_multi_source_matrix.md) separates domestic Upbit/Bithumb venues from Binance/Bybit/OKX global USDT references and marks USD/KRW FX as deferred/out-of-scope for the near-term Tether cross-market strategy.
+
+## USDT/KRW public source probe (read-only)
+- The public probe checks candidate source availability/response shape that can be re-aligned for the future `tether_cross_market_premium` strategy. It writes a planning report only and does not create OpportunityPackets, adapters, orders, balances, transfers, or Council handoffs.
+
+```powershell
+python tools/probe_usdt_krw_sources.py --output data/probes/usdt_krw_public_probe.json
+```
+
+## USDT/KRW public probe review
+- Probe review: [docs/data_availability/usdt_krw_probe_review.md](docs/data_availability/usdt_krw_probe_review.md) preserves the user-observed public probe results, identifies Upbit plus Binance/Bybit/OKX as v0 candidates, and records the correction that FX is out of scope for near-term work and points the next gate to Bithumb USDT/KRW re-check.
+
+## USDT/KRW FX reference probe hardening
+- Hardened FX probe output now distinguishes rate-only responses from public USD/KRW responses that include timestamp/freshness metadata and can be reviewed as Mode B candidates.
+
+```powershell
+python tools/probe_usdt_krw_sources.py --output data/probes/usdt_krw_public_probe_fx_hardened.json
+```
+
+## PR trust framework and merge gate
+- PR template: [.github/pull_request_template.md](.github/pull_request_template.md)
+- PR review policy: [docs/pr_review_policy.md](docs/pr_review_policy.md)
+- Merge gate: [docs/merge_gate.md](docs/merge_gate.md)
+- Rollback policy: [docs/rollback_policy.md](docs/rollback_policy.md)
+- PR handoff evidence fallback: [docs/pr_handoffs/README.md](docs/pr_handoffs/README.md)
+- Codex task checklist: [docs/task_checklist.md](docs/task_checklist.md)
+- Agent workflow: [docs/agent_workflow.md](docs/agent_workflow.md)
+- Architecture index: [docs/architecture.md](docs/architecture.md)
+- Strategy spec index: [docs/strategy_spec.md](docs/strategy_spec.md)
