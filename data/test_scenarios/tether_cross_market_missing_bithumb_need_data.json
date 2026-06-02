@@ -1,0 +1,310 @@
+{
+  "schema_version": "opportunity_packet_v0",
+  "packet_id": "tether_cross_market_missing_bithumb_need_data",
+  "created_at_utc": "2026-06-02T00:00:00Z",
+  "asset": "USDT",
+  "quote": "KRW",
+  "signal_type": "tether_cross_market_premium",
+  "strategy_family": "tether_cross_market_premium",
+  "strategy_id": "usdt_krw_global_reference_v0",
+  "observations": [
+    {
+      "observation_id": "upbit_usdt_krw",
+      "venue_id": "upbit",
+      "venue_name": "Upbit",
+      "market_symbol": "USDT/KRW",
+      "instrument_type": "spot",
+      "region": "KR",
+      "last_price": null,
+      "bid": 1388,
+      "ask": 1390,
+      "bid_size": 1000,
+      "ask_size": 1000,
+      "timestamp_utc": "2026-06-02T00:00:00Z",
+      "fees": {
+        "trading_fee_pct": 0.05,
+        "fee_source": "manual_placeholder"
+      },
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": true,
+        "max_data_age_ms": 450,
+        "latency_ms": 45,
+        "is_realtime": false,
+        "source": "manual_scenario"
+      },
+      "health": {
+        "api_status_known": false,
+        "api_ok": null,
+        "maintenance": null,
+        "trading_enabled": null,
+        "message": "manual fixture only"
+      },
+      "extensions": {
+        "manual_scenario": true,
+        "reference_role": "domestic_usdt_krw"
+      },
+      "liquidity": {
+        "orderbook_depth_available": true,
+        "volume_available": false,
+        "estimated_executable_notional": 1388000,
+        "estimated_slippage_pct": 0.05,
+        "depth_levels": [
+          {
+            "bid_price": 1388,
+            "bid_size": 1000,
+            "ask_price": 1390,
+            "ask_size": 1000
+          }
+        ]
+      }
+    },
+    {
+      "observation_id": "binance_usdt_usdc",
+      "venue_id": "binance",
+      "venue_name": "Binance",
+      "market_symbol": "USDT/USDC",
+      "instrument_type": "spot",
+      "region": "GLOBAL",
+      "last_price": null,
+      "bid": 0.9999,
+      "ask": 1.0001,
+      "bid_size": 100000,
+      "ask_size": 100000,
+      "timestamp_utc": "2026-06-02T00:00:00Z",
+      "fees": {
+        "trading_fee_pct": 0.0,
+        "fee_source": "manual_placeholder"
+      },
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": true,
+        "max_data_age_ms": 350,
+        "latency_ms": 60,
+        "is_realtime": false,
+        "source": "manual_scenario"
+      },
+      "health": {
+        "api_status_known": false,
+        "api_ok": null,
+        "maintenance": null,
+        "trading_enabled": null,
+        "message": "manual fixture only"
+      },
+      "extensions": {
+        "manual_scenario": true,
+        "reference_role": "global_usdt_reference"
+      },
+      "liquidity": {
+        "orderbook_depth_available": true,
+        "volume_available": false,
+        "estimated_executable_notional": 99990.0,
+        "estimated_slippage_pct": 0.0,
+        "depth_levels": [
+          {
+            "bid_price": 0.9999,
+            "bid_size": 100000,
+            "ask_price": 1.0001,
+            "ask_size": 100000
+          }
+        ]
+      }
+    },
+    {
+      "observation_id": "bybit_usdt_usdc",
+      "venue_id": "bybit",
+      "venue_name": "Bybit",
+      "market_symbol": "USDT/USDC",
+      "instrument_type": "spot",
+      "region": "GLOBAL",
+      "last_price": null,
+      "bid": 0.9998,
+      "ask": 1.0002,
+      "bid_size": 90000,
+      "ask_size": 90000,
+      "timestamp_utc": "2026-06-02T00:00:00Z",
+      "fees": {
+        "trading_fee_pct": 0.0,
+        "fee_source": "manual_placeholder"
+      },
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": true,
+        "max_data_age_ms": 350,
+        "latency_ms": 70,
+        "is_realtime": false,
+        "source": "manual_scenario"
+      },
+      "health": {
+        "api_status_known": false,
+        "api_ok": null,
+        "maintenance": null,
+        "trading_enabled": null,
+        "message": "manual fixture only"
+      },
+      "extensions": {
+        "manual_scenario": true,
+        "reference_role": "global_usdt_reference"
+      },
+      "liquidity": {
+        "orderbook_depth_available": true,
+        "volume_available": false,
+        "estimated_executable_notional": 89982.0,
+        "estimated_slippage_pct": 0.0,
+        "depth_levels": [
+          {
+            "bid_price": 0.9998,
+            "bid_size": 90000,
+            "ask_price": 1.0002,
+            "ask_size": 90000
+          }
+        ]
+      }
+    },
+    {
+      "observation_id": "okx_usdt_usdc",
+      "venue_id": "okx",
+      "venue_name": "OKX",
+      "market_symbol": "USDT/USDC",
+      "instrument_type": "spot",
+      "region": "GLOBAL",
+      "last_price": null,
+      "bid": 0.9999,
+      "ask": 1.0001,
+      "bid_size": 85000,
+      "ask_size": 85000,
+      "timestamp_utc": "2026-06-02T00:00:00Z",
+      "fees": {
+        "trading_fee_pct": 0.0,
+        "fee_source": "manual_placeholder"
+      },
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": true,
+        "max_data_age_ms": 350,
+        "latency_ms": 80,
+        "is_realtime": false,
+        "source": "manual_scenario"
+      },
+      "health": {
+        "api_status_known": false,
+        "api_ok": null,
+        "maintenance": null,
+        "trading_enabled": null,
+        "message": "manual fixture only"
+      },
+      "extensions": {
+        "manual_scenario": true,
+        "reference_role": "global_usdt_reference"
+      },
+      "liquidity": {
+        "orderbook_depth_available": true,
+        "volume_available": false,
+        "estimated_executable_notional": 84991.5,
+        "estimated_slippage_pct": 0.0,
+        "depth_levels": [
+          {
+            "bid_price": 0.9999,
+            "bid_size": 85000,
+            "ask_price": 1.0001,
+            "ask_size": 85000
+          }
+        ]
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "missing_bithumb_candidate",
+      "candidate_type": "tether_domestic_spread_signal",
+      "strategy_family": "tether_cross_market_premium",
+      "strategy_id": "usdt_krw_global_reference_v0",
+      "source_observation_id": "upbit_usdt_krw",
+      "target_observation_id": "bithumb_usdt_krw",
+      "source_venue_id": "upbit",
+      "target_venue_id": "bithumb",
+      "direction": "buy_upbit_sell_bithumb",
+      "gross_gap_absolute": 10,
+      "gross_gap_pct": 0.7194244604316548,
+      "estimated_net_gap_pct": 0.46942446043165464,
+      "liquidity_pass": true,
+      "gap_pass": true,
+      "freshness_pass": true,
+      "guard_pass": true,
+      "metrics": {
+        "source_ask": 1390,
+        "target_bid": 1400,
+        "gross_gap_pct": 0.7194244604316548,
+        "estimated_net_gap_pct": 0.46942446043165464,
+        "source_fee_pct": 0.05,
+        "target_fee_pct": 0.05,
+        "estimated_slippage_pct": 0.05,
+        "safety_buffer_pct": 0.1,
+        "domestic_best_bid": 1400,
+        "domestic_best_ask": 1390,
+        "domestic_mid": 1394.0,
+        "domestic_median_mid": 1394.0,
+        "domestic_weighted_mid": 1394.0,
+        "global_usdt_mid": 1.0,
+        "global_usdt_depeg_pct": 0.0,
+        "global_usdt_depeg_flag": false,
+        "global_reference_venue_count": 3,
+        "global_reference_sources": [
+          "binance",
+          "bybit",
+          "okx"
+        ],
+        "timestamp_diff_ms": 100,
+        "data_age_ms": 450,
+        "liquidity_pass": true,
+        "freshness_pass": true,
+        "net_gap_pass": true,
+        "global_reference_pass": true
+      },
+      "thresholds": {
+        "min_estimated_net_gap_pct": 0.1,
+        "max_data_age_ms": 3000,
+        "global_depeg_threshold_pct": 0.5
+      },
+      "assumptions": [
+        "manual scenario only",
+        "NO_TRADE_ONLY"
+      ]
+    }
+  ],
+  "human_context": {
+    "provided": false,
+    "constraints": [
+      "NO_TRADE_ONLY",
+      "manual scenario fixture"
+    ]
+  },
+  "expected_behavior": {
+    "preferred_final_decision": "NEED_DATA",
+    "acceptable_final_decisions": [
+      "NEED_DATA"
+    ],
+    "must_not_include": [
+      "\uc8fc\ubb38 \uc2e4\ud589",
+      "\ucd9c\uae08",
+      "\uc774\uccb4",
+      "\uc790\ub3d9\ub9e4\ub9e4",
+      "ENTER as execution"
+    ],
+    "max_confidence": 0.7,
+    "notes": "Bithumb domestic observation is required before executable domestic spread readiness."
+  },
+  "detector_metadata": {
+    "detector_name": "manual_tether_cross_market_scenario",
+    "detector_version": "v0",
+    "generated_from": "manual_fixture",
+    "source_files": [
+      "docs/strategy_task_cards/tether_cross_market_premium.md"
+    ]
+  },
+  "extensions": {
+    "manual_scenario": true,
+    "no_trade_only": true,
+    "execution_forbidden": true
+  }
+}
