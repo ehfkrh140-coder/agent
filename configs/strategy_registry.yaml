@@ -143,9 +143,9 @@ strategies:
   execution_policy: NO_TRADE_ONLY
 - strategy_family: tether_cross_market_premium
   strategy_id: usdt_krw_global_reference_v0
-  status: future
+  status: experimental
   priority: P1
-  description: Read-only planning strategy comparing domestic Upbit/Bithumb USDT/KRW market state with global USDT reference health from Binance/Bybit/OKX. It does not require USD/KRW FX, does not calculate fair_usdt_krw_price, is not active, and must not be promoted by Codex.
+  description: Read-only experimental signal comparing domestic Upbit/Bithumb USDT/KRW public markets and global Binance/Bybit/OKX USDT reference health without USD/KRW FX. It remains non-active, NO_TRADE_ONLY, does not calculate fair_usdt_krw_price, and must not be promoted by Codex.
   required_observation_fields:
   - upbit_usdt_krw_bid_ask_depth
   - bithumb_usdt_krw_bid_ask_depth
@@ -181,12 +181,12 @@ strategies:
   - bank_or_fiat_transfer
   - auto_trading
   readiness_rules:
-  - future strategy; not active and not experimental
+  - experimental scaffolding only; non-active strategy
   - execution_policy NO_TRADE_ONLY
   - domestic v0 venues are Upbit and Bithumb
   - global reference venues start with Binance, Bybit, OKX and are expandable only by future task card and public probe
   - no USD/KRW FX required and fair_usdt_krw_price is not used
-  - next gate is Tether Cross-Market Bithumb USDT/KRW Recheck v0
+  - readiness_pass remains false and Council handoff is disabled for this strategy
   - Codex must not promote to active by itself; active strategy remains cross_exchange_spot_spread_v1
   default_decision_when_missing_data: NEED_DATA
   execution_policy: NO_TRADE_ONLY

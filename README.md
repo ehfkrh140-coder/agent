@@ -216,6 +216,7 @@ python tools/notify_sampling_result.py --sampling-output data/market_samples/rep
 ```powershell
 python tools/collect_market_data.py --adapter replay_orderbook_imbalance --output data/generated_packets/replay_orderbook_imbalance_packet.json
 python tools/run_strategy_scenarios.py --strategy orderbook_imbalance --evaluate-only
+python tools/run_strategy_scenarios.py --strategy tether_cross_market_premium --evaluate-only
 ```
 
 ## Experimental live orderbook imbalance composite

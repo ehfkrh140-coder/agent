@@ -267,9 +267,9 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
         for text in [playbook, catalog]:
             self.assertIn("stablecoin_krw_premium", text)
             self.assertIn("usdt_krw_kimchi_premium", text)
-        self.assertIn("Tether Cross-Market Bithumb USDT/KRW Recheck v0", playbook)
+        self.assertIn("experimental scaffolding after Bithumb USDT/KRW recheck", playbook)
         self.assertIn("orderbook_imbalance experimental path continues", playbook)
-        self.assertIn("tether_cross_market_premium requires Bithumb USDT/KRW public re-check", playbook)
+        self.assertIn("tether_cross_market_premium has entered experimental scaffolding after Bithumb USDT/KRW public re-check", playbook)
         self.assertIn("funding_rate and spot_futures_basis remain later", playbook)
 
     def test_usdt_krw_multi_source_matrix_exists_and_keeps_strategy_future(self):
@@ -313,7 +313,7 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
             "single venue distortion",
             "stale FX reference",
             "Tether Cross-Market Bithumb USDT/KRW Recheck v0",
-            "Tether Cross-Market Upbit-Only Domestic Reference Scaffolding v0",
+            "Do no trading",
             "No private API",
             "No account/balance lookup",
             "No withdrawal/deposit/transfer",
@@ -364,7 +364,7 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
             "usd_krw_reference_rate",
             "Out of current scope; not required",
             "Tether Cross-Market Bithumb USDT/KRW Recheck v0",
-            "Tether Cross-Market Upbit-Only Domestic Reference Scaffolding v0",
+            "No trading",
             "No private API",
             "No account/balance lookup",
             "No withdrawal/deposit/transfer",
@@ -392,7 +392,7 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
 
 
 
-    def test_tether_cross_market_premium_reframe_is_future_no_fx_read_only(self):
+    def test_tether_cross_market_premium_reframe_is_experimental_no_fx_read_only(self):
         card_path = Path("docs/strategy_task_cards/tether_cross_market_premium.md")
         self.assertTrue(card_path.exists(), str(card_path))
         card = card_path.read_text(encoding="utf-8")
@@ -406,7 +406,7 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
             "fair_usdt_krw_price` is not used",
             "Domestic v0 venues are Upbit and Bithumb only",
             "Upbit `USDT/KRW` is the confirmed primary domestic public source",
-            "Bithumb `USDT/KRW` remains the domestic v0 secondary candidate",
+            "Bithumb `USDT/KRW` is rechecked as available for the manual experimental path",
             "Coinone and Korbit are future domestic expansion, not v0",
             "Binance / Bybit / OKX",
             "Global reference v0 venues are Binance, Bybit, and OKX",
@@ -416,8 +416,8 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
             "global_usdt_depeg_pct =",
             "global_usdt_depeg_flag =",
             "do not calculate `premium_pct` against USD/KRW",
-            "Tether Cross-Market Bithumb USDT/KRW Recheck v0",
-            "Tether Cross-Market Upbit-Only Domestic Reference Scaffolding v0",
+            "Tether Cross-Market Evaluate-Only Review v0",
+            "readiness_pass=false",
             "No private API",
             "No account/balance lookup",
             "No withdrawal/deposit/transfer",
@@ -436,9 +436,9 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
         active = [item for item in strategies if item.get("status") == "active"]
 
         self.assertEqual(tether["strategy_id"], "usdt_krw_global_reference_v0")
-        self.assertEqual(tether["status"], "future")
+        self.assertEqual(tether["status"], "experimental")
         self.assertEqual(tether["execution_policy"], "NO_TRADE_ONLY")
-        self.assertIn("not active", " ".join(tether["readiness_rules"]))
+        self.assertIn("non-active strategy", " ".join(tether["readiness_rules"]))
         self.assertEqual(stablecoin["status"], "future")
         self.assertNotEqual(stablecoin.get("status"), "active")
         self.assertIn("superseded_for_near_term_by_tether_cross_market_premium", " ".join(stablecoin["readiness_rules"]))

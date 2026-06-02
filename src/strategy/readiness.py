@@ -3,6 +3,11 @@ from __future__ import annotations
 from typing import Any
 
 from src.schemas.opportunity_packet import MarketObservation, OpportunityCandidate, OpportunityPacket
+from src.strategy.tether_cross_market_premium import (
+    classify_global_usdt_health,
+    compute_estimated_net_gap_pct,
+    safe_float,
+)
 from src.strategy.registry import active_strategy, load_strategy_current, load_strategy_registry, strategy_by_family
 
 
@@ -22,6 +27,8 @@ def build_readiness_report(
         return _mark_orderbook_report(packet, strategy, active_strategy(current))
     if family == "orderbook_imbalance":
         return _orderbook_imbalance_report(packet, strategy, active_strategy(current))
+    if family == "tether_cross_market_premium":
+        return _tether_cross_market_report(packet, strategy, active_strategy(current))
     return {
         "strategy_family": family,
         "strategy_id": packet.strategy_id or strategy.get("strategy_id"),
@@ -183,6 +190,150 @@ def _orderbook_imbalance_report(packet: OpportunityPacket, strategy: dict[str, A
         "computed_metrics": best_signal or {},
     }
 
+
+def _tether_cross_market_report(packet: OpportunityPacket, strategy: dict[str, Any], active: dict[str, Any]) -> dict[str, Any]:
+    missing: list[str] = []
+    warnings: list[str] = ["experimental_strategy", "non_active_strategy"]
+    obs_by_id = {obs.observation_id: obs for obs in packet.observations if obs.observation_id}
+    domestic_observations = [obs for obs in packet.observations if _is_tether_domestic_observation(obs)]
+    upbit = next((obs for obs in domestic_observations if (obs.venue_id or "").lower() == "upbit"), None)
+    bithumb = next((obs for obs in domestic_observations if (obs.venue_id or "").lower() == "bithumb"), None)
+    if upbit is None:
+        missing.append("domestic.upbit_usdt_krw_observation")
+    if bithumb is None:
+        missing.append("domestic.bithumb_usdt_krw_observation")
+
+    max_data_age_ms = _candidate_threshold(packet.candidates, "max_data_age_ms", 3000.0)
+    stale = False
+    last_price_only = False
+    for obs in [obs for obs in [upbit, bithumb] if obs is not None]:
+        prefix = f"domestic.{obs.venue_id}"
+        if obs.instrument_type != "spot":
+            missing.append(f"{prefix}.instrument_type=spot")
+        for field_name in ["bid", "ask", "bid_size", "ask_size"]:
+            if getattr(obs, field_name) is None:
+                missing.append(f"{prefix}.{field_name}")
+        if obs.liquidity is None or not obs.liquidity.orderbook_depth_available or not obs.liquidity.depth_levels:
+            missing.append(f"{prefix}.liquidity.depth_levels")
+        if obs.timestamp_utc is None and (obs.data_quality is None or not obs.data_quality.timestamps_available):
+            missing.append(f"{prefix}.timestamp")
+        if obs.data_quality is None or obs.data_quality.max_data_age_ms is None:
+            missing.append(f"{prefix}.data_quality.max_data_age_ms")
+        elif obs.data_quality.max_data_age_ms > max_data_age_ms:
+            stale = True
+            warnings.append("stale_domestic_data")
+        if obs.data_quality is None or obs.data_quality.latency_ms is None:
+            missing.append(f"{prefix}.data_quality.latency_ms")
+        if obs.bid is None and obs.ask is None and obs.last_price is not None:
+            last_price_only = True
+
+    domestic_candidate = next(
+        (candidate for candidate in packet.candidates if candidate.candidate_type == "tether_domestic_spread_signal"),
+        packet.candidates[0] if packet.candidates else None,
+    )
+    if domestic_candidate is None:
+        missing.append("candidate.tether_domestic_spread_signal")
+        metrics: dict[str, Any] = {}
+    else:
+        metrics = dict(domestic_candidate.metrics or {})
+        source = _find_observation(domestic_candidate.source_observation_id, domestic_candidate.source_venue_id, obs_by_id, packet.observations)
+        target = _find_observation(domestic_candidate.target_observation_id, domestic_candidate.target_venue_id, obs_by_id, packet.observations)
+        if source is None:
+            missing.append("candidate.source_observation")
+        if target is None:
+            missing.append("candidate.target_observation")
+        if domestic_candidate.liquidity_pass is False or metrics.get("liquidity_pass") is False:
+            warnings.append("low_liquidity_candidate")
+        if domestic_candidate.freshness_pass is False or metrics.get("freshness_pass") is False:
+            stale = True
+            warnings.append("stale_domestic_data")
+
+    global_sources = metrics.get("global_reference_sources") if isinstance(metrics.get("global_reference_sources"), list) else []
+    global_count = safe_float(metrics.get("global_reference_venue_count"))
+    global_pass = metrics.get("global_reference_pass")
+    global_observations = [obs for obs in packet.observations if _is_tether_global_reference_observation(obs)]
+    if (global_count is None or global_count <= 0) and not global_sources and not global_observations:
+        missing.append("global_reference.binance_bybit_okx")
+    if global_pass is False:
+        missing.append("candidate.metrics.global_reference_pass")
+
+    global_mid = metrics.get("global_usdt_mid")
+    threshold = metrics.get("global_depeg_threshold_pct", _candidate_threshold(packet.candidates, "global_depeg_threshold_pct", 0.5))
+    health = classify_global_usdt_health(global_mid, threshold)
+    global_depeg_flag = metrics.get("global_usdt_depeg_flag")
+    if global_depeg_flag is None:
+        global_depeg_flag = health.get("global_usdt_depeg_flag")
+    if global_mid is None:
+        missing.append("candidate.metrics.global_usdt_mid")
+    if global_depeg_flag is True:
+        warnings.append("global_usdt_depeg_risk")
+
+    estimated_net_gap_pct = None
+    if domestic_candidate is not None:
+        estimated_net_gap_pct = domestic_candidate.estimated_net_gap_pct
+    if estimated_net_gap_pct is None:
+        estimated_net_gap_pct = metrics.get("estimated_net_gap_pct")
+    if estimated_net_gap_pct is None:
+        estimated_net_gap_pct = compute_estimated_net_gap_pct(
+            metrics.get("gross_gap_pct"),
+            metrics.get("source_fee_pct"),
+            metrics.get("target_fee_pct"),
+            metrics.get("estimated_slippage_pct"),
+            metrics.get("safety_buffer_pct"),
+        )
+    estimated_net_gap_pct = safe_float(estimated_net_gap_pct)
+    if estimated_net_gap_pct is None:
+        missing.append("candidate.metrics.estimated_net_gap_pct")
+
+    if last_price_only:
+        warnings.append("last_price_only_candidate")
+    if missing or last_price_only:
+        status = "NEED_DATA"
+        recommended = "NEED_DATA"
+    elif stale:
+        status = "REJECT"
+        recommended = "REJECT"
+    elif global_depeg_flag is True:
+        status = "REJECT"
+        recommended = "REJECT"
+    elif estimated_net_gap_pct is not None and estimated_net_gap_pct <= 0:
+        status = "REJECT"
+        recommended = "REJECT"
+        warnings.append("non_positive_estimated_net_gap")
+        warnings.append("balanced_or_no_spread")
+    elif estimated_net_gap_pct is not None and estimated_net_gap_pct > 0:
+        status = "WATCH"
+        recommended = "WATCH"
+        warnings.append("experimental_watch_only")
+    else:
+        status = "NEED_DATA"
+        recommended = "NEED_DATA"
+
+    computed_metrics = dict(metrics)
+    computed_metrics.update(
+        {
+            "estimated_net_gap_pct": estimated_net_gap_pct,
+            "global_usdt_health": health.get("status"),
+            "global_usdt_depeg_pct": metrics.get("global_usdt_depeg_pct", health.get("global_usdt_depeg_pct")),
+            "global_usdt_depeg_flag": global_depeg_flag,
+        }
+    )
+    return {
+        "strategy_family": "tether_cross_market_premium",
+        "strategy_id": packet.strategy_id or strategy.get("strategy_id"),
+        "strategy_status": strategy.get("status", "experimental"),
+        "status": status,
+        "candidate_count": len(packet.candidates),
+        "missing_required_fields": _dedupe(missing),
+        "warnings": _dedupe(warnings),
+        "readiness_pass": False,
+        "experimental_pass": bool(status == "WATCH"),
+        "council_recommended": False,
+        "recommended_default_decision": recommended,
+        "basis": "experimental tether cross-market readiness; non-active, no Council handoff, and no execution path",
+        "computed_metrics": computed_metrics,
+    }
+
 def _find_observation(
     observation_id: str | None,
     venue_id: str | None,
@@ -223,6 +374,26 @@ def _check_spot_side(prefix: str, obs: MarketObservation | None, missing: list[s
         warnings.append("last_price_only_candidate")
 
 
+
+
+def _is_tether_domestic_observation(obs: MarketObservation) -> bool:
+    venue = (obs.venue_id or "").lower()
+    symbol = (obs.market_symbol or "").upper().replace("-", "/")
+    return venue in {"upbit", "bithumb"} and symbol in {"USDT/KRW", "KRW/USDT"}
+
+
+def _is_tether_global_reference_observation(obs: MarketObservation) -> bool:
+    venue = (obs.venue_id or "").lower()
+    symbol = (obs.market_symbol or "").upper().replace("-", "/")
+    return venue in {"binance", "bybit", "okx"} and symbol in {"USDT/USD", "USDT/USDC", "USDC/USDT"}
+
+
+def _candidate_threshold(candidates: list[OpportunityCandidate], key: str, default: float | None) -> float | None:
+    for candidate in candidates:
+        if isinstance(candidate.thresholds, dict) and candidate.thresholds.get(key) is not None:
+            value = safe_float(candidate.thresholds.get(key))
+            return default if value is None else value
+    return default
 
 def _packet_threshold(packet: OpportunityPacket, key: str, default: float | None) -> float | None:
     thresholds = getattr(packet, "thresholds", None)

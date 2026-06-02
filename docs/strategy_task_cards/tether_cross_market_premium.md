@@ -1,36 +1,36 @@
 # Tether Cross-Market Premium Strategy Card v0
 
 ## Task name
-Tether Cross-Market Premium Strategy Reframe v0
+Tether Cross-Market Experimental Scaffolding v0
 
 ## Strategy family
 - `strategy_family`: `tether_cross_market_premium`
 - `strategy_id`: `usdt_krw_global_reference_v0`
-- Status: `future` / planning only
+- Status: `experimental` / scaffolding only
 - Priority: `P1`
 - Execution policy: `NO_TRADE_ONLY`
 - Active: `false`
-- Experimental: `false`
-- Codex must not promote this strategy to active or experimental by itself.
+- Experimental: `true`
+- Codex must not promote this strategy to active by itself.
 
 ## Goal
-Define a read-only strategy plan that observes domestic `USDT/KRW` markets on Korean exchanges and compares that state with global public USDT reference health. The near-term goal is not FX-based kimchi premium, not auto-trading, and not an execution workflow. It is a planning card for detecting domestic Tether cross-market spread, premium-state, and depeg/reference-health conditions with public data only.
+Define a read-only experimental scaffolding plan that observes domestic `USDT/KRW` markets on Korean exchanges and compares that state with global public USDT reference health. The near-term goal is not FX-based kimchi premium, not auto-trading, and not an execution workflow. It is a planning card for detecting domestic Tether cross-market spread, premium-state, and depeg/reference-health conditions with public data only.
 
 ## Current status
-- Future strategy only; not active and not experimental.
+- Experimental scaffolding only; not active and still `NO_TRADE_ONLY`.
 - Active strategy remains `cross_exchange_spot_spread_v1`.
 - Domestic v0 venues are Upbit and Bithumb only.
 - Upbit `USDT/KRW` is the confirmed primary domestic public source from the prior probe (`ok / available`).
-- Bithumb `USDT/KRW` remains the domestic v0 secondary candidate, but prior probe status was `ok / unknown`; it requires re-check / alignment before scaffolding.
+- Bithumb `USDT/KRW` is rechecked as available for the manual experimental path, but live adapters are still not added.
 - Coinone and Korbit are future domestic expansion, not v0.
 - Global reference v0 venues are Binance, Bybit, and OKX.
 - Overseas venues can be expanded later only by separate strategy task cards and public probe review first.
-- No live adapter, persistent adapter, OpportunityPacket builder change, readiness code, scenario JSON, Council handoff, private API, order, transfer, balance lookup, or auto-trading is included.
+- This scaffolding adds manual scenario JSON, formula helpers, and evaluate-only readiness rules; it does not add a live adapter, persistent adapter, OpportunityPacket live builder, Council handoff, private API, order, transfer, balance lookup, or auto-trading.
 
 ## Probe alignment status
 - Prior probe result: Upbit `domestic_usdt_krw` was `ok / available`; treat it as the confirmed primary domestic public source for planning.
-- Prior probe result: Bithumb `domestic_usdt_krw` was `ok / unknown`; keep it as domestic v0 secondary candidate and re-check its public pair availability/response shape.
-- Bithumb must be confirmed before domestic cross-exchange executable spread scaffolding; if Bithumb remains unknown, use the Upbit-only domestic reference fallback instead of executable spread scaffolding.
+- Bithumb `domestic_usdt_krw` has been rechecked for the manual experimental path; domestic executable-spread scaffolding remains manual/evaluate-only and non-active.
+- Bithumb must remain confirmed before any future live domestic cross-exchange executable spread implementation; if it becomes unknown, use the Upbit-only domestic reference fallback instead of executable spread implementation.
 - Prior probe result: Coinone and Korbit were `skipped / unknown`; they are future domestic expansion only, not v0.
 - Prior probe result: Binance, Bybit, and OKX `global_usdt_reference` were `ok / available`; keep them as the initial global USDT reference basket.
 - FX candidates are out-of-scope for current strategy and must not block the no-FX Tether cross-market path.
@@ -201,7 +201,7 @@ abs(global_usdt_depeg_pct) >= threshold
 Important: do not calculate `premium_pct` against USD/KRW in current scope, and do not use `fair_usdt_krw_price` for this near-term strategy.
 
 ## Readiness rules
-Readiness is a draft only. No readiness code is added in this task.
+Readiness is implemented only as experimental evaluate-only scaffolding. It is non-active, never execution-capable, and always keeps `readiness_pass=false` for this strategy.
 
 ### NEED_DATA
 - Upbit/Bithumb `USDT/KRW` pair availability unknown.
@@ -231,13 +231,14 @@ Readiness is a draft only. No readiness code is added in this task.
 - If present in a future schema, it is an analysis-stage label only.
 
 ## Manual scenarios
-Scenario JSON is not added in this task. Future scenario drafts may include:
+Manual scenario JSON added for evaluate-only scaffolding:
 - `tether_cross_market_missing_bithumb_need_data`
-- `tether_cross_market_upbit_to_bithumb_watch`
-- `tether_cross_market_bithumb_to_upbit_watch`
-- `tether_cross_market_stale_domestic_reject`
-- `tether_cross_market_depeg_reference_reject`
-- `tether_cross_market_last_price_only_reject`
+- `tether_cross_market_missing_global_reference_need_data`
+- `tether_cross_market_domestic_spread_positive_watch`
+- `tether_cross_market_high_fee_reject`
+- `tether_cross_market_depeg_risk_reject`
+- `tether_cross_market_last_price_only_need_data`
+- `tether_cross_market_balanced_no_spread_reject`
 
 ## Allowed files for future implementation
 Future task cards may allow only explicitly scoped files. Typical future scopes may include docs, config, tests, and then public probe alignment before any adapter or readiness work.
@@ -246,8 +247,8 @@ Future task cards may allow only explicitly scoped files. Typical future scopes 
 - Do not implement live adapters in this card.
 - Do not implement persistent adapters in this card.
 - Do not implement OpportunityPacket builders in this card.
-- Do not implement readiness code in this card.
-- Do not add scenario JSON in this card.
+- Do not implement active/live readiness or Council handoff in this card.
+- Scenario JSON is manual/evaluate-only and must not be treated as live market data.
 - Do not use private APIs, credentials, account/balance lookup, orders, transfers, withdrawals, KRW/bank transfer flows, auto-trading, or Council automatic calls.
 
 ## Tests
@@ -259,30 +260,29 @@ Documentation/guardrail tests must verify:
 - It includes the domestic spread formula.
 - It includes global depeg health formulas.
 - It says `fair_usdt_krw_price` is not used.
-- Registry keeps the strategy `future` and `NO_TRADE_ONLY`.
+- Registry marks the strategy `experimental` and `NO_TRADE_ONLY` while keeping it non-active.
 - Active strategy remains `cross_exchange_spot_spread_v1`.
 
 ## Manual smoke
-None. This is a documentation/registry planning task only.
+`python tools/run_strategy_scenarios.py --strategy tether_cross_market_premium --evaluate-only`
 
 ## Success criteria
 - Strategy direction is corrected away from FX-based Kimchi Premium.
 - Near-term Tether strategy compares domestic `USDT/KRW` state and global USDT reference health.
 - Domestic v0 venues are fixed to Upbit/Bithumb.
 - Overseas references are expandable starting from Binance/Bybit/OKX.
-- No code implementation is added.
+- Formula helper and evaluate-only readiness scaffolding are added without live adapters or execution paths.
 - No private API or trade behavior is added.
 
 ## Next gate
-Next card: `Tether Cross-Market Bithumb USDT/KRW Recheck v0`
+Next card: `Tether Cross-Market Evaluate-Only Review v0`
 
 Purpose:
-- Re-check Bithumb `USDT/KRW` public pair availability and response shape.
-- Keep Upbit confirmed as the primary domestic public source.
-- Keep Binance/Bybit/OKX global reference basket.
+- Review manual scenario outcomes and readiness warnings.
+- Keep Upbit/Bithumb as domestic v0 venues and Binance/Bybit/OKX as global reference venues.
 - Add no adapter yet.
-- Add no OpportunityPacket builder.
-- Add no readiness/scenario yet.
+- Add no OpportunityPacket live builder.
+- Add no Council handoff.
 - Do no trading.
 
 Alternative if Bithumb remains unknown: `Tether Cross-Market Upbit-Only Domestic Reference Scaffolding v0`. This alternative is analysis-only, is not executable domestic spread, and still has no trade behavior.
@@ -291,6 +291,6 @@ Alternative if Bithumb remains unknown: `Tether Cross-Market Upbit-Only Domestic
 - No FX-based `fair_usdt_krw_price` calculation.
 - No USD/KRW FX source requirement.
 - No active strategy change.
-- No experimental promotion.
+- Experimental but non-active; no active promotion.
 - No runtime/auth/prompt change.
 - No order, balance, transfer, withdrawal, KRW deposit/withdrawal, bank account, private API, or auto-trading workflow.

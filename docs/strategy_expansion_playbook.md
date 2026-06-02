@@ -209,10 +209,10 @@ These are documentation-only planning cards. They do not authorize code, config,
 ## 8. Recommended implementation order
 
 1. `orderbook_imbalance` — existing Upbit/Bithumb orderbook depth makes this the safest next candidate.
-2. `tether_cross_market_premium` / `usdt_krw_global_reference_v0` — next gate is `Tether Cross-Market Bithumb USDT/KRW Recheck v0`; domestic v0 venues are Upbit/Bithumb and global references start with Binance/Bybit/OKX, with FX removed from the required path.
+2. `tether_cross_market_premium` / `usdt_krw_global_reference_v0` — experimental scaffolding after Bithumb USDT/KRW recheck; domestic v0 venues are Upbit/Bithumb and global references start with Binance/Bybit/OKX, with FX removed from the required path. It remains non-active and NO_TRADE_ONLY.
 3. `stablecoin_krw_premium` / `usdt_krw_kimchi_premium` — deferred FX-basis planning only, superseded for near-term implementation by `tether_cross_market_premium`.
 4. `kimchi_premium` — broader domestic/global premium work remains future planning and must not bypass the no-trade playbook.
 5. `funding_rate` — requires public derivatives data and must remain separate from the active spot strategy.
 6. `spot_futures_basis` — combines spot and futures data, so it should follow funding-rate groundwork.
 
-The orderbook_imbalance experimental path continues; tether_cross_market_premium requires Bithumb USDT/KRW public re-check before experimental scaffolding; stablecoin_krw_premium FX-basis planning is deferred; funding_rate and spot_futures_basis remain later. All other strategies remain future backlog items until a dedicated task card promotes them through the playbook.
+The orderbook_imbalance experimental path continues; tether_cross_market_premium has entered experimental scaffolding after Bithumb USDT/KRW public re-check; stablecoin_krw_premium FX-basis planning is deferred; funding_rate and spot_futures_basis remain later. All other strategies remain future backlog items until a dedicated task card promotes them through the playbook.
