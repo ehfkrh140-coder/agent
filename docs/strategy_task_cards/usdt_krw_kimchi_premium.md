@@ -21,6 +21,8 @@ Design a read-only, no-trade future strategy for reading USDT/KRW kimchi premium
 - Not active and not experimental yet.
 - Codex must not promote this strategy to active by itself.
 - No live adapter, no scenario JSON, no readiness implementation, no Council handoff, and no automated execution is included in this card.
+- Data availability matrix: [`docs/data_availability/usdt_krw_multi_source_matrix.md`](../data_availability/usdt_krw_multi_source_matrix.md).
+- experimental scaffolding requires Multi-Source Data Availability Matrix and Public Probe first.
 
 ## Strategy concept
 

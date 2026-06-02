@@ -268,6 +268,64 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
         self.assertIn("orderbook_imbalance experimental path continues", playbook)
         self.assertIn("funding_rate and spot_futures_basis remain later", playbook)
 
+    def test_usdt_krw_multi_source_matrix_exists_and_keeps_strategy_future(self):
+        path = Path("docs/data_availability/usdt_krw_multi_source_matrix.md")
+        self.assertTrue(path.exists(), str(path))
+        text = path.read_text(encoding="utf-8")
+
+        for phrase in [
+            "## Overview",
+            "## Strategy link",
+            "## Source role model",
+            "## Domestic executable/reference venues",
+            "## Global USDT reference venues",
+            "## USD/KRW FX reference sources",
+            "## Recommended premium formulas",
+            "## Aggregation rules",
+            "## Data availability matrix",
+            "## Data risks",
+            "## Next implementation gate",
+            "## No-trade compliance",
+            "Upbit",
+            "Bithumb",
+            "Coinone",
+            "Korbit",
+            "Binance",
+            "Bybit",
+            "OKX",
+            "public FX API candidate",
+            "official FX source candidate",
+            "no-key public source candidate",
+            "A. Domestic USDT/KRW venues",
+            "B. Global USDT reference venues",
+            "C. USD/KRW FX reference sources",
+            "fair_usdt_krw_price",
+            "premium_mid_pct",
+            "premium_sell_pct",
+            "premium_buy_pct",
+            "per_venue_premium_pct",
+            "domestic_median_mid_premium_pct",
+            "global_usdt_usd_median",
+            "single venue distortion",
+            "stale FX reference",
+            "No private API",
+            "No account/balance lookup",
+            "No withdrawal/deposit/transfer",
+            "USDT/KRW Public Probe v0",
+        ]:
+            self.assertIn(phrase, text)
+
+        card = Path("docs/strategy_task_cards/usdt_krw_kimchi_premium.md").read_text(encoding="utf-8")
+        self.assertIn("docs/data_availability/usdt_krw_multi_source_matrix.md", card)
+        self.assertIn("experimental scaffolding requires Multi-Source Data Availability Matrix and Public Probe first", card)
+
+        registry = yaml.safe_load(Path("configs/strategy_registry.yaml").read_text(encoding="utf-8"))
+        stablecoin = next(item for item in registry["strategies"] if item["strategy_family"] == "stablecoin_krw_premium")
+        active = [item for item in registry["strategies"] if item.get("status") == "active"]
+        self.assertEqual(stablecoin["status"], "future")
+        self.assertEqual(stablecoin["execution_policy"], "NO_TRADE_ONLY")
+        self.assertEqual([item["strategy_id"] for item in active], ["cross_exchange_spot_spread_v1"])
+
 
 if __name__ == "__main__":
     unittest.main()

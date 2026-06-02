@@ -237,3 +237,6 @@ python tools/notify_sampling_result.py --sampling-output data/market_samples/rep
 ## Future USDT/KRW kimchi premium strategy card
 - `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0` is documented as a read-only future strategy card only; no adapter, private API, transfer, order, or auto-trading implementation is included.
 - Card: [docs/strategy_task_cards/usdt_krw_kimchi_premium.md](docs/strategy_task_cards/usdt_krw_kimchi_premium.md)
+
+## USDT/KRW multi-source data availability matrix
+- Planning matrix: [docs/data_availability/usdt_krw_multi_source_matrix.md](docs/data_availability/usdt_krw_multi_source_matrix.md) separates domestic venues, global USDT references, and USD/KRW FX sources before any public probe or adapter work.

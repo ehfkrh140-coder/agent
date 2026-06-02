@@ -135,7 +135,7 @@ strategies:
   readiness_rules:
   - future strategy; not active
   - execution_policy NO_TRADE_ONLY
-  - requires USDT/KRW data availability check before experimental scaffolding
+  - requires USDT/KRW multi-source data availability matrix and public probe before experimental scaffolding
   - Codex must not promote to active by itself; active strategy remains cross_exchange_spot_spread_v1
   default_decision_when_missing_data: NEED_DATA
   execution_policy: NO_TRADE_ONLY

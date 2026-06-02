@@ -96,7 +96,7 @@
 아래 전략은 registry에 future로 남기며 현재 active v1 판단 입력으로 사용하지 않는다.
 
 ### P1 Future
-- `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0`: read-only USDT/KRW kimchi premium / FX basis planning strategy; requires data availability check before experimental scaffolding.
+- `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0`: read-only USDT/KRW kimchi premium / FX basis planning strategy; requires the multi-source data availability matrix and public probe before experimental scaffolding.
 - `kimchi_premium`
 - `reverse_premium`
 - `spot_futures_basis`

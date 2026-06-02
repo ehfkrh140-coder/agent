@@ -96,7 +96,7 @@ A strategy cannot move from future to experimental until it has:
 ### stablecoin_krw_premium / usdt_krw_kimchi_premium
 - Purpose: Read USDT/KRW kimchi premium or reverse-premium by comparing domestic USDT/KRW public bid/ask/depth with fair USD/KRW or global USDT/USD reference pricing.
 - Likely public data required: domestic USDT/KRW bid/ask/depth, public USD/KRW reference, optional global USDT/USD reference, timestamp alignment, source reliability, fees, liquidity and depeg-risk metadata. This includes domestic/global prices and FX or USDT-KRW reference assumptions that must be resolved before implementation.
-- First safe implementation step: `USDT/KRW Data Availability Check v0` to document Upbit/Bithumb pair availability and reference-source candidates; no live adapter changes initially.
+- First safe implementation step: `USDT/KRW Data Availability Check v0` / `USDT/KRW Public Probe v0` after the multi-source matrix documents domestic venues, global USDT references and FX candidates; no live adapter changes initially.
 - Why not active yet: FX/reference reliability, timestamp alignment and depeg-risk controls are unresolved; this is a future read-only strategy, not auto-trading.
 
 ### kimchi_premium
