@@ -69,7 +69,7 @@ class GeminiCliClientParsingTests(unittest.TestCase):
             proc = MagicMock()
             proc.pid = 777
             proc.communicate.side_effect = [subprocess.TimeoutExpired(cmd=["gemini.cmd"], timeout=1, output="out", stderr="err"), ("", "")]
-            with patch("subprocess.Popen", return_value=proc), patch("os.name", "posix"):
+            with patch("subprocess.Popen", return_value=proc), patch.object(GeminiCliClient, "_is_windows", return_value=False):
                 with self.assertRaises(TimeoutError):
                     client.generate_structured(
                         prompt='{"summary":"ok"}',
@@ -85,7 +85,7 @@ class GeminiCliClientParsingTests(unittest.TestCase):
         proc.pid = 1234
         proc.communicate.side_effect = [subprocess.TimeoutExpired(cmd=["gemini.cmd"], timeout=30, output="out", stderr="err"), ("", "")]
 
-        with patch("subprocess.Popen", return_value=proc), patch("os.name", "posix"):
+        with patch("subprocess.Popen", return_value=proc), patch.object(GeminiCliClient, "_is_windows", return_value=False):
             with self.assertRaises(TimeoutError) as cm:
                 client._run_cli_command(["gemini.cmd"], env={}, cwd=Path.cwd(), timeout_seconds=30)
             msg = str(cm.exception)
@@ -100,7 +100,7 @@ class GeminiCliClientParsingTests(unittest.TestCase):
         first_exc = subprocess.TimeoutExpired(cmd=["gemini.cmd"], timeout=30, output="", stderr="")
         proc.communicate.side_effect = [first_exc, ("", "")]
 
-        with patch("subprocess.Popen", return_value=proc), patch("os.name", "nt"), patch("subprocess.run") as mock_run:
+        with patch("subprocess.Popen", return_value=proc), patch.object(GeminiCliClient, "_is_windows", return_value=True), patch("subprocess.run") as mock_run:
             with self.assertRaises(TimeoutError):
                 client._run_cli_command(["gemini.cmd"], env={}, cwd=Path.cwd(), timeout_seconds=30)
             mock_run.assert_called()
@@ -226,7 +226,8 @@ class GeminiCliClientParsingTests(unittest.TestCase):
             }
             stdout_wrapper = json.dumps({"response": json.dumps(payload)})
 
-            def fake_run(cmd, env, cwd, timeout_seconds):
+            def fake_run(cmd, env, cwd, timeout_seconds, input_text=None):
+                self.assertEqual(input_text, "x")
                 self.assertEqual(cmd[0], "gemini.cmd")
                 self.assertNotIn("powershell.exe", " ".join(cmd).lower())
                 self.assertNotIn("tee-object", " ".join(cmd).lower())
