@@ -2,7 +2,8 @@ agents:
   - agent_id: agent_01
     name: Agent 01
     provider: gemini_cli
-    model: null  # Optional experimental CLI model override, e.g. gemini-3-flash-preview
+    model: flash
+    approval_mode: plan
     cli_command: gemini.cmd
     gemini_cli_home: C:\gemini-profiles\agent_01
     working_dir: C:\gemini-agent-workspaces\agent_01
@@ -21,7 +22,8 @@ agents:
   - agent_id: agent_02
     name: Agent 02
     provider: gemini_cli
-    model: null  # Optional experimental CLI model override, e.g. gemini-3-flash-preview
+    model: flash
+    approval_mode: plan
     cli_command: gemini.cmd
     gemini_cli_home: C:\gemini-profiles\agent_02
     working_dir: C:\gemini-agent-workspaces\agent_02
@@ -40,7 +42,8 @@ agents:
   - agent_id: agent_03
     name: Agent 03
     provider: gemini_cli
-    model: null  # Optional experimental CLI model override, e.g. gemini-3-flash-preview
+    model: flash
+    approval_mode: plan
     cli_command: gemini.cmd
     gemini_cli_home: C:\gemini-profiles\agent_03
     working_dir: C:\gemini-agent-workspaces\agent_03
@@ -59,7 +62,8 @@ agents:
   - agent_id: agent_04
     name: Agent 04
     provider: gemini_cli
-    model: null  # Optional experimental CLI model override, e.g. gemini-3-flash-preview
+    model: flash
+    approval_mode: plan
     cli_command: gemini.cmd
     gemini_cli_home: C:\gemini-profiles\agent_04
     working_dir: C:\gemini-agent-workspaces\agent_04
@@ -78,7 +82,8 @@ agents:
   - agent_id: agent_05
     name: Agent 05
     provider: gemini_cli
-    model: null  # Optional experimental CLI model override, e.g. gemini-3-flash-preview
+    model: flash
+    approval_mode: plan
     cli_command: gemini.cmd
     gemini_cli_home: C:\gemini-profiles\agent_05
     working_dir: C:\gemini-agent-workspaces\agent_05
