@@ -1,0 +1,12 @@
+# Development-only manual fee placeholders for public spot market data packets.
+# These values are not account-specific fees and must not be treated as live-trading execution terms.
+# Private account fee lookup, API keys, secrets, balances, orders, withdrawals, and transfers are intentionally absent.
+spot_fees:
+  upbit:
+    BTC/KRW:
+      trading_fee_pct: 0.05
+      fee_source: manual_config_placeholder
+  bithumb:
+    BTC/KRW:
+      trading_fee_pct: 0.05
+      fee_source: manual_config_placeholder
