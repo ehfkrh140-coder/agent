@@ -217,6 +217,8 @@ python tools/notify_sampling_result.py --sampling-output data/market_samples/rep
 python tools/collect_market_data.py --adapter replay_orderbook_imbalance --output data/generated_packets/replay_orderbook_imbalance_packet.json
 python tools/run_strategy_scenarios.py --strategy orderbook_imbalance --evaluate-only
 python tools/run_strategy_scenarios.py --strategy tether_cross_market_premium --evaluate-only
+python tools/collect_market_data.py --adapter replay_tether_cross_market_premium --output data/generated_packets/replay_tether_cross_market_packet.json
+python main.py --council --opportunity-file data/generated_packets/replay_tether_cross_market_packet.json --dry-run-context
 ```
 
 ## Experimental live orderbook imbalance composite

@@ -20,6 +20,15 @@ adapters:
     fixture_path: data/fixtures/market_data/cross_exchange_spot_snapshot.json
     enabled: true
     strategy_family: cross_exchange_spot_spread
+
+  replay_tether_cross_market_premium:
+    type: replay
+    enabled: true
+    experimental: true
+    strategy_family: tether_cross_market_premium
+    strategy_id: usdt_krw_global_reference_v0
+    fixture_path: data/fixtures/market_data/tether_cross_market_snapshot.json
+    note: "Experimental/non-active Tether cross-market replay packet. No trading, no Council handoff."
   live_bybit_mark_orderbook_gap:
     type: bybit_public
     base_url: https://api.bybit.com

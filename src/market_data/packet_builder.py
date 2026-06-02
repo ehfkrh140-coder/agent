@@ -4,6 +4,13 @@ from datetime import datetime, timezone
 from typing import Any
 
 from src.market_data.orderbook_imbalance import compute_orderbook_imbalance
+from src.strategy.tether_cross_market_premium import (
+    classify_global_usdt_health,
+    compute_domestic_mid,
+    compute_domestic_spread,
+    compute_domestic_spread_pct,
+    compute_estimated_net_gap_pct,
+)
 from src.market_data.vwap import compute_buy_vwap_from_asks, compute_sell_vwap_from_bids
 from src.schemas.opportunity_packet import (
     DataQualitySnapshot,
@@ -29,6 +36,8 @@ class OpportunityPacketBuilder:
             return self.build_cross_exchange_spot_spread(snapshot)
         if strategy_family == "orderbook_imbalance":
             return self.build_orderbook_imbalance(snapshot)
+        if strategy_family == "tether_cross_market_premium":
+            return self.build_tether_cross_market_premium(snapshot)
         raise ValueError(f"Unsupported strategy_family: {strategy_family!r}")
 
     def build_mark_orderbook_gap(self, snapshot: dict[str, Any]) -> OpportunityPacket:
@@ -80,6 +89,24 @@ class OpportunityPacketBuilder:
             signal_type="orderbook_imbalance",
             strategy_family="orderbook_imbalance",
             strategy_id=snapshot.get("strategy_id") or "orderbook_imbalance_v0",
+            observations=observations,
+            candidates=candidates,
+            detector_metadata=self._metadata(snapshot),
+            extensions=snapshot.get("extensions", {}),
+        )
+
+    def build_tether_cross_market_premium(self, snapshot: dict[str, Any]) -> OpportunityPacket:
+        raw_observations = snapshot.get("observations") or []
+        observations = [self._observation(raw) for raw in raw_observations]
+        candidates = self._tether_cross_market_candidates(observations, snapshot)
+        return OpportunityPacket(
+            packet_id=snapshot.get("packet_id") or self._packet_id("tether_cross_market_premium"),
+            created_at_utc=self._created_at(snapshot),
+            asset=snapshot["asset"],
+            quote=snapshot["quote"],
+            signal_type="tether_cross_market_premium",
+            strategy_family="tether_cross_market_premium",
+            strategy_id=snapshot.get("strategy_id") or "usdt_krw_global_reference_v0",
             observations=observations,
             candidates=candidates,
             detector_metadata=self._metadata(snapshot),
@@ -317,6 +344,182 @@ class OpportunityPacketBuilder:
                 )
             )
         return candidates
+
+    def _tether_cross_market_candidates(self, observations: list[MarketObservation], snapshot: dict[str, Any]) -> list[OpportunityCandidate]:
+        thresholds = snapshot.get("thresholds", {})
+        safety_buffer_pct = float(thresholds.get("safety_buffer_pct", 0.0))
+        min_net_gap_pct = self._optional_float(thresholds.get("min_net_gap_pct"))
+        min_executable_notional = float(thresholds.get("min_executable_notional") or thresholds.get("min_notional") or 0.0)
+        max_data_age_ms = thresholds.get("max_data_age_ms")
+        global_mid, global_sources = self._global_usdt_reference(observations)
+        health = classify_global_usdt_health(global_mid, thresholds.get("global_depeg_threshold_pct", 0.5))
+        global_depeg_flag = health.get("global_usdt_depeg_flag")
+        global_reference_pass = bool(global_sources) and global_depeg_flag is False
+        domestic = {obs.venue_id.lower(): obs for obs in observations if self._is_tether_domestic_observation(obs)}
+        candidates: list[OpportunityCandidate] = []
+        for source_id, target_id in (("upbit", "bithumb"), ("bithumb", "upbit")):
+            source = domestic.get(source_id)
+            target = domestic.get(target_id)
+            if source is None or target is None:
+                continue
+            candidate = self._tether_domestic_candidate(
+                source=source,
+                target=target,
+                snapshot=snapshot,
+                thresholds=thresholds,
+                safety_buffer_pct=safety_buffer_pct,
+                min_net_gap_pct=min_net_gap_pct,
+                min_executable_notional=min_executable_notional,
+                max_data_age_ms=max_data_age_ms,
+                global_mid=global_mid,
+                global_sources=global_sources,
+                global_health=health,
+                global_reference_pass=global_reference_pass,
+            )
+            candidates.append(candidate)
+        return candidates
+
+    def _tether_domestic_candidate(
+        self,
+        *,
+        source: MarketObservation,
+        target: MarketObservation,
+        snapshot: dict[str, Any],
+        thresholds: dict[str, Any],
+        safety_buffer_pct: float,
+        min_net_gap_pct: float | None,
+        min_executable_notional: float,
+        max_data_age_ms: Any,
+        global_mid: float | None,
+        global_sources: list[str],
+        global_health: dict[str, Any],
+        global_reference_pass: bool,
+    ) -> OpportunityCandidate:
+        gross_spread = compute_domestic_spread(source.ask, target.bid)
+        gross_gap_pct = compute_domestic_spread_pct(source.ask, target.bid)
+        source_fee_pct = self._fee_pct(source)
+        target_fee_pct = self._fee_pct(target)
+        source_slippage_pct = self._slippage_pct(source) or 0.0
+        target_slippage_pct = self._slippage_pct(target) or 0.0
+        estimated_slippage_pct = source_slippage_pct + target_slippage_pct
+        estimated_net_gap_pct = compute_estimated_net_gap_pct(
+            gross_gap_pct,
+            source_fee_pct,
+            target_fee_pct,
+            estimated_slippage_pct,
+            safety_buffer_pct,
+        )
+        source_notional = source.ask * source.ask_size if source.ask is not None and source.ask_size is not None else 0.0
+        target_notional = target.bid * target.bid_size if target.bid is not None and target.bid_size is not None else 0.0
+        executable_notional = min(source_notional, target_notional)
+        liquidity_pass = executable_notional >= min_executable_notional if min_executable_notional else executable_notional > 0
+        source_fresh = self._freshness_pass(source, max_data_age_ms)
+        target_fresh = self._freshness_pass(target, max_data_age_ms)
+        freshness_pass = bool(source_fresh and target_fresh)
+        net_gap_pass = None
+        if estimated_net_gap_pct is not None and min_net_gap_pct is not None:
+            net_gap_pass = estimated_net_gap_pct >= min_net_gap_pct
+        domestic_best_bid = max(value for value in [source.bid, target.bid] if value is not None) if source.bid is not None or target.bid is not None else None
+        domestic_best_ask = min(value for value in [source.ask, target.ask] if value is not None) if source.ask is not None or target.ask is not None else None
+        direction = f"buy_{source.venue_id}_sell_{target.venue_id}_usdt_krw_signal"
+        metrics = {
+            "source_ask": source.ask,
+            "target_bid": target.bid,
+            "gross_gap_pct": self._round_optional(gross_gap_pct),
+            "estimated_net_gap_pct": self._round_optional(estimated_net_gap_pct),
+            "source_fee_pct": source_fee_pct,
+            "target_fee_pct": target_fee_pct,
+            "estimated_slippage_pct": self._round_optional(estimated_slippage_pct),
+            "safety_buffer_pct": safety_buffer_pct,
+            "executable_notional": self._round_optional(executable_notional),
+            "domestic_best_bid": domestic_best_bid,
+            "domestic_best_ask": domestic_best_ask,
+            "domestic_mid": self._round_optional(compute_domestic_mid(domestic_best_bid, domestic_best_ask)),
+            "global_usdt_mid": self._round_optional(global_mid),
+            "global_usdt_depeg_pct": self._round_optional(global_health.get("global_usdt_depeg_pct")),
+            "global_usdt_depeg_flag": global_health.get("global_usdt_depeg_flag"),
+            "global_reference_venue_count": len(global_sources),
+            "global_reference_sources": global_sources,
+            "global_reference_pass": global_reference_pass,
+            "liquidity_pass": liquidity_pass,
+            "freshness_pass": freshness_pass,
+            "net_gap_pass": net_gap_pass,
+        }
+        return OpportunityCandidate(
+            candidate_id=f"{source.venue_id}_to_{target.venue_id}_tether_cross_market",
+            candidate_type="tether_domestic_spread_signal",
+            strategy_family="tether_cross_market_premium",
+            strategy_id=snapshot.get("strategy_id") or "usdt_krw_global_reference_v0",
+            side_candidate="BUY_SOURCE_SELL_TARGET",
+            source_observation_id=source.observation_id,
+            target_observation_id=target.observation_id,
+            source_venue_id=source.venue_id,
+            target_venue_id=target.venue_id,
+            direction=direction,
+            gross_gap_absolute=self._round_optional(gross_spread),
+            gross_gap_pct=self._round_optional(gross_gap_pct),
+            estimated_net_gap_pct=self._round_optional(estimated_net_gap_pct),
+            liquidity_pass=liquidity_pass,
+            freshness_pass=freshness_pass,
+            gap_pass=bool(net_gap_pass) if net_gap_pass is not None else None,
+            guard_pass=True,
+            metrics=metrics,
+            thresholds=thresholds,
+            required_missing_fields=self._missing_tether_fields(source, target),
+            assumptions=[
+                "experimental non-active tether cross-market replay signal",
+                "global references are depeg/reference checks, not execution venues",
+                "no private API and no trading behavior",
+            ],
+        )
+
+    def _global_usdt_reference(self, observations: list[MarketObservation]) -> tuple[float | None, list[str]]:
+        mids: list[float] = []
+        sources: list[str] = []
+        for obs in observations:
+            if not self._is_tether_global_reference_observation(obs):
+                continue
+            if obs.bid is None or obs.ask is None:
+                continue
+            mids.append((obs.bid + obs.ask) / 2)
+            sources.append(obs.venue_id)
+        if not mids:
+            return None, []
+        ordered = sorted(mids)
+        midpoint = len(ordered) // 2
+        if len(ordered) % 2:
+            median = ordered[midpoint]
+        else:
+            median = (ordered[midpoint - 1] + ordered[midpoint]) / 2
+        return median, sources
+
+    def _is_tether_domestic_observation(self, obs: MarketObservation) -> bool:
+        symbol = (obs.market_symbol or "").upper().replace("-", "/")
+        return (obs.venue_id or "").lower() in {"upbit", "bithumb"} and symbol == "USDT/KRW"
+
+    def _is_tether_global_reference_observation(self, obs: MarketObservation) -> bool:
+        if obs.extensions.get("reference_role") == "global_usdt_reference":
+            return True
+        symbol = (obs.market_symbol or "").upper().replace("-", "/")
+        return (obs.venue_id or "").lower() in {"binance", "bybit", "okx"} and symbol in {"USDT/USD", "USDT/USDC", "USDC/USDT"}
+
+    def _missing_tether_fields(self, source: MarketObservation, target: MarketObservation) -> list[str]:
+        missing: list[str] = []
+        for label, obs in (("source", source), ("target", target)):
+            for field_name in ["bid", "ask", "bid_size", "ask_size"]:
+                if getattr(obs, field_name) is None:
+                    missing.append(f"{label}.{field_name}")
+            if obs.fees is None:
+                missing.append(f"{label}.fees")
+            if obs.liquidity is None or not obs.liquidity.depth_levels:
+                missing.append(f"{label}.liquidity.depth_levels")
+            if obs.timestamp_utc is None:
+                missing.append(f"{label}.timestamp_utc")
+            if obs.data_quality is None or obs.data_quality.max_data_age_ms is None:
+                missing.append(f"{label}.data_quality.max_data_age_ms")
+            if obs.data_quality is None or obs.data_quality.latency_ms is None:
+                missing.append(f"{label}.data_quality.latency_ms")
+        return missing
 
     def _missing_orderbook_imbalance_fields(self, obs: MarketObservation) -> list[str]:
         missing: list[str] = []

@@ -25,7 +25,7 @@ Define a read-only experimental scaffolding plan that observes domestic `USDT/KR
 - Coinone and Korbit are future domestic expansion, not v0.
 - Global reference v0 venues are Binance, Bybit, and OKX.
 - Overseas venues can be expanded later only by separate strategy task cards and public probe review first.
-- This scaffolding adds manual scenario JSON, formula helpers, and evaluate-only readiness rules; it does not add a live adapter, persistent adapter, OpportunityPacket live builder, Council handoff, private API, order, transfer, balance lookup, or auto-trading.
+- This scaffolding adds manual scenario JSON, formula helpers, evaluate-only readiness rules, and replay packet-builder support; it does not add a live adapter, persistent adapter, OpportunityPacket live builder, Council handoff, private API, order, transfer, balance lookup, or auto-trading.
 
 ## Probe alignment status
 - Prior probe result: Upbit `domestic_usdt_krw` was `ok / available`; treat it as the confirmed primary domestic public source for planning.
@@ -265,6 +265,13 @@ Documentation/guardrail tests must verify:
 
 ## Manual smoke
 `python tools/run_strategy_scenarios.py --strategy tether_cross_market_premium --evaluate-only`
+
+Replay packet builder smoke:
+
+```text
+python tools/collect_market_data.py --adapter replay_tether_cross_market_premium --output data/generated_packets/replay_tether_cross_market_packet.json
+python main.py --council --opportunity-file data/generated_packets/replay_tether_cross_market_packet.json --dry-run-context
+```
 
 ## Success criteria
 - Strategy direction is corrected away from FX-based Kimchi Premium.
