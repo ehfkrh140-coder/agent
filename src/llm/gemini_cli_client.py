@@ -9,6 +9,9 @@ from typing import Optional, Type
 
 from pydantic import BaseModel
 
+from src.schemas.agent_response import AgentResponse
+from src.validators.response_safety import add_warnings_to_concerns, validate_agent_response_safety
+
 AUTH_PROMPT_PATTERNS = [
     "Opening authentication page",
     "Do you want to continue",
@@ -40,6 +43,14 @@ class GeminiCliClient:
         self.timeout_seconds = timeout_seconds
 
     @staticmethod
+    def default_policy_path() -> Path:
+        return Path(__file__).resolve().parents[2] / "configs" / "gemini_cli_targeted_policy.toml"
+
+    @staticmethod
+    def _is_windows() -> bool:
+        return os.name == "nt"
+
+    @staticmethod
     def _preview(text: str, limit: int = 4000) -> str:
         return (text or "")[:limit]
 
@@ -56,11 +67,11 @@ class GeminiCliClient:
         t = (text or "").lower()
         return any(p.lower() in t for p in AUTH_PROMPT_PATTERNS)
 
-    def _run_cli_command(self, cmd: list[str], env: dict, cwd: Path, timeout_seconds: int) -> tuple[int, str, str]:
-        creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
+    def _run_cli_command(self, cmd: list[str], env: dict, cwd: Path, timeout_seconds: int, input_text: Optional[str] = None) -> tuple[int, str, str]:
+        creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if self._is_windows() else 0
         process = subprocess.Popen(
             cmd,
-            stdin=subprocess.DEVNULL,
+            stdin=subprocess.PIPE if input_text is not None else subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -72,12 +83,12 @@ class GeminiCliClient:
             creationflags=creationflags,
         )
         try:
-            stdout, stderr = process.communicate(timeout=timeout_seconds)
+            stdout, stderr = process.communicate(input=input_text, timeout=timeout_seconds)
             return process.returncode or 0, stdout or "", stderr or ""
         except subprocess.TimeoutExpired as exc:
             stdout = exc.stdout or ""
             stderr = exc.stderr or ""
-            if os.name == "nt":
+            if self._is_windows():
                 try:
                     subprocess.run(
                         ["taskkill", "/F", "/T", "/PID", str(process.pid)],
@@ -195,11 +206,71 @@ class GeminiCliClient:
         session_id = outer.get("session_id")
         return str(session_id) if session_id else None
 
-    def _build_generate_command(self, prompt: str, model: Optional[str] = None) -> list[str]:
-        cmd = [self.cli_command, "--skip-trust"]
+    @classmethod
+    def extract_tool_total_calls(cls, stdout: str) -> Optional[int]:
+        try:
+            outer = json.loads(cls._extract_first_json_object(stdout or ""))
+        except Exception:
+            return None
+        if not isinstance(outer, dict):
+            return None
+        stats = outer.get("stats")
+        tools = stats.get("tools") if isinstance(stats, dict) else None
+        total_calls = tools.get("totalCalls") if isinstance(tools, dict) else None
+        try:
+            return int(total_calls)
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _combine_warnings(*warnings: Optional[str]) -> Optional[str]:
+        parts: list[str] = []
+        for warning in warnings:
+            if not warning:
+                continue
+            for item in str(warning).split(","):
+                item = item.strip()
+                if item and item not in parts:
+                    parts.append(item)
+        return ",".join(parts) if parts else None
+
+    @staticmethod
+    def _extract_user_message_from_prompt(prompt: str) -> str:
+        marker = "사용자 메시지:\n"
+        tail_marker = "\n\n최종 출력 계약:"
+        if marker not in (prompt or ""):
+            return prompt or ""
+        user_part = (prompt or "").split(marker, 1)[1]
+        if tail_marker in user_part:
+            user_part = user_part.split(tail_marker, 1)[0]
+        return user_part.strip()
+
+    def _postprocess_response(self, *, response: BaseModel, warning: Optional[str], stdout: str, prompt: str) -> tuple[BaseModel, Optional[str]]:
+        extra_warnings: list[str] = []
+        total_calls = self.extract_tool_total_calls(stdout)
+        if total_calls is not None and total_calls > 0:
+            extra_warnings.append("tool_calls_detected")
+        if isinstance(response, AgentResponse):
+            safety_warnings = validate_agent_response_safety(response, self._extract_user_message_from_prompt(prompt))
+            if safety_warnings:
+                add_warnings_to_concerns(response, safety_warnings)
+                extra_warnings.extend(safety_warnings)
+        return response, self._combine_warnings(warning, ",".join(extra_warnings))
+
+    def _build_generate_command(self, prompt: str = "", model: Optional[str] = None, approval_mode: str = "plan", policy_path: Optional[str] = None) -> list[str]:
+        resolved_policy = Path(policy_path).resolve() if policy_path else self.default_policy_path().resolve()
+        cmd = [
+            self.cli_command,
+            "--skip-trust",
+            "--approval-mode",
+            approval_mode,
+            "--policy",
+            str(resolved_policy),
+            "-o",
+            "json",
+        ]
         if model:
             cmd.extend(["--model", model])
-        cmd.extend(["-p", prompt, "--output-format", "json"])
         return cmd
 
     def _build_env(self, gemini_cli_home: str) -> dict:
@@ -239,9 +310,9 @@ class GeminiCliClient:
     def healthcheck_profile(self, *, gemini_cli_home: str, working_dir: Optional[str] = None) -> ProfilePreflightResult:
         wd = Path(working_dir) if working_dir else Path.cwd()
         wd.mkdir(parents=True, exist_ok=True)
-        cmd = [self.cli_command, "--skip-trust", "-p", '{"summary":"ping"}', "--output-format", "json"]
+        cmd = self._build_generate_command(model="flash")
         try:
-            code, stdout, stderr = self._run_cli_command(cmd=cmd, env=self._build_env(gemini_cli_home), cwd=wd, timeout_seconds=20)
+            code, stdout, stderr = self._run_cli_command(cmd=cmd, env=self._build_env(gemini_cli_home), cwd=wd, timeout_seconds=20, input_text='{"summary":"ping"}')
         except TimeoutError:
             return ProfilePreflightResult("FAILED", "healthcheck timeout")
         combined = (stdout or "") + "\n" + (stderr or "")
@@ -251,19 +322,20 @@ class GeminiCliClient:
             return ProfilePreflightResult("FAILED", f"healthcheck failed code={code}")
         return ProfilePreflightResult("OK", "healthcheck ok")
 
-    def generate_structured_interactive_file(self, *, prompt: str, response_schema: Type[BaseModel], gemini_cli_home: str, working_dir: Optional[str] = None, output_dir: Optional[str] = None, agent_id: str = "agent", model: Optional[str] = None) -> CliCallResult:
+    def generate_structured_interactive_file(self, *, prompt: str, response_schema: Type[BaseModel], gemini_cli_home: str, working_dir: Optional[str] = None, output_dir: Optional[str] = None, agent_id: str = "agent", model: Optional[str] = None, approval_mode: str = "plan", policy_path: Optional[str] = None) -> CliCallResult:
         wd = Path(working_dir) if working_dir else Path.cwd()
         wd.mkdir(parents=True, exist_ok=True)
         out_dir = Path(output_dir) if output_dir else (wd / "outputs")
         out_dir.mkdir(parents=True, exist_ok=True)
         output_path = out_dir / f"{agent_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-        cmd = self._build_generate_command(prompt, model=model)
+        cmd = self._build_generate_command(prompt, model=model, approval_mode=approval_mode, policy_path=policy_path)
         returncode, stdout, stderr = self._run_cli_command(
             cmd=cmd,
             env=self._build_env(gemini_cli_home),
             cwd=wd,
             timeout_seconds=max(self.timeout_seconds, 300),
+            input_text=prompt,
         )
 
         if self._detect_auth_required((stdout or "") + "\n" + (stderr or "")):
@@ -276,6 +348,7 @@ class GeminiCliClient:
             raise RuntimeError(f"Interactive output file empty: {output_path}")
 
         response, warning = self.parse_agent_response_from_stdout(stdout or "", response_schema)
+        response, warning = self._postprocess_response(response=response, warning=warning, stdout=stdout or "", prompt=prompt)
         return CliCallResult(
             response=response,
             warning=warning,
@@ -284,11 +357,11 @@ class GeminiCliClient:
             cli_session_id=self.extract_cli_session_id(stdout),
         )
 
-    def generate_structured(self, *, prompt: str, response_schema: Type[BaseModel], gemini_cli_home: str, working_dir: Optional[str] = None, model: Optional[str] = None) -> CliCallResult:
+    def generate_structured(self, *, prompt: str, response_schema: Type[BaseModel], gemini_cli_home: str, working_dir: Optional[str] = None, model: Optional[str] = None, approval_mode: str = "plan", policy_path: Optional[str] = None) -> CliCallResult:
         wd = Path(working_dir) if working_dir else Path.cwd()
         wd.mkdir(parents=True, exist_ok=True)
-        cmd = self._build_generate_command(prompt, model=model)
-        returncode, stdout, stderr = self._run_cli_command(cmd=cmd, env=self._build_env(gemini_cli_home), cwd=wd, timeout_seconds=self.timeout_seconds)
+        cmd = self._build_generate_command(prompt, model=model, approval_mode=approval_mode, policy_path=policy_path)
+        returncode, stdout, stderr = self._run_cli_command(cmd=cmd, env=self._build_env(gemini_cli_home), cwd=wd, timeout_seconds=self.timeout_seconds, input_text=prompt)
 
         if self._detect_auth_required((stdout or "") + "\n" + (stderr or "")):
             raise RuntimeError("AUTH_REQUIRED: run python tools/auth_warmup.py --agent agent_XX first.")
@@ -298,6 +371,7 @@ class GeminiCliClient:
         if returncode != 0:
             raise RuntimeError(f"Gemini CLI failed with code {returncode}. stderr={err_prev}")
         response, warning = self.parse_agent_response_from_stdout(stdout, response_schema)
+        response, warning = self._postprocess_response(response=response, warning=warning, stdout=stdout, prompt=prompt)
         return CliCallResult(
             response=response,
             warning=warning,

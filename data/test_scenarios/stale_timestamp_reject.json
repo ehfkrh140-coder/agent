@@ -1,0 +1,150 @@
+{
+  "schema_version": "opportunity_packet_v0",
+  "packet_id": "stale_timestamp_reject",
+  "created_at_utc": "2026-05-29T00:00:00Z",
+  "asset": "BTC",
+  "quote": "KRW",
+  "signal_type": "cross_exchange_price_gap",
+  "observations": [
+    {
+      "observation_id": "upbit_1",
+      "venue_id": "upbit",
+      "venue_name": "Upbit",
+      "market_symbol": "BTC/KRW",
+      "instrument_type": "spot",
+      "region": "KR",
+      "last_price": 100000000,
+      "bid": 99990000,
+      "ask": 100010000,
+      "bid_size": null,
+      "ask_size": null,
+      "base_volume_24h": null,
+      "quote_volume_24h": null,
+      "timestamp_utc": "2026-05-29T00:00:01Z",
+      "fees": {
+        "trading_fee_pct": 0.35,
+        "maker_fee_pct": 0.25,
+        "taker_fee_pct": 0.35,
+        "withdrawal_fee_asset": 0.0005,
+        "network_fee_asset": 0.0003,
+        "fee_tier": "retail",
+        "fee_source": "scenario",
+        "extensions": {}
+      },
+      "liquidity": {
+        "orderbook_depth_available": true,
+        "volume_available": true,
+        "estimated_executable_notional": 50000000,
+        "estimated_slippage_pct": 0.08,
+        "depth_levels": []
+      },
+      "transfer": {
+        "status_known": false
+      },
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": null,
+        "max_data_age_ms": 1000,
+        "source": "manual_scenario",
+        "latency_ms": null,
+        "is_realtime": true
+      },
+      "health": {
+        "api_status_known": false
+      },
+      "extensions": {}
+    },
+    {
+      "observation_id": "bithumb_1",
+      "venue_id": "bithumb",
+      "venue_name": "Bithumb",
+      "market_symbol": "BTC/KRW",
+      "instrument_type": "spot",
+      "region": "KR",
+      "last_price": 100800000,
+      "bid": 100790000,
+      "ask": 100810000,
+      "bid_size": null,
+      "ask_size": null,
+      "base_volume_24h": null,
+      "quote_volume_24h": null,
+      "timestamp_utc": "2026-05-28T23:40:00Z",
+      "fees": {
+        "trading_fee_pct": 0.35,
+        "maker_fee_pct": 0.25,
+        "taker_fee_pct": 0.35,
+        "withdrawal_fee_asset": 0.0005,
+        "network_fee_asset": 0.0003,
+        "fee_tier": "retail",
+        "fee_source": "scenario",
+        "extensions": {}
+      },
+      "liquidity": {
+        "orderbook_depth_available": true,
+        "volume_available": true,
+        "estimated_executable_notional": 50000000,
+        "estimated_slippage_pct": 0.08,
+        "depth_levels": []
+      },
+      "transfer": {
+        "status_known": false
+      },
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": null,
+        "max_data_age_ms": 1200000,
+        "source": "manual_scenario",
+        "latency_ms": null,
+        "is_realtime": true
+      },
+      "health": {
+        "api_status_known": false
+      },
+      "extensions": {}
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "c1",
+      "candidate_type": "buy_low_sell_high",
+      "source_observation_id": "upbit_1",
+      "target_observation_id": "bithumb_1",
+      "source_venue_id": "upbit",
+      "target_venue_id": "bithumb",
+      "direction": "buy_source_sell_target_candidate",
+      "gross_gap_absolute": 800000,
+      "gross_gap_pct": 0.8,
+      "estimated_net_gap_pct": null,
+      "required_missing_fields": [
+        "fresh_timestamp"
+      ],
+      "assumptions": [
+        "target venue data stale"
+      ],
+      "extensions": {}
+    }
+  ],
+  "human_context": null,
+  "expected_behavior": {
+    "preferred_final_decision": "REJECT",
+    "acceptable_final_decisions": [
+      "REJECT",
+      "NEED_DATA"
+    ],
+    "must_not_include": [
+      "즉시 매수"
+    ],
+    "max_confidence": 0.65,
+    "notes": "stale timestamp"
+  },
+  "detector_metadata": {
+    "detector_name": "manual_scenario",
+    "detector_version": "v0",
+    "generated_from": "manual_scenario",
+    "source_files": [
+      "data/test_scenarios/stale_timestamp_reject.json"
+    ],
+    "extensions": {}
+  },
+  "extensions": {}
+}
