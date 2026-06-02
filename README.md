@@ -234,22 +234,24 @@ python tools/sample_market_data.py --adapter replay_orderbook_imbalance --sample
 python tools/notify_sampling_result.py --sampling-output data/market_samples/replay_orderbook_imbalance_sample.json --log
 ```
 
-## Future USDT/KRW kimchi premium strategy card
-- `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0` is documented as a read-only future strategy card only; no adapter, private API, transfer, order, or auto-trading implementation is included.
-- Card: [docs/strategy_task_cards/usdt_krw_kimchi_premium.md](docs/strategy_task_cards/usdt_krw_kimchi_premium.md)
+## Future Tether cross-market premium strategy card
+- `tether_cross_market_premium` / `usdt_krw_global_reference_v0` reframes near-term USDT work around Upbit/Bithumb domestic `USDT/KRW` market state and Binance/Bybit/OKX global USDT reference health, with no USD/KRW FX requirement and no adapter/private API/transfer/order/auto-trading implementation.
+- The older `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0` FX-basis card is deferred for near-term implementation.
+- Near-term card: [docs/strategy_task_cards/tether_cross_market_premium.md](docs/strategy_task_cards/tether_cross_market_premium.md)
+- Deferred FX-basis card: [docs/strategy_task_cards/usdt_krw_kimchi_premium.md](docs/strategy_task_cards/usdt_krw_kimchi_premium.md)
 
 ## USDT/KRW multi-source data availability matrix
-- Planning matrix: [docs/data_availability/usdt_krw_multi_source_matrix.md](docs/data_availability/usdt_krw_multi_source_matrix.md) separates domestic venues, global USDT references, and USD/KRW FX sources before any adapter or experimental scaffolding work.
+- Planning matrix: [docs/data_availability/usdt_krw_multi_source_matrix.md](docs/data_availability/usdt_krw_multi_source_matrix.md) separates domestic Upbit/Bithumb venues from Binance/Bybit/OKX global USDT references and marks USD/KRW FX as deferred/out-of-scope for the near-term Tether cross-market strategy.
 
 ## USDT/KRW public source probe (read-only)
-- The public probe checks candidate source availability/response shape for the future `stablecoin_krw_premium` strategy. It writes a planning report only and does not create OpportunityPackets, adapters, orders, balances, transfers, or Council handoffs.
+- The public probe checks candidate source availability/response shape that can be re-aligned for the future `tether_cross_market_premium` strategy. It writes a planning report only and does not create OpportunityPackets, adapters, orders, balances, transfers, or Council handoffs.
 
 ```powershell
 python tools/probe_usdt_krw_sources.py --output data/probes/usdt_krw_public_probe.json
 ```
 
 ## USDT/KRW public probe review
-- Probe review: [docs/data_availability/usdt_krw_probe_review.md](docs/data_availability/usdt_krw_probe_review.md) preserves the user-observed public probe results, identifies Upbit plus Binance/Bybit/OKX as v0 candidates, and keeps FX reference unresolved before any experimental scaffolding.
+- Probe review: [docs/data_availability/usdt_krw_probe_review.md](docs/data_availability/usdt_krw_probe_review.md) preserves the user-observed public probe results, identifies Upbit plus Binance/Bybit/OKX as v0 candidates, and records the correction that FX is out of scope for near-term work.
 
 ## USDT/KRW FX reference probe hardening
 - Hardened FX probe output now distinguishes rate-only responses from public USD/KRW responses that include timestamp/freshness metadata and can be reviewed as Mode B candidates.

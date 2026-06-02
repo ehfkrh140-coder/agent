@@ -96,7 +96,8 @@
 아래 전략은 registry에 future로 남기며 현재 active v1 판단 입력으로 사용하지 않는다.
 
 ### P1 Future
-- `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0`: read-only USDT/KRW kimchi premium / FX basis planning strategy; requires the multi-source data availability matrix and public probe before experimental scaffolding.
+- `tether_cross_market_premium` / `usdt_krw_global_reference_v0`: read-only near-term planning strategy that compares Upbit/Bithumb `USDT/KRW` domestic market state with Binance/Bybit/OKX global USDT reference health; no USD/KRW FX or `fair_usdt_krw_price` is required.
+- `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0`: deferred read-only USDT/KRW kimchi premium / FX basis planning strategy; superseded for near-term implementation by `tether_cross_market_premium`.
 - `kimchi_premium`
 - `reverse_premium`
 - `spot_futures_basis`

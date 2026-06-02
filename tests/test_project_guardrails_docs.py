@@ -230,7 +230,10 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
             "not auto-trading",
             "Mode A: Domestic USDT/KRW executable spread",
             "Mode B: USDT/KRW Kimchi Premium / FX Basis",
-            "Mode B is the user-intended core strategy",
+            "deferred/superseded",
+            "superseded by [`tether_cross_market_premium`](tether_cross_market_premium.md)",
+            "USD/KRW FX reference is out of current scope",
+            "`fair_usdt_krw_price` is not used in the current user-intended strategy",
             "## Data forbidden",
             "private API",
             "API key / secret / token",
@@ -241,7 +244,7 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
             "auto-trading",
             "fair_usdt_krw_price = usd_krw_reference_rate * global_usdt_usd_reference",
             "premium_pct = ((domestic_usdt_krw_price - fair_usdt_krw_price) / fair_usdt_krw_price) * 100",
-            "USDT/KRW Data Availability Check v0",
+            "Tether Cross-Market Public Probe Alignment v0",
         ]:
             self.assertIn(phrase, text)
 
@@ -264,8 +267,9 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
         for text in [playbook, catalog]:
             self.assertIn("stablecoin_krw_premium", text)
             self.assertIn("usdt_krw_kimchi_premium", text)
-        self.assertIn("USDT/KRW Data Availability Check v0", playbook)
+        self.assertIn("Tether Cross-Market Public Probe Alignment v0", playbook)
         self.assertIn("orderbook_imbalance experimental path continues", playbook)
+        self.assertIn("tether_cross_market_premium requires public probe alignment", playbook)
         self.assertIn("funding_rate and spot_futures_basis remain later", playbook)
 
     def test_usdt_krw_multi_source_matrix_exists_and_keeps_strategy_future(self):
@@ -280,6 +284,7 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
             "## Domestic executable/reference venues",
             "## Global USDT reference venues",
             "## USD/KRW FX reference sources",
+            "deferred/out-of-scope",
             "## Recommended premium formulas",
             "## Aggregation rules",
             "## Data availability matrix",
@@ -300,24 +305,24 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
             "B. Global USDT reference venues",
             "C. USD/KRW FX reference sources",
             "fair_usdt_krw_price",
-            "premium_mid_pct",
-            "premium_sell_pct",
-            "premium_buy_pct",
-            "per_venue_premium_pct",
-            "domestic_median_mid_premium_pct",
-            "global_usdt_usd_median",
+            "gross_gap_pct",
+            "estimated_net_gap_pct",
+            "global_usdt_depeg_flag",
+            "domestic_median_mid",
+            "global_usdt_median",
             "single venue distortion",
             "stale FX reference",
+            "Tether Cross-Market Public Probe Alignment v0",
             "No private API",
             "No account/balance lookup",
             "No withdrawal/deposit/transfer",
-            "USDT/KRW Public Probe v0",
+            "Tether Cross-Market Public Probe Alignment v0",
         ]:
             self.assertIn(phrase, text)
 
         card = Path("docs/strategy_task_cards/usdt_krw_kimchi_premium.md").read_text(encoding="utf-8")
         self.assertIn("docs/data_availability/usdt_krw_multi_source_matrix.md", card)
-        self.assertIn("experimental scaffolding requires Multi-Source Data Availability Matrix and Public Probe first", card)
+        self.assertIn("Tether Cross-Market Public Probe Alignment", card)
 
         registry = yaml.safe_load(Path("configs/strategy_registry.yaml").read_text(encoding="utf-8"))
         stablecoin = next(item for item in registry["strategies"] if item["strategy_family"] == "stablecoin_krw_premium")
@@ -351,13 +356,13 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
             "Bybit: ok / available",
             "OKX: ok / available",
             "Frankfurter/no-key public FX candidate: ok / unknown",
-            "FX source unresolved",
-            "Mode B cannot become experimental until USD/KRW FX source is confirmed",
+            "FX is out of scope",
+            "near-term strategy uses domestic USDT/KRW and global USDT reference only",
             "Domestic v0 primary candidate: Upbit USDT/KRW",
-            "median of Binance, Bybit, OKX",
+            "Median of Binance, Bybit, and OKX",
             "usd_krw_reference_rate",
-            "fair_usdt_krw_price cannot be calculated reliably",
-            "USDT/KRW FX Reference Probe Hardening v0",
+            "Out of current scope; not required",
+            "Tether Cross-Market Public Probe Alignment v0",
             "No private API",
             "No account/balance lookup",
             "No withdrawal/deposit/transfer",
@@ -369,11 +374,12 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
         self.assertIn("probe_available_for_USDT_KRW", matrix)
         self.assertIn("probe_unknown", matrix)
         self.assertIn("probe_available_for_reference", matrix)
-        self.assertIn("FX reference remains unresolved", matrix)
+        self.assertIn("FX: deferred/out-of-scope for current strategy", matrix)
 
         card = Path("docs/strategy_task_cards/usdt_krw_kimchi_premium.md").read_text(encoding="utf-8")
         self.assertIn("docs/data_availability/usdt_krw_probe_review.md", card)
-        self.assertIn("Experimental scaffolding is blocked until a reliable public `USD/KRW` FX source is confirmed", card)
+        self.assertIn("superseded for near-term implementation", card)
+        self.assertIn("Tether Cross-Market Public Probe Alignment", card)
 
         registry = yaml.safe_load(Path("configs/strategy_registry.yaml").read_text(encoding="utf-8"))
         stablecoin = next(item for item in registry["strategies"] if item["strategy_family"] == "stablecoin_krw_premium")
@@ -382,6 +388,54 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
         self.assertEqual(stablecoin["execution_policy"], "NO_TRADE_ONLY")
         self.assertEqual([item["strategy_id"] for item in active], ["cross_exchange_spot_spread_v1"])
 
+
+
+    def test_tether_cross_market_premium_reframe_is_future_no_fx_read_only(self):
+        card_path = Path("docs/strategy_task_cards/tether_cross_market_premium.md")
+        self.assertTrue(card_path.exists(), str(card_path))
+        card = card_path.read_text(encoding="utf-8")
+
+        for phrase in [
+            "tether_cross_market_premium",
+            "usdt_krw_global_reference_v0",
+            "NO_TRADE_ONLY",
+            "This strategy does not require USD/KRW FX",
+            "This strategy does not calculate `fair_usdt_krw_price`",
+            "fair_usdt_krw_price` is not used",
+            "Domestic v0 venues are fixed to Upbit and Bithumb",
+            "Binance / Bybit / OKX",
+            "Global venues can be expanded later only through a new task card and public probe first",
+            "gross_gap_pct =",
+            "(target_bid - source_ask) / source_ask * 100",
+            "global_usdt_depeg_pct =",
+            "global_usdt_depeg_flag =",
+            "do not calculate `premium_pct` against USD/KRW",
+            "Tether Cross-Market Public Probe Alignment v0",
+            "No private API",
+            "No account/balance lookup",
+            "No withdrawal/deposit/transfer",
+        ]:
+            self.assertIn(phrase, card)
+
+        deferred = Path("docs/strategy_task_cards/usdt_krw_kimchi_premium.md").read_text(encoding="utf-8")
+        self.assertIn("Deferred/superseded note", deferred)
+        self.assertIn("superseded by [`tether_cross_market_premium`](tether_cross_market_premium.md)", deferred)
+        self.assertIn("USD/KRW FX reference is out of current scope", deferred)
+
+        registry = yaml.safe_load(Path("configs/strategy_registry.yaml").read_text(encoding="utf-8"))
+        strategies = registry["strategies"]
+        tether = next(item for item in strategies if item["strategy_family"] == "tether_cross_market_premium")
+        stablecoin = next(item for item in strategies if item["strategy_family"] == "stablecoin_krw_premium")
+        active = [item for item in strategies if item.get("status") == "active"]
+
+        self.assertEqual(tether["strategy_id"], "usdt_krw_global_reference_v0")
+        self.assertEqual(tether["status"], "future")
+        self.assertEqual(tether["execution_policy"], "NO_TRADE_ONLY")
+        self.assertIn("not active", " ".join(tether["readiness_rules"]))
+        self.assertEqual(stablecoin["status"], "future")
+        self.assertNotEqual(stablecoin.get("status"), "active")
+        self.assertIn("superseded_for_near_term_by_tether_cross_market_premium", " ".join(stablecoin["readiness_rules"]))
+        self.assertEqual([item["strategy_id"] for item in active], ["cross_exchange_spot_spread_v1"])
 
     def test_pr_trust_framework_docs_and_template_exist(self):
         required_paths = [

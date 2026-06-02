@@ -202,15 +202,17 @@ Initial future/experimental preparation drafts live under `docs/strategy_task_ca
 - `orderbook_imbalance.md`
 - `kimchi_premium.md`
 - `funding_rate.md`
+- `tether_cross_market_premium.md`
 
 These are documentation-only planning cards. They do not authorize code, config, live adapter, readiness, or scenario implementation.
 
 ## 8. Recommended implementation order
 
 1. `orderbook_imbalance` — existing Upbit/Bithumb orderbook depth makes this the safest next candidate.
-2. `stablecoin_krw_premium` / `usdt_krw_kimchi_premium` — requires `USDT/KRW Data Availability Check v0` before experimental scaffolding.
-3. `kimchi_premium` — broader domestic/global premium work still requires data requirements and FX/reference policy first.
-4. `funding_rate` — requires public derivatives data and must remain separate from the active spot strategy.
-5. `spot_futures_basis` — combines spot and futures data, so it should follow funding-rate groundwork.
+2. `tether_cross_market_premium` / `usdt_krw_global_reference_v0` — next gate is `Tether Cross-Market Public Probe Alignment v0`; domestic v0 venues are Upbit/Bithumb and global references start with Binance/Bybit/OKX, with FX removed from the required path.
+3. `stablecoin_krw_premium` / `usdt_krw_kimchi_premium` — deferred FX-basis planning only, superseded for near-term implementation by `tether_cross_market_premium`.
+4. `kimchi_premium` — broader domestic/global premium work remains future planning and must not bypass the no-trade playbook.
+5. `funding_rate` — requires public derivatives data and must remain separate from the active spot strategy.
+6. `spot_futures_basis` — combines spot and futures data, so it should follow funding-rate groundwork.
 
-The orderbook_imbalance experimental path continues; stablecoin_krw_premium requires data availability checks before experimental scaffolding; funding_rate and spot_futures_basis remain later. All other strategies remain future backlog items until a dedicated task card promotes them through the playbook.
+The orderbook_imbalance experimental path continues; tether_cross_market_premium requires public probe alignment before experimental scaffolding; stablecoin_krw_premium FX-basis planning is deferred; funding_rate and spot_futures_basis remain later. All other strategies remain future backlog items until a dedicated task card promotes them through the playbook.

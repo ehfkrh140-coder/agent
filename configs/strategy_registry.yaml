@@ -103,7 +103,7 @@ strategies:
   strategy_id: usdt_krw_kimchi_premium_v0
   status: future
   priority: P1
-  description: Read-only strategy planning entry for reading premium/discount between domestic USDT/KRW public prices and fair USD/KRW or global USDT/USD reference pricing. Not active; Codex must not promote it to active by itself.
+  description: Deferred read-only strategy planning entry for the earlier FX-based USDT/KRW kimchi premium interpretation. Superseded for near-term implementation by tether_cross_market_premium; not active; Codex must not promote it to active by itself.
   required_observation_fields:
   - domestic_usdt_krw_bid_ask_depth
   - public_usd_krw_reference_rate
@@ -112,9 +112,9 @@ strategies:
   - source_reliability_metadata
   required_candidate_fields:
   - candidate_type=usdt_krw_premium_signal_or_usdt_krw_discount_signal
-  - metrics.fair_usdt_krw_price
-  - metrics.premium_pct
-  - metrics.estimated_net_premium_pct
+  - metrics.fair_usdt_krw_price_deferred
+  - metrics.premium_pct_deferred
+  - metrics.estimated_net_premium_pct_deferred
   required_data_quality_fields:
   - timestamps_available
   - max_data_age_ms
@@ -135,7 +135,58 @@ strategies:
   readiness_rules:
   - future strategy; not active
   - execution_policy NO_TRADE_ONLY
-  - requires USDT/KRW multi-source data availability matrix and public probe before experimental scaffolding
+  - future strategy; deferred for near-term implementation
+  - superseded_for_near_term_by_tether_cross_market_premium
+  - USD/KRW FX and fair_usdt_krw_price are out of current near-term scope
+  - Codex must not promote to active by itself; active strategy remains cross_exchange_spot_spread_v1
+  default_decision_when_missing_data: NEED_DATA
+  execution_policy: NO_TRADE_ONLY
+- strategy_family: tether_cross_market_premium
+  strategy_id: usdt_krw_global_reference_v0
+  status: future
+  priority: P1
+  description: Read-only planning strategy comparing domestic Upbit/Bithumb USDT/KRW market state with global USDT reference health from Binance/Bybit/OKX. It does not require USD/KRW FX, does not calculate fair_usdt_krw_price, is not active, and must not be promoted by Codex.
+  required_observation_fields:
+  - upbit_usdt_krw_bid_ask_depth
+  - bithumb_usdt_krw_bid_ask_depth
+  - domestic_timestamp_latency_data_age
+  - binance_bybit_okx_global_usdt_reference_bid_ask_mid
+  - global_depeg_health_metadata
+  required_candidate_fields:
+  - candidate_type=domestic_usdt_cross_exchange_spread_signal_or_domestic_usdt_premium_state_signal_or_global_usdt_depeg_health_signal
+  - metrics.gross_gap_pct
+  - metrics.estimated_net_gap_pct
+  - metrics.domestic_best_bid
+  - metrics.domestic_best_ask
+  - metrics.domestic_median_mid
+  - metrics.domestic_weighted_mid
+  - metrics.global_usdt_mid
+  - metrics.global_usdt_depeg_pct
+  - metrics.global_usdt_depeg_flag
+  required_data_quality_fields:
+  - timestamps_available
+  - max_data_age_ms
+  - latency_ms
+  optional_fields:
+  - public_venue_health
+  - global_reference_venue_count
+  - source_reliability_score
+  forbidden_for_active_if_any:
+  - not_active_v1
+  - private_endpoint
+  - api_key_secret_token
+  - account_balance_lookup
+  - order_execution
+  - withdrawal_deposit_transfer
+  - bank_or_fiat_transfer
+  - auto_trading
+  readiness_rules:
+  - future strategy; not active and not experimental
+  - execution_policy NO_TRADE_ONLY
+  - domestic v0 venues are Upbit and Bithumb
+  - global reference venues start with Binance, Bybit, OKX and are expandable only by future task card and public probe
+  - no USD/KRW FX required and fair_usdt_krw_price is not used
+  - next gate is Tether Cross-Market Public Probe Alignment v0
   - Codex must not promote to active by itself; active strategy remains cross_exchange_spot_spread_v1
   default_decision_when_missing_data: NEED_DATA
   execution_policy: NO_TRADE_ONLY

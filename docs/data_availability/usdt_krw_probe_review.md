@@ -1,13 +1,11 @@
-# USDT/KRW Public Probe Review and FX Source Decision v0
+# USDT/KRW Public Probe Review and Source Decision v0
 
 ## Overview
-This document reviews the user-observed `USDT/KRW Public Probe v0` results for the future `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0` strategy. It is a planning and source-decision document only: it does not add live adapters, persistent adapters, OpportunityPacket builder support, readiness rules, scenario JSON, private API access, account/balance lookup, orders, transfers, or auto-trading.
+This document reviews the user-observed `USDT/KRW Public Probe v0` results. It is retained as a planning and source-decision document only: it does not add live adapters, persistent adapters, OpportunityPacket builder support, readiness rules, scenario JSON, private API access, account/balance lookup, orders, transfers, or auto-trading.
 
-The core user-intended strategy remains Mode B: `USDT/KRW Kimchi Premium / FX Basis`. Mode B requires a reliable public `USD/KRW` reference before experimental scaffolding can start.
+Correction note: User clarified FX is out of scope. This review is retained as historical planning, but near-term strategy uses domestic USDT/KRW and global USDT reference only. The near-term strategy is now `tether_cross_market_premium` / `usdt_krw_global_reference_v0`, not the earlier FX-based Kimchi Premium / FX Basis interpretation.
 
 ## Probe input summary
-The review is based on the user's local read-only probe results from `tools/probe_usdt_krw_sources.py`. The probe checked candidate sources from `configs/usdt_krw_probe_sources.yaml` and recorded only public-source availability/shape status.
-
 Domestic results:
 - Upbit: ok / available
 - Bithumb: ok / unknown
@@ -19,86 +17,80 @@ Global results:
 - Bybit: ok / available
 - OKX: ok / available
 
-FX results:
+FX results retained as historical context only:
 - Frankfurter/no-key public FX candidate: ok / unknown
 - official FX source candidate: skipped / unknown
 - other public FX candidate: skipped / unknown
 
 ## Source result table
 
-| source | role | probe status | pair/reference availability | review interpretation |
-|---|---|---:|---:|---|
-| Upbit | domestic_usdt_krw | ok | available | Primary domestic v0 candidate for USDT/KRW bid/ask/depth, subject to future read-only fixture/scaffolding checks. |
-| Bithumb | domestic_usdt_krw | ok | unknown | Secondary domestic candidate; public response shape did not prove USDT/KRW availability sufficiently for v0 primary use. |
-| Coinone | domestic_usdt_krw | skipped | unknown | Candidate remains unconfirmed; no implementation until a later public-source review. |
-| Korbit | domestic_usdt_krw | skipped | unknown | Candidate remains unconfirmed; no implementation until a later public-source review. |
+| source | role | probe_status | pair_availability | planning note |
+|---|---|---|---|---|
+| Upbit | domestic_usdt_krw | ok | available | Primary domestic v0 candidate for USDT/KRW bid/ask/depth, subject to `Tether Cross-Market Public Probe Alignment v0`. |
+| Bithumb | domestic_usdt_krw | ok | unknown | Secondary domestic v0 candidate; re-check Bithumb USDT/KRW pair availability before scaffolding. |
+| Coinone | future_domestic_expansion | skipped | unknown | Future expansion only; not v0. |
+| Korbit | future_domestic_expansion | skipped | unknown | Future expansion only; not v0. |
 | Binance | global_usdt_reference | ok | available | Candidate global USDT reference source. Prefer use as part of a multi-source median/reference set, not as an execution venue. |
 | Bybit | global_usdt_reference | ok | available | Candidate global USDT reference source. Prefer use as part of a multi-source median/reference set, not as an execution venue. |
 | OKX | global_usdt_reference | ok | available | Candidate global USDT reference source. Prefer use as part of a multi-source median/reference set, not as an execution venue. |
-| Frankfurter/no-key public FX candidate | fx_reference | ok | unknown | FX source unresolved; response did not establish a reliable USD/KRW rate and timestamp basis for Mode B. |
-| official FX source candidate | fx_reference | skipped | unknown | FX source unresolved; candidate needs no-key public endpoint review. |
-| other public FX candidate | fx_reference | skipped | unknown | FX source unresolved; candidate needs no-key public endpoint review. |
+| Frankfurter/no-key public FX candidate | deferred_fx_reference | ok | unknown | Historical FX source unresolved; no longer required for near-term strategy. |
+| official FX source candidate | deferred_fx_reference | skipped | unknown | Historical FX source unresolved; no longer required for near-term strategy. |
+| other public FX candidate | deferred_fx_reference | skipped | unknown | Historical FX source unresolved; no longer required for near-term strategy. |
 
 ## Domestic source decision
 Domestic v0 primary candidate: Upbit USDT/KRW, because the probe showed Upbit `ok / available`.
 
-Domestic secondary candidates: Bithumb, Coinone, and Korbit remain candidates but are not confirmed. Bithumb returned `ok / unknown`, while Coinone and Korbit remained `skipped / unknown`. They must not be treated as available domestic inputs until a later public-data check proves pair availability and response shape.
+Domestic v0 secondary candidate: Bithumb USDT/KRW remains required for the near-term domestic spread concept, but probe output is `ok / unknown`; pair availability must be re-checked in the next public probe alignment card.
 
-Upbit availability does not make the strategy active, does not create execution permission, and does not authorize orders or transfers. It only identifies a likely public domestic source for a future read-only experimental scaffolding card.
+Coinone and Korbit are future domestic expansion candidates only, not v0.
 
 ## Global USDT reference decision
-Global v0 reference candidates: Binance, Bybit, and OKX, because the probe showed all three as `ok / available`.
+Global v0 reference candidates are Binance, Bybit, and OKX. They should be used first as a multi-source reference/depeg-health basket, preferably via median or other source-robust aggregation after response-shape comparability is reviewed.
 
-The preferred future reference is a median or multi-source reference across Binance, Bybit, and OKX if their response shapes and symbols are sufficiently comparable. These sources are reference/depeg-check inputs only; they are not execution venues for this strategy in the current phase.
+Global reference venues are not automatic execution venues. Only public ticker/orderbook/reference data is allowed.
 
 ## FX reference decision
-FX v0 source: not finalized.
+FX v0 source is not needed for the near-term strategy.
 
-The Frankfurter/no-key public FX candidate returned `ok / unknown`, and the official/other FX candidates remained `skipped / unknown`. Therefore, the USD/KRW FX reference is unresolved. Do not convert any FX candidate into a confirmed source without evidence of a reliable public USD/KRW rate, timestamp, freshness behavior, and no-key/no-private compliance.
-
-Mode B cannot become experimental until USD/KRW FX source is confirmed.
-
-## FX hardening status
-`USDT/KRW FX Reference Probe Hardening v0` extends the public probe result shape with `fx_rate_detected`, `fx_pair_detected`, `fx_timestamp_detected`, `fx_date_or_time_value`, `requires_api_key`, and `suitable_for_mode_b_candidate` fields. A source is suitable for Mode B only when a no-key public JSON response clearly exposes a USD/KRW rate plus timestamp/date or freshness metadata.
-
-The FX blocker remains unresolved unless a probe report contains at least one `fx_suitable_candidates` entry and `fx_unresolved=false`. Even if a suitable candidate appears in a probe report, this strategy remains `future` until a later task explicitly adds experimental scaffolding.
+The earlier FX source work showed unresolved USD/KRW candidates, but the user clarified that USD/KRW FX is out of scope. Do not continue FX cadence work as the next step for the current user-intended strategy. Do not calculate `fair_usdt_krw_price`, and do not calculate `premium_pct` against USD/KRW in current scope.
 
 ## Current blocker
-The current blocker is the unresolved `usd_krw_reference_rate` source. Without `usd_krw_reference_rate`, `fair_usdt_krw_price` cannot be calculated reliably, and `premium_mid_pct`, `premium_sell_pct`, `premium_buy_pct`, or `estimated_net_premium_pct` would be incomplete or misleading.
-
-This blocks `stablecoin_krw_premium` from experimental scaffolding even though Upbit and the global USDT reference candidates have useful probe results.
+The previous FX blocker no longer blocks near-term work because FX is no longer a required source. The current blocker is alignment of the public probe results with the reframed source set:
+- Confirm Upbit `USDT/KRW` remains available.
+- Re-check Bithumb `USDT/KRW` pair availability.
+- Confirm Binance/Bybit/OKX global reference symbols are comparable enough for a depeg/reference basket.
+- Remove FX from the required path.
 
 ## Recommended v0 source set
-Proposed future source set after the FX blocker is resolved:
+Proposed future source set for `tether_cross_market_premium`:
 
-`domestic_usdt_krw_price`:
-- Upbit USDT/KRW bid/ask/depth as the primary v0 domestic source.
+`domestic_usdt_krw_price` / domestic spread source:
+- Upbit `USDT/KRW` bid/ask/depth as primary confirmed domestic source.
+- Bithumb `USDT/KRW` bid/ask/depth as required domestic counterpart after re-check.
 
-`global_usdt_usd_reference`:
-- Median of Binance, Bybit, and OKX global USDT reference values if shapes are sufficiently comparable; in short, use a median of Binance, Bybit, OKX only after shape comparability is reviewed.
+`global_usdt_reference_health`:
+- Median of Binance, Bybit, and OKX global USDT reference mids if shapes and symbols are sufficiently comparable.
 
 `usd_krw_reference_rate`:
-- Unresolved; requires FX source probe hardening.
-
-Without `usd_krw_reference_rate`, `fair_usdt_krw_price` cannot be calculated reliably; fair_usdt_krw_price cannot be calculated reliably from domestic/global crypto data alone.
+- Out of current scope; not required.
 
 ## Next gate
-Next card after this hardening step: choose one based on the hardened FX probe report.
-- If `fx_unresolved=true`: manually choose/review FX source candidates before another probe hardening pass.
-- If `fx_unresolved=false`: `USDT/KRW Experimental Scaffolding v0` may be proposed, but must still be a separate read-only task.
+Next card: `Tether Cross-Market Public Probe Alignment v0`
 
 Purpose:
-- Improve FX source candidates.
-- Confirm whether a no-key USD/KRW public reference can provide reliable rate and timestamp metadata.
-- Preserve no-private, no-key, and no-scraping rules.
-- Do not implement the full strategy yet.
-- Do not add live adapters, persistent adapters, OpportunityPacket builder support, readiness code, or scenario JSON.
+- Reuse existing probe outputs where possible.
+- Confirm Upbit `USDT/KRW`.
+- Re-check Bithumb `USDT/KRW` pair availability.
+- Keep Binance/Bybit/OKX global references.
+- Remove FX from the required path.
+- No adapter yet.
+- No trading.
 
 ## No-trade compliance
 - No private API.
 - No API key / secret / token.
 - No account/balance lookup.
-- No order placement or order cancellation.
+- No order placement or order cancel.
 - No withdrawal/deposit/transfer.
 - No KRW deposit/withdrawal or bank account / fiat transfer implementation.
 - No auto-trading.

@@ -1,5 +1,8 @@
 # USDT/KRW Kimchi Premium Strategy Card v0
 
+> Deferred/superseded note: the previous FX-based Kimchi Premium / FX Basis interpretation is deferred. The user clarified that USD/KRW FX reference is out of current scope, `fair_usdt_krw_price` is not used in the current user-intended strategy, and near-term implementation is superseded by [`tether_cross_market_premium`](tether_cross_market_premium.md). This card is retained as archived/deferred future planning only; it is not active and not experimental.
+
+
 ## Task name
 USDT/KRW Kimchi Premium Strategy Card v0
 
@@ -8,23 +11,26 @@ USDT/KRW Kimchi Premium Strategy Card v0
 - `strategy_id`: `usdt_krw_kimchi_premium_v0`
 - First implementation target: `USDT/KRW`
 - Long-term expansion: other stablecoins such as `USDC/KRW` may be considered only after a separate read-only data requirement review.
-- Current status: `future`
+- Current status: `future` / deferred for near-term implementation
 - Active strategy: no. The active strategy remains `cross_exchange_spot_spread_v1`.
 - Execution policy: `NO_TRADE_ONLY`
 
 ## Goal
-Design a read-only, no-trade future strategy for reading USDT/KRW kimchi premium or reverse-premium conditions. This is not auto-trading, not an execution strategy, and not a request to place orders, transfer funds, query balances, or use private APIs.
+Preserve a read-only, no-trade future planning record for the older FX-based USDT/KRW kimchi premium or reverse-premium interpretation. This card is now deferred/superseded for near-term work by `tether_cross_market_premium`; it is not auto-trading, not an execution strategy, and not a request to place orders, transfer funds, query balances, or use private APIs.
 
 ## Current status
-- Status: `future`
-- Priority: `P1`
+- Status: `future` / deferred.
+- Priority: `P1` historical planning.
 - Not active and not experimental yet.
+- Superseded for near-term implementation by [`tether_cross_market_premium`](tether_cross_market_premium.md).
+- USD/KRW FX reference is out of current scope for the user-intended near-term strategy.
+- `fair_usdt_krw_price` is not used in the current user-intended strategy.
 - Codex must not promote this strategy to active by itself.
 - No live adapter, no scenario JSON, no readiness implementation, no Council handoff, and no automated execution is included in this card.
 - Data availability matrix: [`docs/data_availability/usdt_krw_multi_source_matrix.md`](../data_availability/usdt_krw_multi_source_matrix.md).
 - Public probe review: [`docs/data_availability/usdt_krw_probe_review.md`](../data_availability/usdt_krw_probe_review.md).
 - experimental scaffolding requires Multi-Source Data Availability Matrix and Public Probe first.
-- Experimental scaffolding is blocked until a reliable public `USD/KRW` FX source is confirmed by hardened probe results (`suitable_for_mode_b_candidate=true`).
+- Experimental scaffolding for this FX-based interpretation is deferred; near-term scaffolding should use the Tether Cross-Market Public Probe Alignment path instead of FX cadence work.
 
 ## Strategy concept
 
@@ -35,12 +41,12 @@ Design a read-only, no-trade future strategy for reading USDT/KRW kimchi premium
 - This is similar to `cross_exchange_spot_spread_v1` but with `asset=USDT` and `quote=KRW`.
 - Mode A is a domestic exchange-to-exchange USDT spread and is only a lower-level or supporting observation for kimchi premium analysis.
 
-### Mode B: USDT/KRW Kimchi Premium / FX Basis
-- Compare domestic `USDT/KRW` public bid/ask/depth with a fair KRW value derived from public `USD/KRW` reference rates and optional global `USDT/USD` references.
-- If domestic USDT/KRW is above the fair reference, the signal is premium.
-- If domestic USDT/KRW is below the fair reference, the signal is discount or reverse premium.
-- Requires FX source reliability, timestamp alignment, stale FX risk controls, and USDT depeg risk checks.
-- Mode B is the user-intended core strategy: read the USDT/KRW kimchi premium or reverse premium as a public-data analysis signal.
+### Mode B: USDT/KRW Kimchi Premium / FX Basis (deferred)
+- This was the earlier interpretation: compare domestic `USDT/KRW` public bid/ask/depth with a fair KRW value derived from public `USD/KRW` reference rates and optional global `USDT/USD` references.
+- The user clarified that this FX-based interpretation is not the current near-term target.
+- USD/KRW FX reference is out of current scope.
+- `fair_usdt_krw_price` is not used in the current user-intended strategy.
+- Near-term implementation is superseded by `tether_cross_market_premium`, which monitors domestic `USDT/KRW` and global USDT reference health without KRW FX conversion.
 
 ## Data required
 
@@ -129,7 +135,9 @@ Candidate metrics draft:
 - `freshness_pass`
 - `premium_pass`
 
-## Formula draft
+## Formula draft (historical/deferred FX interpretation)
+
+The formulas below are retained only for historical/future FX-basis planning. They are not used in the current user-intended near-term strategy. The current strategy must not calculate `fair_usdt_krw_price` or `premium_pct` against USD/KRW.
 
 Mode B fair value:
 
@@ -171,7 +179,7 @@ gross_spread_pct
 - safety_buffer_pct
 ```
 
-## Readiness rules
+## Readiness rules (historical/deferred FX interpretation)
 
 ### NEED_DATA
 - `USDT/KRW` pair availability unknown
@@ -208,6 +216,9 @@ gross_spread_pct
 - If present in a schema, `ENTER` is an analysis-stage label only and must not be converted into an order, transfer, or automated trade.
 
 ## Manual scenarios
+
+These scenario names are historical/deferred drafts. Do not add scenario JSON for this card unless a future user-approved task reactivates the FX-based interpretation.
+
 Scenario JSON files are not part of this card. Draft scenario names for a later experimental scaffolding card:
 - `usdt_krw_premium_missing_fx_need_data`
 - `usdt_krw_premium_missing_depth_need_data`
@@ -227,21 +238,21 @@ Future task cards may allow only carefully scoped documentation, fixtures, confi
 - Do not add private endpoints, API keys, secrets, tokens, account lookup, balance lookup, orders, order cancel, withdrawal, deposit, transfer, fiat/bank transfer, auto-trading, or Council auto-call behavior.
 
 ## Tests
-Documentation tests should verify this card exists, is read-only/no-trade, is not auto-trading, distinguishes Mode A and Mode B, identifies Mode B as the user-intended core strategy, includes forbidden data/actions, includes formulas, and leaves the active strategy unchanged.
+Documentation tests should verify this card exists, is read-only/no-trade, is not auto-trading, is marked deferred/superseded for near-term implementation, keeps the old Mode A / deferred Mode B distinction for historical context, and leaves the active strategy unchanged.
 
 ## Manual smoke
 None. This is a documentation-only strategy card.
 
 ## Success criteria
 - `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0` is documented as a future read-only strategy.
-- The card clearly separates domestic USDT spread observation from USDT/KRW kimchi premium / FX basis analysis.
+- The card clearly marks USDT/KRW kimchi premium / FX basis analysis as deferred historical planning.
 - No active strategy change occurs.
 - No adapter, private API, or trading implementation is added.
 - The multi-source matrix is linked at [`docs/data_availability/usdt_krw_multi_source_matrix.md`](../data_availability/usdt_krw_multi_source_matrix.md).
 - Experimental scaffolding requires the Multi-Source Data Availability Matrix and `USDT/KRW Public Probe v0` report first.
 - Probe review is linked at [`docs/data_availability/usdt_krw_probe_review.md`](../data_availability/usdt_krw_probe_review.md).
-- Experimental scaffolding is blocked until a reliable public `USD/KRW` FX source is confirmed by hardened probe results (`suitable_for_mode_b_candidate=true`).
-- The earlier next-card label `USDT/KRW Data Availability Check v0` is now represented by the Multi-Source Matrix plus `USDT/KRW Public Probe v0`; the next implementation gate is `USDT/KRW FX Reference Probe Hardening v0`, followed only later by `USDT/KRW Experimental Scaffolding v0` if the FX blocker is resolved.
+- Experimental scaffolding for this FX-based interpretation is deferred; near-term scaffolding should use the Tether Cross-Market Public Probe Alignment path instead of FX cadence work.
+- The near-term next implementation gate is `Tether Cross-Market Public Probe Alignment v0`; FX cadence work is no longer required for the current user-intended strategy.
 
 ## Non-goals
 - Do not treat the public probe report as a live adapter or execution readiness check.
