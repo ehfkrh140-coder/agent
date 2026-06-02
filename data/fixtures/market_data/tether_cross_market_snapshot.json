@@ -1,0 +1,221 @@
+{
+  "packet_id": "fixture_tether_cross_market_replay",
+  "created_at_utc": "2026-06-02T00:00:00Z",
+  "asset": "USDT",
+  "quote": "KRW",
+  "signal_type": "tether_cross_market_premium",
+  "strategy_family": "tether_cross_market_premium",
+  "strategy_id": "usdt_krw_global_reference_v0",
+  "thresholds": {
+    "min_net_gap_pct": 0.1,
+    "max_data_age_ms": 3000,
+    "max_latency_ms": 1000,
+    "min_executable_notional": 1000000,
+    "safety_buffer_pct": 0.1,
+    "global_depeg_threshold_pct": 0.5
+  },
+  "adapter_metadata": {
+    "generated_from": "replay",
+    "adapter_id": "replay_tether_cross_market_premium",
+    "adapter_type": "replay",
+    "fixture_path": "data/fixtures/market_data/tether_cross_market_snapshot.json"
+  },
+  "observations": [
+    {
+      "observation_id": "upbit_usdt_krw_replay",
+      "venue_id": "upbit",
+      "venue_name": "Upbit",
+      "market_symbol": "USDT/KRW",
+      "instrument_type": "spot",
+      "region": "KR",
+      "last_price": 1390,
+      "bid": 1388,
+      "ask": 1390,
+      "bid_size": 1600,
+      "ask_size": 1600,
+      "timestamp_utc": "2026-06-02T00:00:00Z",
+      "fees": {
+        "trading_fee_pct": 0.05,
+        "fee_source": "manual_replay_fixture"
+      },
+      "liquidity": {
+        "orderbook_depth_available": true,
+        "volume_available": false,
+        "estimated_executable_notional": 2224000,
+        "estimated_slippage_pct": 0.04,
+        "depth_levels": [
+          {"level": 1, "bid_price": 1388, "bid_size": 1600, "ask_price": 1390, "ask_size": 1600},
+          {"level": 2, "bid_price": 1387, "bid_size": 1200, "ask_price": 1391, "ask_size": 1200}
+        ]
+      },
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": true,
+        "max_data_age_ms": 450,
+        "source": "replay_fixture",
+        "latency_ms": 55,
+        "is_realtime": false
+      },
+      "health": {
+        "api_status_known": true,
+        "api_ok": true,
+        "maintenance": false,
+        "trading_enabled": true,
+        "message": "replay fixture only"
+      },
+      "extensions": {
+        "reference_role": "domestic_usdt_krw",
+        "manual_fixture": true
+      }
+    },
+    {
+      "observation_id": "bithumb_usdt_krw_replay",
+      "venue_id": "bithumb",
+      "venue_name": "Bithumb",
+      "market_symbol": "USDT/KRW",
+      "instrument_type": "spot",
+      "region": "KR",
+      "last_price": 1401,
+      "bid": 1400,
+      "ask": 1402,
+      "bid_size": 1500,
+      "ask_size": 1500,
+      "timestamp_utc": "2026-06-02T00:00:00Z",
+      "fees": {
+        "trading_fee_pct": 0.05,
+        "fee_source": "manual_replay_fixture"
+      },
+      "liquidity": {
+        "orderbook_depth_available": true,
+        "volume_available": false,
+        "estimated_executable_notional": 2100000,
+        "estimated_slippage_pct": 0.04,
+        "depth_levels": [
+          {"level": 1, "bid_price": 1400, "bid_size": 1500, "ask_price": 1402, "ask_size": 1500},
+          {"level": 2, "bid_price": 1399, "bid_size": 1000, "ask_price": 1403, "ask_size": 1000}
+        ]
+      },
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": true,
+        "max_data_age_ms": 520,
+        "source": "replay_fixture",
+        "latency_ms": 70,
+        "is_realtime": false
+      },
+      "health": {
+        "api_status_known": true,
+        "api_ok": true,
+        "maintenance": false,
+        "trading_enabled": true,
+        "message": "replay fixture only"
+      },
+      "extensions": {
+        "reference_role": "domestic_usdt_krw",
+        "manual_fixture": true
+      }
+    },
+    {
+      "observation_id": "binance_usdt_usdc_replay",
+      "venue_id": "binance",
+      "venue_name": "Binance",
+      "market_symbol": "USDT/USDC",
+      "instrument_type": "spot",
+      "region": "GLOBAL",
+      "last_price": 1.0000,
+      "bid": 0.9999,
+      "ask": 1.0001,
+      "bid_size": 100000,
+      "ask_size": 100000,
+      "timestamp_utc": "2026-06-02T00:00:00Z",
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": true,
+        "max_data_age_ms": 350,
+        "source": "replay_fixture",
+        "latency_ms": 90,
+        "is_realtime": false
+      },
+      "health": {
+        "api_status_known": true,
+        "api_ok": true,
+        "maintenance": false,
+        "message": "replay fixture only"
+      },
+      "extensions": {
+        "reference_role": "global_usdt_reference",
+        "manual_fixture": true
+      }
+    },
+    {
+      "observation_id": "bybit_usdt_usdc_replay",
+      "venue_id": "bybit",
+      "venue_name": "Bybit",
+      "market_symbol": "USDT/USDC",
+      "instrument_type": "spot",
+      "region": "GLOBAL",
+      "last_price": 1.0001,
+      "bid": 1.0000,
+      "ask": 1.0002,
+      "bid_size": 95000,
+      "ask_size": 95000,
+      "timestamp_utc": "2026-06-02T00:00:00Z",
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": true,
+        "max_data_age_ms": 400,
+        "source": "replay_fixture",
+        "latency_ms": 95,
+        "is_realtime": false
+      },
+      "health": {
+        "api_status_known": true,
+        "api_ok": true,
+        "maintenance": false,
+        "message": "replay fixture only"
+      },
+      "extensions": {
+        "reference_role": "global_usdt_reference",
+        "manual_fixture": true
+      }
+    },
+    {
+      "observation_id": "okx_usdt_usdc_replay",
+      "venue_id": "okx",
+      "venue_name": "OKX",
+      "market_symbol": "USDT/USDC",
+      "instrument_type": "spot",
+      "region": "GLOBAL",
+      "last_price": 1.0000,
+      "bid": 0.9998,
+      "ask": 1.0002,
+      "bid_size": 90000,
+      "ask_size": 90000,
+      "timestamp_utc": "2026-06-02T00:00:00Z",
+      "data_quality": {
+        "timestamps_available": true,
+        "timestamps_aligned": true,
+        "max_data_age_ms": 420,
+        "source": "replay_fixture",
+        "latency_ms": 100,
+        "is_realtime": false
+      },
+      "health": {
+        "api_status_known": true,
+        "api_ok": true,
+        "maintenance": false,
+        "message": "replay fixture only"
+      },
+      "extensions": {
+        "reference_role": "global_usdt_reference",
+        "manual_fixture": true
+      }
+    }
+  ],
+  "extensions": {
+    "fixture_note": "Experimental/non-active Tether cross-market replay fixture. No trading and no Council handoff.",
+    "experimental_strategy": true,
+    "non_active_strategy": true,
+    "no_trade_only": true
+  }
+}

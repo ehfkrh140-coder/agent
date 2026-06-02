@@ -1,0 +1,236 @@
+# Read-only market data adapter registry. No private credentials or trading permissions.
+adapters:
+  replay_mark_orderbook_gap:
+    type: replay
+    fixture_path: data/fixtures/market_data/mark_orderbook_gap_snapshot.json
+    enabled: false
+    experimental: true
+    strategy_family: mark_orderbook_gap
+    note: Not part of active v1 strategy
+
+  replay_orderbook_imbalance:
+    type: replay
+    fixture_path: data/fixtures/market_data/orderbook_imbalance_snapshot.json
+    enabled: true
+    experimental: true
+    strategy_family: orderbook_imbalance
+    note: Experimental non-active orderbook imbalance replay fixture
+  replay_cross_exchange_spot_spread:
+    type: replay
+    fixture_path: data/fixtures/market_data/cross_exchange_spot_snapshot.json
+    enabled: true
+    strategy_family: cross_exchange_spot_spread
+
+  replay_tether_cross_market_premium:
+    type: replay
+    enabled: true
+    experimental: true
+    strategy_family: tether_cross_market_premium
+    strategy_id: usdt_krw_global_reference_v0
+    fixture_path: data/fixtures/market_data/tether_cross_market_snapshot.json
+    note: "Experimental/non-active Tether cross-market replay packet. No trading, no Council handoff."
+  live_bybit_mark_orderbook_gap:
+    type: bybit_public
+    base_url: https://api.bybit.com
+    category: linear
+    symbol: BTCUSDT
+    display_symbol: BTC/USDT-PERP
+    orderbook_limit: 25
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    unit: 1
+    thresholds:
+      base_percent: 2.0
+      min_gap_floor_pct: 0.2
+      min_notional: 500.0
+      max_data_age_ms: 3000
+    guards:
+      manual_blacklisted: false
+      runtime_blocked: false
+      open_position: false
+      pending_duplicate: false
+    enabled: false
+    experimental: true
+    strategy_family: mark_orderbook_gap
+    note: Not part of active v1 strategy
+  live_upbit_spot:
+    type: upbit_public_spot
+    enabled: true
+    base_url: https://api.upbit.com
+    market: KRW-BTC
+    display_symbol: BTC/KRW
+    ticker_path: /v1/ticker
+    orderbook_path: /v1/orderbook
+    orderbook_limit: 15
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_config_path: configs/spot_fees.yaml
+  live_bithumb_spot:
+    type: bithumb_public_spot
+    enabled: true
+    base_url: https://api.bithumb.com
+    market: KRW-BTC
+    api_symbol: BTC_KRW
+    display_symbol: BTC/KRW
+    # Public Bithumb endpoint paths are kept configurable because public API versions may differ.
+    ticker_path: /public/ticker/{symbol}
+    orderbook_path: /public/orderbook/{symbol}
+    orderbook_limit: 15
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_config_path: configs/spot_fees.yaml
+  live_upbit_bithumb_orderbook_imbalance:
+    type: composite_orderbook_imbalance
+    enabled: true
+    experimental: true
+    strategy_family: orderbook_imbalance
+    strategy_id: orderbook_imbalance_v0
+    signal_type: orderbook_imbalance
+    asset: BTC
+    quote: KRW
+    venues:
+      - live_upbit_spot
+      - live_bithumb_spot
+    thresholds:
+      imbalance_ratio_threshold: 1.5
+      max_data_age_ms: 3000
+      target_notional: 1000000
+    note: "Experimental/non-active signal. Not executable spread. No Council handoff."
+  live_upbit_bithumb_spot_spread:
+    type: composite_spot_spread
+    enabled: true
+    strategy_family: cross_exchange_spot_spread
+    strategy_id: cross_exchange_spot_spread_v1
+    signal_type: cross_exchange_spot_spread
+    asset: BTC
+    quote: KRW
+    venues:
+      - live_upbit_spot
+      - live_bithumb_spot
+    thresholds:
+      min_net_gap_pct: 0.2
+      max_data_age_ms: 3000
+      max_latency_ms: 1000
+      min_notional: 1000000
+      min_executable_notional: 1000000
+      target_notionals:
+        - 1000000
+        - 5000000
+      safety_buffer_pct: 0.05
+
+  live_upbit_usdt_krw_spot:
+    type: upbit_public_spot
+    enabled: true
+    experimental: true
+    base_url: https://api.upbit.com
+    market: KRW-USDT
+    display_symbol: USDT/KRW
+    ticker_path: /v1/ticker
+    orderbook_path: /v1/orderbook
+    orderbook_limit: 15
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_config_path: configs/spot_fees.yaml
+    fee_override:
+      trading_fee_pct: 0.05
+      fee_source: manual_market_data_config_placeholder
+    note: "Public read-only Upbit USDT/KRW observation for non-active Tether cross-market experiments."
+  live_bithumb_usdt_krw_spot:
+    type: bithumb_public_spot
+    enabled: true
+    experimental: true
+    base_url: https://api.bithumb.com
+    market: KRW-USDT
+    api_symbol: USDT_KRW
+    display_symbol: USDT/KRW
+    ticker_path: /public/ticker/{symbol}
+    orderbook_path: /public/orderbook/{symbol}
+    orderbook_limit: 15
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_config_path: configs/spot_fees.yaml
+    fee_override:
+      trading_fee_pct: 0.05
+      fee_source: manual_market_data_config_placeholder
+    note: "Public read-only Bithumb USDT/KRW observation for non-active Tether cross-market experiments."
+  live_binance_usdt_reference:
+    type: global_usdt_reference
+    enabled: true
+    experimental: true
+    base_url: https://api.binance.com
+    venue_id: binance
+    venue_name: Binance
+    market_symbol: USDT/USDC
+    instrument_type: reference
+    ticker_path: /api/v3/ticker/bookTicker
+    ticker_params:
+      symbol: USDTUSDC
+    response_format: binance_book_ticker
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    note: "Public read-only global USDT reference. Reference/depeg health only, not execution."
+  live_bybit_usdt_reference:
+    type: global_usdt_reference
+    enabled: true
+    experimental: true
+    base_url: https://api.bybit.com
+    venue_id: bybit
+    venue_name: Bybit
+    market_symbol: USDT/USDC
+    instrument_type: reference
+    ticker_path: /v5/market/tickers
+    ticker_params:
+      category: spot
+      symbol: USDTUSDC
+    response_format: bybit_v5_ticker
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    note: "Public read-only global USDT reference. Reference/depeg health only, not execution."
+  live_okx_usdt_reference:
+    type: global_usdt_reference
+    enabled: true
+    experimental: true
+    base_url: https://www.okx.com
+    venue_id: okx
+    venue_name: OKX
+    market_symbol: USDT/USDC
+    instrument_type: reference
+    ticker_path: /api/v5/market/ticker
+    ticker_params:
+      instId: USDT-USDC
+    response_format: okx_ticker
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    note: "Public read-only global USDT reference. Reference/depeg health only, not execution."
+  live_tether_cross_market_premium:
+    type: composite_tether_cross_market_premium
+    enabled: true
+    experimental: true
+    strategy_family: tether_cross_market_premium
+    strategy_id: usdt_krw_global_reference_v0
+    signal_type: tether_cross_market_premium
+    asset: USDT
+    quote: KRW
+    domestic_venues:
+      - live_upbit_usdt_krw_spot
+      - live_bithumb_usdt_krw_spot
+    global_reference_venues:
+      - live_binance_usdt_reference
+      - live_bybit_usdt_reference
+      - live_okx_usdt_reference
+    thresholds:
+      min_net_gap_pct: 0.2
+      max_data_age_ms: 3000
+      max_latency_ms: 1000
+      min_executable_notional: 1000000
+      safety_buffer_pct: 0.05
+      global_depeg_threshold_pct: 0.2
+    note: "Experimental/non-active Tether cross-market live public packet. No trading, no Council handoff."
