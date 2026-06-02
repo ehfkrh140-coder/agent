@@ -247,3 +247,6 @@ python tools/notify_sampling_result.py --sampling-output data/market_samples/rep
 ```powershell
 python tools/probe_usdt_krw_sources.py --output data/probes/usdt_krw_public_probe.json
 ```
+
+## USDT/KRW public probe review
+- Probe review: [docs/data_availability/usdt_krw_probe_review.md](docs/data_availability/usdt_krw_probe_review.md) preserves the user-observed public probe results, identifies Upbit plus Binance/Bybit/OKX as v0 candidates, and keeps FX reference unresolved before any experimental scaffolding.

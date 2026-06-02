@@ -22,7 +22,9 @@ Design a read-only, no-trade future strategy for reading USDT/KRW kimchi premium
 - Codex must not promote this strategy to active by itself.
 - No live adapter, no scenario JSON, no readiness implementation, no Council handoff, and no automated execution is included in this card.
 - Data availability matrix: [`docs/data_availability/usdt_krw_multi_source_matrix.md`](../data_availability/usdt_krw_multi_source_matrix.md).
+- Public probe review: [`docs/data_availability/usdt_krw_probe_review.md`](../data_availability/usdt_krw_probe_review.md).
 - experimental scaffolding requires Multi-Source Data Availability Matrix and Public Probe first.
+- Experimental scaffolding is blocked until a reliable public `USD/KRW` FX source is confirmed.
 
 ## Strategy concept
 
@@ -237,7 +239,9 @@ None. This is a documentation-only strategy card.
 - No adapter, private API, or trading implementation is added.
 - The multi-source matrix is linked at [`docs/data_availability/usdt_krw_multi_source_matrix.md`](../data_availability/usdt_krw_multi_source_matrix.md).
 - Experimental scaffolding requires the Multi-Source Data Availability Matrix and `USDT/KRW Public Probe v0` report first.
-- The earlier next-card label `USDT/KRW Data Availability Check v0` is now represented by the Multi-Source Matrix plus `USDT/KRW Public Probe v0`; the next implementation gate after the read-only probe report can be `USDT/KRW Experimental Scaffolding v0`.
+- Probe review is linked at [`docs/data_availability/usdt_krw_probe_review.md`](../data_availability/usdt_krw_probe_review.md).
+- Experimental scaffolding is blocked until a reliable public `USD/KRW` FX source is confirmed.
+- The earlier next-card label `USDT/KRW Data Availability Check v0` is now represented by the Multi-Source Matrix plus `USDT/KRW Public Probe v0`; the next implementation gate is `USDT/KRW FX Reference Probe Hardening v0`, followed only later by `USDT/KRW Experimental Scaffolding v0` if the FX blocker is resolved.
 
 ## Non-goals
 - Do not treat the public probe report as a live adapter or execution readiness check.

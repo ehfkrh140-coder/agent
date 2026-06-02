@@ -327,5 +327,61 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
         self.assertEqual([item["strategy_id"] for item in active], ["cross_exchange_spot_spread_v1"])
 
 
+    def test_usdt_krw_probe_review_documents_source_decision_and_fx_blocker(self):
+        path = Path("docs/data_availability/usdt_krw_probe_review.md")
+        self.assertTrue(path.exists(), str(path))
+        text = path.read_text(encoding="utf-8")
+
+        for phrase in [
+            "## Overview",
+            "## Probe input summary",
+            "## Source result table",
+            "## Domestic source decision",
+            "## Global USDT reference decision",
+            "## FX reference decision",
+            "## Current blocker",
+            "## Recommended v0 source set",
+            "## Next gate",
+            "## No-trade compliance",
+            "Upbit: ok / available",
+            "Bithumb: ok / unknown",
+            "Coinone: skipped / unknown",
+            "Korbit: skipped / unknown",
+            "Binance: ok / available",
+            "Bybit: ok / available",
+            "OKX: ok / available",
+            "Frankfurter/no-key public FX candidate: ok / unknown",
+            "FX source unresolved",
+            "Mode B cannot become experimental until USD/KRW FX source is confirmed",
+            "Domestic v0 primary candidate: Upbit USDT/KRW",
+            "median of Binance, Bybit, OKX",
+            "usd_krw_reference_rate",
+            "fair_usdt_krw_price cannot be calculated reliably",
+            "USDT/KRW FX Reference Probe Hardening v0",
+            "No private API",
+            "No account/balance lookup",
+            "No withdrawal/deposit/transfer",
+        ]:
+            self.assertIn(phrase, text)
+
+        matrix = Path("docs/data_availability/usdt_krw_multi_source_matrix.md").read_text(encoding="utf-8")
+        self.assertIn("docs/data_availability/usdt_krw_probe_review.md", matrix)
+        self.assertIn("probe_available_for_USDT_KRW", matrix)
+        self.assertIn("probe_unknown", matrix)
+        self.assertIn("probe_available_for_reference", matrix)
+        self.assertIn("FX reference remains unresolved", matrix)
+
+        card = Path("docs/strategy_task_cards/usdt_krw_kimchi_premium.md").read_text(encoding="utf-8")
+        self.assertIn("docs/data_availability/usdt_krw_probe_review.md", card)
+        self.assertIn("Experimental scaffolding is blocked until a reliable public `USD/KRW` FX source is confirmed", card)
+
+        registry = yaml.safe_load(Path("configs/strategy_registry.yaml").read_text(encoding="utf-8"))
+        stablecoin = next(item for item in registry["strategies"] if item["strategy_family"] == "stablecoin_krw_premium")
+        active = [item for item in registry["strategies"] if item.get("status") == "active"]
+        self.assertEqual(stablecoin["status"], "future")
+        self.assertEqual(stablecoin["execution_policy"], "NO_TRADE_ONLY")
+        self.assertEqual([item["strategy_id"] for item in active], ["cross_exchange_spot_spread_v1"])
+
+
 if __name__ == "__main__":
     unittest.main()

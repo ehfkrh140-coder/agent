@@ -1,10 +1,11 @@
 # USDT/KRW Multi-Source Data Availability Matrix v0
 
 ## Overview
-This document is a planning-only data availability matrix for `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0`. It separates domestic executable/reference venues, global USDT reference venues, and USD/KRW FX reference sources before any experimental scaffolding. It does not confirm pair availability, implement public probes, add live adapters, or authorize trading.
+This document is a planning-only data availability matrix for `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0`. It separates domestic executable/reference venues, global USDT reference venues, and USD/KRW FX reference sources before any experimental scaffolding. The read-only public probe has now been reviewed in [`docs/data_availability/usdt_krw_probe_review.md`](usdt_krw_probe_review.md); this matrix still does not add live adapters, persistent adapters, OpportunityPackets, or trading authorization.
 
 ## Strategy link
 - Strategy card: [`docs/strategy_task_cards/usdt_krw_kimchi_premium.md`](../strategy_task_cards/usdt_krw_kimchi_premium.md)
+- Probe review: [`docs/data_availability/usdt_krw_probe_review.md`](usdt_krw_probe_review.md)
 - Strategy family: `stablecoin_krw_premium`
 - Strategy id: `usdt_krw_kimchi_premium_v0`
 - Status: `future`
@@ -54,26 +55,26 @@ FX sources are candidates only. The next public probe must verify response shape
 
 | venue | role | pair_to_check | pair_availability_status | public_ticker_candidate | public_orderbook_candidate | public_market_list_candidate | timestamp_available | depth_available | fee_source | implementation_status | notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Upbit | domestic USDT/KRW bid/ask/depth; possible future execution-candidate venue, read-only now | `KRW-USDT` or documented equivalent | unknown_until_public_probe | candidate_source; BTC/KRW public adapter exists but USDT/KRW not verified | candidate_source; BTC/KRW orderbook adapter exists but USDT/KRW not verified | candidate_source | unknown_until_public_probe | unknown_until_public_probe | manual placeholder only | already_supported_for_BTC_KRW_public_adapter; USDT/KRW not_implemented | Do not confirm tradability in this document; next public probe checks pair availability. |
-| Bithumb | domestic USDT/KRW bid/ask/depth; possible future execution-candidate venue, read-only now | `USDT_KRW` or documented equivalent | unknown_until_public_probe | candidate_source; BTC/KRW public adapter exists but USDT/KRW not verified | candidate_source; BTC/KRW orderbook adapter exists but USDT/KRW not verified | candidate_source | unknown_until_public_probe | unknown_until_public_probe | manual placeholder only | already_supported_for_BTC_KRW_public_adapter; USDT/KRW not_implemented | Do not confirm tradability in this document; next public probe checks pair availability. |
-| Coinone | domestic USDT/KRW bid/ask/depth candidate, read-only now | documented USDT/KRW symbol candidate | unknown_until_public_probe | public ticker docs candidate | public orderbook docs candidate | public market docs candidate | unknown_until_public_probe | unknown_until_public_probe | manual placeholder only | candidate_source; not_implemented | Public ticker/orderbook/market docs must be reviewed by a later probe card. |
-| Korbit | domestic USDT/KRW bid/ask/depth candidate, read-only now | documented USDT/KRW symbol candidate | unknown_until_public_probe | candidate_source | candidate_source | candidate_source | unknown_until_public_probe | unknown_until_public_probe | manual placeholder only | unknown_until_public_probe; not_implemented | Availability and public response shape are unknown until a later public probe. |
+| Upbit | domestic USDT/KRW bid/ask/depth; possible future execution-candidate venue, read-only now | `KRW-USDT` or documented equivalent | probe_available_for_USDT_KRW | probe_available_for_USDT_KRW | probe_available_for_USDT_KRW | probe_available_for_USDT_KRW | probe_available_for_USDT_KRW | probe_available_for_USDT_KRW | manual placeholder only | already_supported_for_BTC_KRW_public_adapter; USDT/KRW future probe candidate only | User local probe result was ok / available; this is a primary v0 domestic source candidate, not an active/execution source. |
+| Bithumb | domestic USDT/KRW bid/ask/depth; possible future execution-candidate venue, read-only now | `USDT_KRW` or documented equivalent | probe_unknown | probe_unknown | probe_unknown | candidate_source | probe_unknown | probe_unknown | manual placeholder only | already_supported_for_BTC_KRW_public_adapter; USDT/KRW not_implemented | User local probe result was ok / unknown; keep as secondary candidate only. |
+| Coinone | domestic USDT/KRW bid/ask/depth candidate, read-only now | documented USDT/KRW symbol candidate | skipped_unknown | public ticker docs candidate | public orderbook docs candidate | public market docs candidate | unknown_until_future_probe | unknown_until_future_probe | manual placeholder only | candidate_source; not_implemented | User local probe result was skipped / unknown; no availability is confirmed. |
+| Korbit | domestic USDT/KRW bid/ask/depth candidate, read-only now | documented USDT/KRW symbol candidate | skipped_unknown | candidate_source | candidate_source | candidate_source | unknown_until_future_probe | unknown_until_future_probe | manual placeholder only | candidate_source; not_implemented | User local probe result was skipped / unknown; no availability is confirmed. |
 
 ## Global USDT reference venues
 
 | venue | reference_pair_candidates | ticker_candidate | orderbook_candidate | timestamp_available | depth_available | depeg_reference_role | implementation_status | notes |
 |---|---|---|---|---|---|---|---|---|
-| Binance | `USDT/USD`, `USDT/USDC`, `USDC/USDT`, documented equivalents | candidate_source | candidate_source | unknown_until_public_probe | unknown_until_public_probe | Reference midpoint and depeg cross-check only | candidate_source | Not an execution target here; use public ticker/orderbook only. |
-| Bybit | `USDT/USD`, `USDT/USDC`, `USDC/USDT`, documented equivalents | candidate_source | candidate_source | unknown_until_public_probe | unknown_until_public_probe | Reference midpoint and depeg cross-check only | existing_public_adapter_for_derivatives_but_spot_usdt_reference_not_implemented | Existing public adapter is derivatives-oriented; spot USDT reference is not implemented. |
-| OKX | `USDT/USD`, `USDT/USDC`, `USDC/USDT`, documented equivalents | candidate_source | candidate_source | unknown_until_public_probe | unknown_until_public_probe | Reference midpoint and depeg cross-check only | candidate_source | Not an execution target here; use public ticker/orderbook only. |
+| Binance | `USDT/USD`, `USDT/USDC`, `USDC/USDT`, documented equivalents | probe_available_for_reference | candidate_source | probe_available_for_reference | unknown_until_future_probe | Reference midpoint and depeg cross-check only | probe_available_for_reference | User local probe result was ok / available; use only as one global reference candidate. |
+| Bybit | `USDT/USD`, `USDT/USDC`, `USDC/USDT`, documented equivalents | probe_available_for_reference | candidate_source | probe_available_for_reference | unknown_until_future_probe | Reference midpoint and depeg cross-check only | existing_public_adapter_for_derivatives_but_spot_usdt_reference_not_implemented; probe_available_for_reference | User local probe result was ok / available; use only as one global reference candidate. |
+| OKX | `USDT/USD`, `USDT/USDC`, `USDC/USDT`, documented equivalents | probe_available_for_reference | candidate_source | probe_available_for_reference | unknown_until_future_probe | Reference midpoint and depeg cross-check only | probe_available_for_reference | User local probe result was ok / available; use only as one global reference candidate. |
 
 ## USD/KRW FX reference sources
 
 | source | role | requires_api_key | update_frequency_known | timestamp_available | reliability_level | implementation_status | notes |
 |---|---|---|---|---|---|---|---|
-| Frankfurter or no-key public FX candidate | public USD/KRW FX candidate for fair-value calculation | unknown_until_public_probe | unknown_until_public_probe | unknown_until_public_probe | candidate_source | candidate_source; not_implemented | Do not assume suitability; probe response shape and timestamp first. |
-| official FX source candidate | higher-reliability official USD/KRW reference candidate | unknown_until_public_probe | unknown_until_public_probe | unknown_until_public_probe | candidate_official_reference | candidate_source; not_implemented | Source policy must determine update frequency, timestamp and licensing constraints. |
-| other public market FX source candidate | additional public USD/KRW reference candidate | unknown_until_public_probe | unknown_until_public_probe | unknown_until_public_probe | candidate_secondary_reference | candidate_source; not_implemented | Use only public/no-private data; next probe compares shape and staleness metadata. |
+| Frankfurter or no-key public FX candidate | public USD/KRW FX candidate for fair-value calculation | no_key_candidate_but_unresolved | probe_unknown | probe_unknown | unresolved_candidate_source | unresolved; not_implemented | User local probe result was ok / unknown; do not use as confirmed FX source yet. |
+| official FX source candidate | higher-reliability official USD/KRW reference candidate | unknown_until_fx_probe_hardening | unknown_until_fx_probe_hardening | unknown_until_fx_probe_hardening | candidate_official_reference | unresolved; not_implemented | User local probe result was skipped / unknown; source policy must determine update frequency, timestamp and licensing constraints. |
+| other public market FX source candidate | additional public USD/KRW reference candidate | unknown_until_fx_probe_hardening | unknown_until_fx_probe_hardening | unknown_until_fx_probe_hardening | candidate_secondary_reference | unresolved; not_implemented | User local probe result was skipped / unknown; use only public/no-private data. |
 
 ## Recommended premium formulas
 
@@ -136,7 +137,7 @@ This planning matrix intentionally marks most USDT/KRW and FX fields as `unknown
 - global USDT reference pair availability for Binance, Bybit and OKX;
 - FX source response shape, key requirements and timestamp availability.
 
-No pair availability is confirmed by this document.
+Probe review status: Upbit is `probe_available_for_USDT_KRW`; Bithumb is `probe_unknown`; Coinone and Korbit remain `skipped_unknown`; Binance, Bybit and OKX are `probe_available_for_reference`; FX reference remains unresolved. See [`docs/data_availability/usdt_krw_probe_review.md`](usdt_krw_probe_review.md).
 
 ## Data risks
 - single venue distortion
@@ -163,7 +164,7 @@ Purpose:
 - Do no trading.
 - Add no persistent adapter yet.
 
-`USDT/KRW Public Probe v0` now provides a read-only check tool that can write `data/probes/usdt_krw_public_probe.json` from candidate public endpoints. The probe is not a persistent adapter, does not create OpportunityPackets, and does not change strategy status. Review the probe report before any future experimental scaffolding card.
+`USDT/KRW Public Probe v0` results are reviewed in [`docs/data_availability/usdt_krw_probe_review.md`](usdt_krw_probe_review.md). The next gate is `USDT/KRW FX Reference Probe Hardening v0` because Mode B cannot become experimental until a reliable USD/KRW FX source is confirmed. The probe is not a persistent adapter, does not create OpportunityPackets, and does not change strategy status.
 
 ## No-trade compliance
 - No private API.
