@@ -383,5 +383,135 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
         self.assertEqual([item["strategy_id"] for item in active], ["cross_exchange_spot_spread_v1"])
 
 
+    def test_pr_trust_framework_docs_and_template_exist(self):
+        required_paths = [
+            ".github/pull_request_template.md",
+            "docs/pr_review_policy.md",
+            "docs/merge_gate.md",
+            "docs/rollback_policy.md",
+            "docs/task_checklist.md",
+            "docs/agent_workflow.md",
+        ]
+        for path in required_paths:
+            self.assertTrue(Path(path).exists(), path)
+
+        template = Path(".github/pull_request_template.md").read_text(encoding="utf-8")
+        for phrase in [
+            "작업 목적",
+            "변경 파일 목록",
+            "영향 범위",
+            "테스트 결과",
+            "예상 리스크",
+            "롤백 방법",
+            "사람이 반드시 확인해야 하는 항목",
+            "No-trade compliance",
+            "Did this PR modify src?",
+            "Did this PR modify tools?",
+            "Did this PR modify prompts?",
+            "Did this PR modify configs?",
+            "Did this PR change active strategy?",
+            "private API / API key / balance / order / transfer / auto-trading",
+            "What files should the reviewer inspect first?",
+            "How to rollback?",
+        ]:
+            self.assertIn(phrase, template)
+
+    def test_pr_review_policy_merge_gate_and_rollback_cover_required_guardrails(self):
+        review = Path("docs/pr_review_policy.md").read_text(encoding="utf-8")
+        for phrase in [
+            "trusted without reading every line",
+            "PRs must be small and scoped",
+            "purpose, affected files, tests, risks, and rollback",
+            "runtime/auth/prompts/strategy_current/private API is high-risk",
+            "docs-only",
+            "config-only",
+            "test-only",
+            "probe",
+            "adapter",
+            "readiness",
+            "strategy/scenario",
+            "runtime/LLM",
+            "execution/private API",
+        ]:
+            self.assertIn(phrase, review)
+
+        merge_gate = Path("docs/merge_gate.md").read_text(encoding="utf-8")
+        for phrase in [
+            "Tests pass",
+            "Existing behavior is preserved",
+            "Docs are updated",
+            "Impact scope is declared",
+            "Failure handling exists",
+            "No unrelated files changed",
+            "No no-trade violation",
+            "Rollback method is documented",
+            "User approval is present for high-risk categories",
+            "Unexplained refactor",
+            "Private API/key/order/balance/transfer additions",
+            "Active strategy change without explicit user approval",
+            "Missing rollback plan",
+        ]:
+            self.assertIn(phrase, merge_gate)
+
+        rollback = Path("docs/rollback_policy.md").read_text(encoding="utf-8")
+        for phrase in [
+            "Prefer a revert PR over force push",
+            "docs-only PR",
+            "Config PR",
+            "Code PR",
+            "verify `active_strategy` remains `cross_exchange_spot_spread_v1`",
+            "Runtime/Gemini rollback",
+            "Generated data files should not be treated as source rollback",
+        ]:
+            self.assertIn(phrase, rollback)
+
+    def test_task_checklist_agent_workflow_and_agents_require_pr_evidence(self):
+        checklist = Path("docs/task_checklist.md").read_text(encoding="utf-8")
+        for phrase in [
+            "Before starting",
+            "Task type",
+            "Allowed files",
+            "Forbidden files",
+            "Expected tests",
+            "Manual smoke needed?",
+            "Rollback path",
+            "Human approval needed?",
+            "After completing",
+            "No-trade confirmation",
+        ]:
+            self.assertIn(phrase, checklist)
+
+        workflow = Path("docs/agent_workflow.md").read_text(encoding="utf-8")
+        for phrase in [
+            "User: product owner and final approver",
+            "Codex: implementation worker",
+            "GPT/reviewer: design and risk reviewer",
+            "Codex must provide evidence",
+            "User should not need to read every line of code",
+            "Human final approval is required",
+            "strategy changes",
+            "active promotion",
+            "runtime/auth changes",
+            "execution/private API",
+            "merge approval",
+        ]:
+            self.assertIn(phrase, workflow)
+
+        agents = Path("AGENTS.md").read_text(encoding="utf-8")
+        for phrase in [
+            ".github/pull_request_template.md",
+            "purpose, files changed, impact, tests, risks, rollback, and no-trade compliance",
+            "rollback/no-trade evidence",
+            "high-risk",
+            "must not claim it is safe-to-merge without explicit human review",
+        ]:
+            self.assertIn(phrase, agents)
+
+        no_trade = Path("docs/no_trade_policy.md").read_text(encoding="utf-8")
+        self.assertIn("Private exchange endpoints", no_trade)
+        active = Path("docs/active_strategy.md").read_text(encoding="utf-8")
+        self.assertIn("cross_exchange_spot_spread_v1", active)
+
+
 if __name__ == "__main__":
     unittest.main()

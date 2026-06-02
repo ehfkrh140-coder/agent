@@ -21,3 +21,9 @@
 - If a test or check cannot run, record the exact command and the reason.
 - PR summaries should clearly list changed files/areas and test results.
 - Keep manual smoke tests read-only and avoid live network calls unless the task explicitly requests them.
+
+## PR trust evidence
+- Every Codex PR must fill `.github/pull_request_template.md` and include purpose, files changed, impact, tests, risks, rollback, and no-trade compliance.
+- PR summaries must provide rollback/no-trade evidence, not only a code summary.
+- If a task is high-risk, Codex must mark it high-risk in the summary and must not claim it is safe-to-merge without explicit human review.
+- High-risk areas include runtime/auth/Gemini changes, prompts, `configs/strategy_current.yaml`, active strategy changes, strategy promotion, risk policy changes, and any execution/private API surface.
