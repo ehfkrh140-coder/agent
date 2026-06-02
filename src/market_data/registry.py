@@ -8,7 +8,12 @@ import yaml
 from src.market_data.adapters.base import MarketDataAdapter
 from src.market_data.adapters.bithumb import BithumbPublicSpotAdapter
 from src.market_data.adapters.bybit import BybitPublicMarketDataAdapter
-from src.market_data.adapters.composite import CompositeOrderbookImbalanceAdapter, CompositeSpotSpreadAdapter
+from src.market_data.adapters.composite import (
+    CompositeOrderbookImbalanceAdapter,
+    CompositeSpotSpreadAdapter,
+    CompositeTetherCrossMarketAdapter,
+)
+from src.market_data.adapters.global_usdt_reference import GlobalUsdtReferenceAdapter
 from src.market_data.adapters.replay import ReplayMarketDataAdapter
 from src.market_data.adapters.upbit import UpbitPublicSpotAdapter
 
@@ -41,6 +46,21 @@ def build_adapter(adapter_id: str, config: dict[str, Any] | None = None) -> Mark
         return UpbitPublicSpotAdapter(adapter_id, config=adapter_config)
     if adapter_type == "bithumb_public_spot":
         return BithumbPublicSpotAdapter(adapter_id, config=adapter_config)
+    if adapter_type == "global_usdt_reference":
+        return GlobalUsdtReferenceAdapter(adapter_id, config=adapter_config)
+    if adapter_type == "composite_tether_cross_market_premium":
+        domestic_ids = adapter_config.get("domestic_venues") or []
+        global_ids = adapter_config.get("global_reference_venues") or []
+        if not isinstance(domestic_ids, list) or not domestic_ids:
+            raise ValueError(f"Tether composite adapter {adapter_id} requires domestic_venues")
+        if not isinstance(global_ids, list) or not global_ids:
+            raise ValueError(f"Tether composite adapter {adapter_id} requires global_reference_venues")
+        return CompositeTetherCrossMarketAdapter(
+            adapter_id,
+            config=adapter_config,
+            domestic_adapters=[build_adapter(child_id, config) for child_id in domestic_ids],
+            global_reference_adapters=[build_adapter(child_id, config) for child_id in global_ids],
+        )
     if adapter_type in {"composite_spot_spread", "composite_orderbook_imbalance"}:
         child_ids = adapter_config.get("venues") or []
         if not isinstance(child_ids, list) or not child_ids:

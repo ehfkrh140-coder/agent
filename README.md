@@ -218,6 +218,7 @@ python tools/collect_market_data.py --adapter replay_orderbook_imbalance --outpu
 python tools/run_strategy_scenarios.py --strategy orderbook_imbalance --evaluate-only
 python tools/run_strategy_scenarios.py --strategy tether_cross_market_premium --evaluate-only
 python tools/collect_market_data.py --adapter replay_tether_cross_market_premium --output data/generated_packets/replay_tether_cross_market_packet.json
+python tools/collect_market_data.py --adapter live_tether_cross_market_premium --output data/generated_packets/live_tether_cross_market_packet.json
 python main.py --council --opportunity-file data/generated_packets/replay_tether_cross_market_packet.json --dry-run-context
 ```
 

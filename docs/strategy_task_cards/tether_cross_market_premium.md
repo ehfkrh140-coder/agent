@@ -21,11 +21,11 @@ Define a read-only experimental scaffolding plan that observes domestic `USDT/KR
 - Active strategy remains `cross_exchange_spot_spread_v1`.
 - Domestic v0 venues are Upbit and Bithumb only.
 - Upbit `USDT/KRW` is the confirmed primary domestic public source from the prior probe (`ok / available`).
-- Bithumb `USDT/KRW` is rechecked as available for the manual experimental path, but live adapters are still not added.
+- Bithumb `USDT/KRW` is rechecked as available for the manual experimental path, and the live composite adapter path remains public read-only/non-active.
 - Coinone and Korbit are future domestic expansion, not v0.
 - Global reference v0 venues are Binance, Bybit, and OKX.
 - Overseas venues can be expanded later only by separate strategy task cards and public probe review first.
-- This scaffolding adds manual scenario JSON, formula helpers, evaluate-only readiness rules, and replay packet-builder support; it does not add a live adapter, persistent adapter, OpportunityPacket live builder, Council handoff, private API, order, transfer, balance lookup, or auto-trading.
+- This scaffolding now includes manual scenario JSON, formula helpers, evaluate-only readiness rules, replay packet-builder support, and a public read-only live composite adapter; it does not add a persistent adapter, sampling/alert path, Council handoff, private API, order, transfer, balance lookup, or auto-trading.
 
 ## Probe alignment status
 - Prior probe result: Upbit `domestic_usdt_krw` was `ok / available`; treat it as the confirmed primary domestic public source for planning.
@@ -244,10 +244,10 @@ Manual scenario JSON added for evaluate-only scaffolding:
 Future task cards may allow only explicitly scoped files. Typical future scopes may include docs, config, tests, and then public probe alignment before any adapter or readiness work.
 
 ## Forbidden files/actions
-- Do not implement live adapters in this card.
+- Do not implement additional live adapters beyond the explicitly scoped public read-only composite adapter.
 - Do not implement persistent adapters in this card.
-- Do not implement OpportunityPacket builders in this card.
-- Do not implement active/live readiness or Council handoff in this card.
+- Do not implement additional OpportunityPacket builders beyond the replay/live snapshot path already scoped.
+- Do not implement active/live readiness promotion or Council handoff in this card.
 - Scenario JSON is manual/evaluate-only and must not be treated as live market data.
 - Do not use private APIs, credentials, account/balance lookup, orders, transfers, withdrawals, KRW/bank transfer flows, auto-trading, or Council automatic calls.
 
@@ -273,12 +273,19 @@ python tools/collect_market_data.py --adapter replay_tether_cross_market_premium
 python main.py --council --opportunity-file data/generated_packets/replay_tether_cross_market_packet.json --dry-run-context
 ```
 
+Live public composite adapter smoke (public endpoints only, experimental/non-active):
+
+```text
+python tools/collect_market_data.py --adapter live_tether_cross_market_premium --output data/generated_packets/live_tether_cross_market_packet.json
+python main.py --council --opportunity-file data/generated_packets/live_tether_cross_market_packet.json --dry-run-context
+```
+
 ## Success criteria
 - Strategy direction is corrected away from FX-based Kimchi Premium.
 - Near-term Tether strategy compares domestic `USDT/KRW` state and global USDT reference health.
 - Domestic v0 venues are fixed to Upbit/Bithumb.
 - Overseas references are expandable starting from Binance/Bybit/OKX.
-- Formula helper and evaluate-only readiness scaffolding are added without live adapters or execution paths.
+- Formula helper, evaluate-only readiness scaffolding, replay packet building, and live public composite packet generation are added without execution paths.
 - No private API or trade behavior is added.
 
 ## Next gate
@@ -287,8 +294,8 @@ Next card: `Tether Cross-Market Evaluate-Only Review v0`
 Purpose:
 - Review manual scenario outcomes and readiness warnings.
 - Keep Upbit/Bithumb as domestic v0 venues and Binance/Bybit/OKX as global reference venues.
-- Add no adapter yet.
-- Add no OpportunityPacket live builder.
+- Review live public composite output shape and endpoint stability.
+- Add no persistent adapter, sampling/alert path, or execution path.
 - Add no Council handoff.
 - Do no trading.
 

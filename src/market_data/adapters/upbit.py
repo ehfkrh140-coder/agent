@@ -113,7 +113,7 @@ class UpbitPublicSpotAdapter(MarketDataAdapter):
             "base_volume_24h": _safe_float(ticker.get("acc_trade_volume_24h")),
             "quote_volume_24h": _safe_float(ticker.get("acc_trade_price_24h")),
             "timestamp_utc": timestamp.isoformat(),
-            "fees": _fee_snapshot("upbit", self.display_symbol, self.fee_config_path),
+            "fees": _configured_fee_snapshot(self.config) or _fee_snapshot("upbit", self.display_symbol, self.fee_config_path),
             "liquidity": {
                 "orderbook_depth_available": bool(units),
                 "volume_available": ticker.get("acc_trade_volume_24h") not in (None, ""),
@@ -213,6 +213,11 @@ def _upbit_depth(units: Any, *, limit: int) -> list[dict[str, Any]]:
         )
     return rows
 
+
+
+def _configured_fee_snapshot(config: dict[str, Any]) -> dict[str, Any] | None:
+    fee = config.get("fee_override") or config.get("fees")
+    return dict(fee) if isinstance(fee, dict) else None
 
 def _fee_snapshot(venue_id: str, display_symbol: str, fee_config_path: str) -> dict[str, Any] | None:
     path = Path(fee_config_path)
