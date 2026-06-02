@@ -24,6 +24,9 @@
 
 ## PR trust evidence
 - Every Codex PR must fill `.github/pull_request_template.md` and include purpose, files changed, impact, tests, risks, rollback, and no-trade compliance.
+- Every non-trivial Codex PR must include either a correctly filled GitHub PR template body or a task-specific handoff evidence file under `docs/pr_handoffs/`.
+- Because generated PR bodies can be generic, `docs/pr_handoffs/<task_slug>.md` is required for probe, adapter, packet-builder, readiness, scenario, sampling-alert, runtime/LLM, and strategy registry changes.
+- Docs-only PRs that only update governance docs may use the PR template alone, but a handoff evidence file is recommended when review evidence would otherwise be hard to audit.
 - PR summaries must provide rollback/no-trade evidence, not only a code summary.
 - If a task is high-risk, Codex must mark it high-risk in the summary and must not claim it is safe-to-merge without explicit human review.
 - High-risk areas include runtime/auth/Gemini changes, prompts, `configs/strategy_current.yaml`, active strategy changes, strategy promotion, risk policy changes, and any execution/private API surface.

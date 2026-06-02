@@ -8,6 +8,7 @@
 - Manual smoke needed?
 - Rollback path:
 - Human approval needed?
+- Handoff file required?
 - High-risk category? If yes, why:
 - No-trade boundaries for this task:
 
@@ -25,4 +26,6 @@
 - Rollback method:
 - No-trade confirmation:
 - Reviewer should inspect first:
+- Create `docs/pr_handoffs/<task_slug>.md` when required:
+- Handoff file path or reason PR template alone is enough:
 - Human approval required before merge?

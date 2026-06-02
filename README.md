@@ -266,6 +266,7 @@ python tools/probe_usdt_krw_sources.py --output data/probes/usdt_krw_public_prob
 - PR review policy: [docs/pr_review_policy.md](docs/pr_review_policy.md)
 - Merge gate: [docs/merge_gate.md](docs/merge_gate.md)
 - Rollback policy: [docs/rollback_policy.md](docs/rollback_policy.md)
+- PR handoff evidence fallback: [docs/pr_handoffs/README.md](docs/pr_handoffs/README.md)
 - Codex task checklist: [docs/task_checklist.md](docs/task_checklist.md)
 - Agent workflow: [docs/agent_workflow.md](docs/agent_workflow.md)
 - Architecture index: [docs/architecture.md](docs/architecture.md)

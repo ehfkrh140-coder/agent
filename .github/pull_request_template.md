@@ -14,6 +14,9 @@
 - 리뷰어가 먼저 볼 파일:
 - 전체 변경 파일:
 - 생성/수정/삭제 구분:
+- Handoff evidence file (`docs/pr_handoffs/<task_slug>.md`) 또는 필요 없는 이유:
+
+> If this PR body is generated generically or cannot include full evidence, add a task-specific handoff file under `docs/pr_handoffs/` and link it here.
 
 ## 영향 범위
 - 영향 받는 기능:

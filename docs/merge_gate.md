@@ -22,6 +22,9 @@ Do not merge if any of the following are true:
 - Missing tests without an explicit reason.
 - Missing rollback plan.
 - PR template not filled with purpose, files, impact, tests, risks, rollback, and no-trade compliance.
+- PR title/body is generic and no `docs/pr_handoffs/` evidence file exists.
+- Changed files include strategy/config/code but no impact scope or rollback plan exists.
+- No-trade compliance is not explicitly stated.
 
 ## Human approval required
 Human approval is required for:

@@ -587,5 +587,70 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
         self.assertIn("cross_exchange_spot_spread_v1", active)
 
 
+    def test_pr_handoff_evidence_docs_and_policy_exist(self):
+        readme_path = Path("docs/pr_handoffs/README.md")
+        template_path = Path("docs/pr_handoffs/TEMPLATE.md")
+        self.assertTrue(readme_path.exists(), str(readme_path))
+        self.assertTrue(template_path.exists(), str(template_path))
+
+        template = template_path.read_text(encoding="utf-8")
+        for phrase in [
+            "# PR Handoff Evidence",
+            "## 1. Purpose",
+            "## 2. Changed files",
+            "## 3. Impact scope",
+            "## 4. Tests run",
+            "## 5. Manual smoke",
+            "## 7. Risks",
+            "## 8. Rollback plan",
+            "## 9. Human review required",
+            "## 10. No-trade compliance",
+            "private API:",
+            "API key/secret/token:",
+            "balance/account:",
+            "order/cancel:",
+            "transfer/withdraw/deposit:",
+            "fiat/bank transfer:",
+            "auto-trading:",
+            "active strategy changed:",
+        ]:
+            self.assertIn(phrase, template)
+
+        readme = readme_path.read_text(encoding="utf-8")
+        for phrase in [
+            "Every non-trivial Codex PR must include either",
+            "probe",
+            "adapter",
+            "packet-builder",
+            "readiness",
+            "scenario",
+            "sampling-alert",
+            "runtime/LLM",
+            "strategy registry changes",
+        ]:
+            self.assertIn(phrase, readme)
+
+        agents = Path("AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("docs/pr_handoffs", agents)
+        self.assertIn("strategy registry changes", agents)
+
+        merge_gate = Path("docs/merge_gate.md").read_text(encoding="utf-8")
+        self.assertIn("PR title/body is generic and no `docs/pr_handoffs/` evidence file exists", merge_gate)
+        self.assertIn("No-trade compliance is not explicitly stated", merge_gate)
+
+        pr_template = Path(".github/pull_request_template.md").read_text(encoding="utf-8")
+        self.assertIn("docs/pr_handoffs/<task_slug>.md", pr_template)
+        self.assertIn("If this PR body is generated generically", pr_template)
+
+        review_policy = Path("docs/pr_review_policy.md").read_text(encoding="utf-8")
+        self.assertIn("task-specific handoff evidence file", review_policy)
+        self.assertIn("strategy registry changes", review_policy)
+
+        no_trade = Path("docs/no_trade_policy.md").read_text(encoding="utf-8")
+        self.assertIn("Private exchange endpoints", no_trade)
+        current = yaml.safe_load(Path("configs/strategy_current.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(current["active_strategy"]["strategy_id"], "cross_exchange_spot_spread_v1")
+
+
 if __name__ == "__main__":
     unittest.main()
