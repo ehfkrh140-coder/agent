@@ -2,11 +2,21 @@ from __future__ import annotations
 
 from typing import Any
 
+ORDERBOOK_IMBALANCE_STATUSES = {
+    "NO_IMBALANCE",
+    "NO_PERSISTENT_IMBALANCE",
+    "PERSISTENT_BID_HEAVY",
+    "PERSISTENT_ASK_HEAVY",
+    "MIXED_IMBALANCE",
+}
+
 
 def format_console_alert(payload: dict[str, Any], alert: dict[str, Any]) -> str:
     """Render a human-readable, no-network alert summary for console/file use."""
 
     summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else payload
+    if summary.get("strategy_family") == "orderbook_imbalance" or summary.get("persistence_status") in ORDERBOOK_IMBALANCE_STATUSES:
+        return _format_orderbook_imbalance_alert(payload, summary, alert)
     adapter_or_strategy = _adapter_or_strategy(payload, summary)
     asset_quote = _asset_quote(payload)
     header_label = "Council handoff ready" if alert.get("alert_type") == "persistent_ready_edge" else adapter_or_strategy
@@ -24,6 +34,29 @@ def format_console_alert(payload: dict[str, Any], alert: dict[str, Any]) -> str:
     )
     if payload.get("council_input_file"):
         lines.append(f"council_input_file={payload.get('council_input_file')}")
+    if payload.get("sampling_output_file") or payload.get("sampling_output"):
+        lines.append(f"sampling_output={payload.get('sampling_output_file') or payload.get('sampling_output')}")
+    lines.append(f"reason={alert.get('reason')}")
+    lines.append(f"recommended_action={alert.get('recommended_action')}")
+    return "\n".join(lines)
+
+
+def _format_orderbook_imbalance_alert(payload: dict[str, Any], summary: dict[str, Any], alert: dict[str, Any]) -> str:
+    lines = [f"[{alert.get('alert_level')}] experimental orderbook_imbalance{_asset_quote(payload)}"]
+    lines.extend(
+        [
+            f"status={summary.get('persistence_status')}",
+            f"samples_ok={summary.get('samples_ok')}/{summary.get('samples_requested') or payload.get('samples_requested')}",
+            f"imbalance_seen_count={summary.get('imbalance_seen_count')}",
+            f"bid_heavy_count={summary.get('bid_heavy_count')}",
+            f"ask_heavy_count={summary.get('ask_heavy_count')}",
+            f"balanced_count={summary.get('balanced_count')}",
+            f"max_imbalance_ratio={_fmt_number(summary.get('max_imbalance_ratio'))}",
+            f"avg_imbalance_ratio={_fmt_number(summary.get('avg_imbalance_ratio'))}",
+            f"council_recommended={str(bool(payload.get('council_recommended'))).lower()}",
+            "non_active=true",
+        ]
+    )
     if payload.get("sampling_output_file") or payload.get("sampling_output"):
         lines.append(f"sampling_output={payload.get('sampling_output_file') or payload.get('sampling_output')}")
     lines.append(f"reason={alert.get('reason')}")
@@ -53,5 +86,14 @@ def _fmt_pct(value: Any) -> str:
         return "null"
     try:
         return f"{float(value):.4f}%"
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _fmt_number(value: Any) -> str:
+    if value is None:
+        return "null"
+    try:
+        return f"{float(value):.4f}"
     except (TypeError, ValueError):
         return str(value)

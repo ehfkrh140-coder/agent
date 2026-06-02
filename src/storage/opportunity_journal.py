@@ -21,11 +21,18 @@ def build_journal_record(result: dict[str, Any], *, sampling_output: str | None 
         "samples_requested": summary.get("samples_requested") or result.get("samples_requested"),
         "samples_ok": summary.get("samples_ok"),
         "samples_error": summary.get("samples_error"),
+        "strategy_family": summary.get("strategy_family"),
         "candidate_seen_count": summary.get("candidate_seen_count"),
         "positive_net_gap_count": summary.get("positive_net_gap_count"),
         "readiness_pass_count": summary.get("readiness_pass_count"),
         "max_estimated_net_gap_pct": summary.get("max_estimated_net_gap_pct"),
         "avg_estimated_net_gap_pct": summary.get("avg_estimated_net_gap_pct"),
+        "imbalance_seen_count": summary.get("imbalance_seen_count"),
+        "bid_heavy_count": summary.get("bid_heavy_count"),
+        "ask_heavy_count": summary.get("ask_heavy_count"),
+        "balanced_count": summary.get("balanced_count"),
+        "max_imbalance_ratio": summary.get("max_imbalance_ratio"),
+        "avg_imbalance_ratio": summary.get("avg_imbalance_ratio"),
         "direction_counts": summary.get("direction_counts") or {},
     }
 

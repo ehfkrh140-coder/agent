@@ -93,6 +93,7 @@ def _sample_record(index: int, collected_at: str, packet: OpportunityPacket, rea
         "error": None,
         "packet_id": packet.packet_id,
         "candidate_count": len(packet.candidates),
+        "strategy_family": packet.strategy_family,
         "readiness_status": readiness.get("status"),
         "readiness_pass": bool(readiness.get("readiness_pass")),
         "recommended_default_decision": readiness.get("recommended_default_decision"),
@@ -110,19 +111,30 @@ def _best_candidate(candidates: list[OpportunityCandidate]) -> dict[str, Any] | 
     vwap_results = candidate.metrics.get("vwap_results") if isinstance(candidate.metrics, dict) else None
     if isinstance(vwap_results, list) and vwap_results:
         default_vwap = vwap_results[0]
+    metrics = candidate.metrics if isinstance(candidate.metrics, dict) else {}
     return {
         "candidate_id": candidate.candidate_id,
+        "candidate_type": candidate.candidate_type,
         "source_venue_id": candidate.source_venue_id,
         "target_venue_id": candidate.target_venue_id,
+        "direction": candidate.direction,
         "gross_gap_pct": candidate.gross_gap_pct,
         "estimated_net_gap_pct": candidate.estimated_net_gap_pct,
         "net_gap_pass": _metric_bool(candidate, "net_gap_pass", default_vwap),
         "liquidity_pass": candidate.liquidity_pass,
         "freshness_pass": candidate.freshness_pass,
-        "target_notional": (default_vwap or {}).get("target_notional"),
+        "target_notional": metrics.get("target_notional") if "target_notional" in metrics else (default_vwap or {}).get("target_notional"),
         "source_vwap_ask": (default_vwap or {}).get("source_vwap_ask"),
         "target_vwap_bid": (default_vwap or {}).get("target_vwap_bid"),
         "vwap_result": default_vwap,
+        "imbalance_side": metrics.get("imbalance_side"),
+        "imbalance_ratio": metrics.get("imbalance_ratio"),
+        "bid_depth_notional": metrics.get("bid_depth_notional"),
+        "ask_depth_notional": metrics.get("ask_depth_notional"),
+        "spread_pct": metrics.get("spread_pct"),
+        "depth_levels_used": metrics.get("depth_levels_used"),
+        "imbalance_pass": metrics.get("imbalance_pass"),
+        "experimental_pass": metrics.get("experimental_pass"),
     }
 
 

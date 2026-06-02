@@ -225,3 +225,11 @@ python tools/run_strategy_scenarios.py --strategy orderbook_imbalance --evaluate
 python tools/collect_market_data.py --adapter live_upbit_bithumb_orderbook_imbalance --output data/generated_packets/live_orderbook_imbalance_packet.json
 python main.py --council --opportunity-file data/generated_packets/live_orderbook_imbalance_packet.json --dry-run-context
 ```
+
+## Experimental orderbook imbalance sampling alerts
+- `orderbook_imbalance` sampling remains experimental/non-active: persistence summaries and alerts are journal-review signals only, never Council handoff or execution instructions.
+
+```powershell
+python tools/sample_market_data.py --adapter replay_orderbook_imbalance --samples 3 --interval 0 --output data/market_samples/replay_orderbook_imbalance_sample.json --journal
+python tools/notify_sampling_result.py --sampling-output data/market_samples/replay_orderbook_imbalance_sample.json --log
+```
