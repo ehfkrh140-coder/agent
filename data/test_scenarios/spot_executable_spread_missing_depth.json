@@ -1,0 +1,168 @@
+{
+  "schema_version": "opportunity_packet_v0",
+  "packet_id": "spot_executable_spread_missing_depth",
+  "created_at_utc": "2026-05-29T00:00:00Z",
+  "asset": "BTC",
+  "quote": "KRW",
+  "signal_type": "cross_exchange_price_gap",
+  "strategy_family": "cross_exchange_spot_spread",
+  "strategy_id": "cross_exchange_spot_spread_v1",
+  "observations": [
+    {
+      "observation_id": "upbit_1",
+      "venue_id": "upbit",
+      "venue_name": "Upbit",
+      "market_symbol": "BTC/KRW",
+      "instrument_type": "spot",
+      "region": "KR",
+      "last_price": 100000000,
+      "bid": null,
+      "ask": null,
+      "bid_size": null,
+      "ask_size": null,
+      "base_volume_24h": 10.0,
+      "quote_volume_24h": 1000000000,
+      "timestamp_utc": null,
+      "fees": null,
+      "liquidity": {
+        "orderbook_depth_available": false,
+        "volume_available": true,
+        "estimated_executable_notional": null,
+        "estimated_slippage_pct": null,
+        "depth_levels": [],
+        "extensions": {}
+      },
+      "data_quality": {
+        "timestamps_available": false,
+        "timestamps_aligned": null,
+        "max_data_age_ms": null,
+        "source": "manual_scenario",
+        "latency_ms": 200,
+        "is_realtime": false,
+        "extensions": {}
+      },
+      "health": {
+        "api_status_known": true,
+        "api_ok": true,
+        "maintenance": false,
+        "trading_enabled": true,
+        "message": null,
+        "extensions": {}
+      },
+      "extensions": {}
+    },
+    {
+      "observation_id": "bithumb_1",
+      "venue_id": "bithumb",
+      "venue_name": "Bithumb",
+      "market_symbol": "BTC/KRW",
+      "instrument_type": "spot",
+      "region": "KR",
+      "last_price": 100700000,
+      "bid": null,
+      "ask": null,
+      "bid_size": null,
+      "ask_size": null,
+      "base_volume_24h": 10.0,
+      "quote_volume_24h": 1007000000,
+      "timestamp_utc": null,
+      "fees": null,
+      "liquidity": {
+        "orderbook_depth_available": false,
+        "volume_available": true,
+        "estimated_executable_notional": null,
+        "estimated_slippage_pct": null,
+        "depth_levels": [],
+        "extensions": {}
+      },
+      "data_quality": {
+        "timestamps_available": false,
+        "timestamps_aligned": null,
+        "max_data_age_ms": null,
+        "source": "manual_scenario",
+        "latency_ms": 200,
+        "is_realtime": false,
+        "extensions": {}
+      },
+      "health": {
+        "api_status_known": true,
+        "api_ok": true,
+        "maintenance": false,
+        "trading_enabled": true,
+        "message": null,
+        "extensions": {}
+      },
+      "extensions": {}
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "c1",
+      "candidate_type": "spot_executable_spread_candidate",
+      "strategy_family": "cross_exchange_spot_spread",
+      "strategy_id": "cross_exchange_spot_spread_v1",
+      "side_candidate": "BUY_SOURCE_SELL_TARGET",
+      "source_observation_id": "upbit_1",
+      "target_observation_id": "bithumb_1",
+      "source_venue_id": "upbit",
+      "target_venue_id": "bithumb",
+      "direction": "buy_source_ask_sell_target_bid_candidate",
+      "gross_gap_absolute": 600000,
+      "gross_gap_pct": 0.6,
+      "estimated_net_gap_pct": null,
+      "liquidity_pass": true,
+      "gap_pass": false,
+      "freshness_pass": true,
+      "guard_pass": true,
+      "metrics": {
+        "source_ask": 100000000,
+        "target_bid": 100600000,
+        "safety_buffer_pct": 0.05
+      },
+      "guards": {},
+      "thresholds": {
+        "min_net_gap_pct": 0.2,
+        "max_data_age_ms": 3000,
+        "min_executable_notional": 1000000
+      },
+      "required_missing_fields": [
+        "source.ask",
+        "target.bid",
+        "fees",
+        "orderbook_depth",
+        "timestamp"
+      ],
+      "assumptions": [
+        "last_price_only_candidate"
+      ],
+      "extensions": {}
+    }
+  ],
+  "human_context": null,
+  "expected_behavior": {
+    "preferred_final_decision": "NEED_DATA",
+    "acceptable_final_decisions": [
+      "NEED_DATA",
+      "WATCH"
+    ],
+    "must_not_include": [
+      "주문 실행",
+      "출금",
+      "이체"
+    ],
+    "max_confidence": 0.7,
+    "notes": "last price only and missing depth/fees/timestamp"
+  },
+  "detector_metadata": {
+    "detector_name": "manual_spot_strategy_scenario",
+    "detector_version": "v1",
+    "generated_from": "manual_scenario",
+    "source_files": [
+      "data/test_scenarios/spot_executable_spread_missing_depth.json"
+    ],
+    "extensions": {}
+  },
+  "extensions": {
+    "strategy_catalog_ref": "docs/current_trading_rule_v1.md"
+  }
+}

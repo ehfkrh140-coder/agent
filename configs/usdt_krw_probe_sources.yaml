@@ -1,0 +1,255 @@
+schema_version: usdt_krw_probe_sources_v0
+notes:
+  - Candidate public source list now aligned for tether_cross_market_premium planning.
+  - Domestic v0 probe focus is Upbit/Bithumb; Coinone/Korbit are future expansion.
+  - Global v0 reference focus is Binance/Bybit/OKX.
+  - FX candidates are retained as historical metadata but are out_of_scope_for_tether_cross_market.
+  - No credentials, no private API, no account/balance lookup, no orders, no transfers.
+sources:
+  - source_id: upbit
+    role: domestic_usdt_krw
+    enabled_for_probe: true
+    base_url: https://api.upbit.com
+    no_private_api: true
+    expected_public_only: true
+    safe_public_probe: true
+    pair_candidates:
+      - KRW-USDT
+      - USDT/KRW
+    endpoints:
+      market_list:
+        path: /v1/market/all
+        params:
+          isDetails: 'false'
+      ticker:
+        path: /v1/ticker
+        params:
+          markets: KRW-USDT
+      orderbook:
+        path: /v1/orderbook
+        params:
+          markets: KRW-USDT
+    notes:
+      - Uses known public Upbit market-list, ticker, and orderbook candidates only.
+      - Availability is confirmed only when public responses clearly identify KRW-USDT.
+
+  - source_id: bithumb
+    role: domestic_usdt_krw
+    enabled_for_probe: true
+    base_url: https://api.bithumb.com
+    no_private_api: true
+    expected_public_only: true
+    safe_public_probe: true
+    pair_candidates:
+      - USDT_KRW
+      - USDT/KRW
+    endpoints:
+      market_list:
+        path: /public/ticker/ALL_KRW
+      ticker:
+        path: /public/ticker/{symbol}
+        symbol: USDT_KRW
+      orderbook:
+        path: /public/orderbook/{symbol}
+        symbol: USDT_KRW
+    confirmation_rule:
+      - Availability is confirmed only when public response clearly identifies USDT/KRW or returns valid ticker/orderbook data for the exact pair.
+      - Do not infer availability from unrelated KRW or USDT data.
+    notes:
+      - Uses known public Bithumb ticker and orderbook path candidates only.
+      - Market-list style candidate is public ticker ALL_KRW only; it must clearly identify USDT_KRW before proving availability.
+      - Availability is confirmed only when public response clearly identifies USDT/KRW or returns valid ticker/orderbook data for the exact pair.
+
+  - source_id: coinone
+    role: domestic_usdt_krw
+    enabled_for_probe: false
+    base_url: placeholder_public_coinone_base_url
+    no_private_api: true
+    expected_public_only: true
+    safe_public_probe: false
+    pair_candidates:
+      - USDT/KRW
+      - USDT_KRW
+    endpoints:
+      placeholder: no_safe_public_endpoint_selected_yet
+    notes:
+      - Future domestic expansion only, not v0 for tether_cross_market_premium.
+      - Candidate source only; endpoint uncertainty is high, so this probe records skipped/unknown if included manually.
+      - A later task may add a public endpoint candidate after documentation review.
+
+  - source_id: korbit
+    role: domestic_usdt_krw
+    enabled_for_probe: false
+    base_url: placeholder_public_korbit_base_url
+    no_private_api: true
+    expected_public_only: true
+    safe_public_probe: false
+    pair_candidates:
+      - USDT/KRW
+      - usdt_krw
+    endpoints:
+      placeholder: no_safe_public_endpoint_selected_yet
+    notes:
+      - Future domestic expansion only, not v0 for tether_cross_market_premium.
+      - Candidate source only; endpoint uncertainty is high, so this probe records skipped/unknown if included manually.
+      - Do not infer pair availability without a clear public response.
+
+  - source_id: binance
+    role: global_usdt_reference
+    enabled_for_probe: true
+    base_url: https://api.binance.com
+    no_private_api: true
+    expected_public_only: true
+    safe_public_probe: true
+    pair_candidates:
+      - USDCUSDT
+      - USDTUSDC
+      - USDT/USD
+    endpoints:
+      ticker:
+        path: /api/v3/ticker/bookTicker
+        params:
+          symbol: USDCUSDT
+    notes:
+      - Public spot bookTicker candidate for USDT reference/depeg checks only.
+      - Not an execution venue for this strategy.
+
+  - source_id: bybit
+    role: global_usdt_reference
+    enabled_for_probe: true
+    base_url: https://api.bybit.com
+    no_private_api: true
+    expected_public_only: true
+    safe_public_probe: true
+    pair_candidates:
+      - USDCUSDT
+      - USDTUSDC
+      - USDT/USD
+    endpoints:
+      ticker:
+        path: /v5/market/tickers
+        params:
+          category: spot
+          symbol: USDCUSDT
+    notes:
+      - Public spot ticker candidate for reference checks; existing Bybit adapter is not reused or modified.
+      - Not an execution venue for this strategy.
+
+  - source_id: okx
+    role: global_usdt_reference
+    enabled_for_probe: true
+    base_url: https://www.okx.com
+    no_private_api: true
+    expected_public_only: true
+    safe_public_probe: true
+    pair_candidates:
+      - USDC-USDT
+      - USDT-USD
+      - USDT/USDC
+    endpoints:
+      ticker:
+        path: /api/v5/market/ticker
+        params:
+          instId: USDC-USDT
+    notes:
+      - Public market ticker candidate for reference checks only.
+      - Not an execution venue for this strategy.
+
+  - source_id: frankfurter_or_no_key_public_fx_candidate
+    role: fx_reference
+    enabled_for_probe: true
+    base_url: https://api.frankfurter.app
+    no_private_api: true
+    expected_public_only: true
+    safe_public_probe: true
+    requires_api_key: false
+    timestamp_expected: true
+    pair_candidates:
+      - USD/KRW
+      - rates.KRW
+    endpoints:
+      ticker:
+        path: /latest
+        params:
+          from: USD
+          to: KRW
+    freshness_notes:
+      - Expected to expose a date field; probe must verify it before suitability.
+      - Daily FX cadence may be too stale for intraday premium analysis without additional guardrails.
+    reliability_notes:
+      - No official reliability is claimed by config; response metadata must be reviewed.
+      - Candidate only for deferred historical Mode B fair-value calculations.
+      - out_of_scope_for_tether_cross_market.
+    notes:
+      - Retained as historical/deferred metadata; FX is out_of_scope_for_tether_cross_market.
+      - No-key public FX candidate; suitability and timestamp freshness must be reviewed from probe output only if a future FX-basis task revives it.
+      - Do not claim official reliability from this source.
+
+  - source_id: exchangerate_host_candidate
+    role: fx_reference
+    enabled_for_probe: false
+    base_url: https://api.exchangerate.host
+    no_private_api: true
+    expected_public_only: true
+    safe_public_probe: false
+    requires_api_key: unknown
+    timestamp_expected: unknown
+    pair_candidates:
+      - USD/KRW
+      - rates.KRW
+    endpoints:
+      placeholder: disabled_until_no_key_policy_confirmed
+    freshness_notes:
+      - Candidate retained only as historical metadata; out_of_scope_for_tether_cross_market.
+      - Manual review of no-key availability and timestamp metadata is only for a future FX-basis task.
+    reliability_notes:
+      - Do not probe until no-key public status is confirmed; do not add credentials.
+    notes:
+      - Disabled candidate; no safe no-key endpoint is selected in this config.
+      - Keep skipped/unknown until source policy is reviewed.
+
+  - source_id: official_fx_source_candidate
+    role: fx_reference
+    enabled_for_probe: false
+    base_url: placeholder_official_fx_source_candidate
+    no_private_api: true
+    expected_public_only: true
+    safe_public_probe: false
+    requires_api_key: unknown
+    timestamp_expected: unknown
+    pair_candidates:
+      - USD/KRW
+    endpoints:
+      placeholder: no_safe_no_key_public_endpoint_selected_yet
+    freshness_notes:
+      - Official source freshness and timestamp behavior must be verified before use.
+    reliability_notes:
+      - Candidate official reference only; do not claim reliability without response metadata.
+      - out_of_scope_for_tether_cross_market.
+    notes:
+      - Disabled for current tether_cross_market_premium probe alignment; FX is out_of_scope_for_tether_cross_market.
+      - Candidate only; no safe no-key endpoint has been selected in this config.
+      - Probe records skipped/unknown rather than scraping or using credentials.
+
+  - source_id: other_public_fx_candidate
+    role: fx_reference
+    enabled_for_probe: false
+    base_url: placeholder_other_public_fx_candidate
+    no_private_api: true
+    expected_public_only: true
+    safe_public_probe: false
+    requires_api_key: unknown
+    timestamp_expected: unknown
+    pair_candidates:
+      - USD/KRW
+    endpoints:
+      placeholder: no_safe_public_endpoint_selected_yet
+    freshness_notes:
+      - Timestamp/freshness metadata must be proven by public JSON response before use.
+    reliability_notes:
+      - Candidate secondary source only; no reliability claim is made.
+      - out_of_scope_for_tether_cross_market.
+    notes:
+      - Disabled for current tether_cross_market_premium probe alignment; FX is out_of_scope_for_tether_cross_market.
+      - Candidate only; no safe endpoint has been selected in this config.
+      - Probe records skipped/unknown.
