@@ -186,7 +186,7 @@ strategies:
   - domestic v0 venues are Upbit and Bithumb
   - global reference venues start with Binance, Bybit, OKX and are expandable only by future task card and public probe
   - no USD/KRW FX required and fair_usdt_krw_price is not used
-  - next gate is Tether Cross-Market Public Probe Alignment v0
+  - next gate is Tether Cross-Market Bithumb USDT/KRW Recheck v0
   - Codex must not promote to active by itself; active strategy remains cross_exchange_spot_spread_v1
   default_decision_when_missing_data: NEED_DATA
   execution_policy: NO_TRADE_ONLY

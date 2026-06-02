@@ -30,7 +30,7 @@ Preserve a read-only, no-trade future planning record for the older FX-based USD
 - Data availability matrix: [`docs/data_availability/usdt_krw_multi_source_matrix.md`](../data_availability/usdt_krw_multi_source_matrix.md).
 - Public probe review: [`docs/data_availability/usdt_krw_probe_review.md`](../data_availability/usdt_krw_probe_review.md).
 - experimental scaffolding requires Multi-Source Data Availability Matrix and Public Probe first.
-- Experimental scaffolding for this FX-based interpretation is deferred; near-term scaffolding should use the Tether Cross-Market Public Probe Alignment path instead of FX cadence work.
+- Experimental scaffolding for this FX-based interpretation is deferred; near-term scaffolding should use the Tether Cross-Market Bithumb USDT/KRW Recheck path instead of FX cadence work.
 
 ## Strategy concept
 
@@ -251,8 +251,8 @@ None. This is a documentation-only strategy card.
 - The multi-source matrix is linked at [`docs/data_availability/usdt_krw_multi_source_matrix.md`](../data_availability/usdt_krw_multi_source_matrix.md).
 - Experimental scaffolding requires the Multi-Source Data Availability Matrix and `USDT/KRW Public Probe v0` report first.
 - Probe review is linked at [`docs/data_availability/usdt_krw_probe_review.md`](../data_availability/usdt_krw_probe_review.md).
-- Experimental scaffolding for this FX-based interpretation is deferred; near-term scaffolding should use the Tether Cross-Market Public Probe Alignment path instead of FX cadence work.
-- The near-term next implementation gate is `Tether Cross-Market Public Probe Alignment v0`; FX cadence work is no longer required for the current user-intended strategy.
+- Experimental scaffolding for this FX-based interpretation is deferred; near-term scaffolding should use the Tether Cross-Market Bithumb USDT/KRW Recheck path instead of FX cadence work.
+- The near-term next implementation gate is `Tether Cross-Market Bithumb USDT/KRW Recheck v0`; FX cadence work is no longer required for the current user-intended strategy.
 
 ## Non-goals
 - Do not treat the public probe report as a live adapter or execution readiness check.

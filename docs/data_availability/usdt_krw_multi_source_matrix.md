@@ -1,7 +1,7 @@
 # USDT/KRW Multi-Source Data Availability Matrix v0
 
 ## Overview
-This document is a planning-only data availability matrix for the near-term `tether_cross_market_premium` / `usdt_krw_global_reference_v0` strategy. The strategy has been reframed away from `USDT/KRW Kimchi Premium / FX Basis`: USD/KRW FX reference and `fair_usdt_krw_price` are deferred/out-of-scope for the current user-intended strategy. The matrix now separates domestic `USDT/KRW` venues from global USDT reference venues before any experimental scaffolding, live adapter, persistent adapter, OpportunityPacket builder, readiness code, or trading workflow.
+This document is a planning-only Tether Cross-Market source matrix for the near-term `tether_cross_market_premium` / `usdt_krw_global_reference_v0` strategy. The strategy has been reframed away from `USDT/KRW Kimchi Premium / FX Basis`: USD/KRW FX reference and `fair_usdt_krw_price` are deferred/out-of-scope for the current user-intended strategy. The matrix now separates domestic `USDT/KRW` venues from global USDT reference venues before any experimental scaffolding, live adapter, persistent adapter, OpportunityPacket builder, readiness code, or trading workflow.
 
 Historical FX-basis planning for `stablecoin_krw_premium` / `usdt_krw_kimchi_premium_v0` is retained, but it is superseded for near-term implementation by `tether_cross_market_premium`.
 
@@ -60,8 +60,8 @@ FX sources must not be used for current strategy readiness. If revisited in a fu
 
 | venue | role | pair_to_check | pair_availability_status | public_ticker_candidate | public_orderbook_candidate | public_market_list_candidate | timestamp_available | depth_available | fee_source | implementation_status | notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Upbit | v0 domestic `USDT/KRW` executable/reference venue | `USDT/KRW` | probe_available_for_USDT_KRW | public ticker candidate | public orderbook candidate | public market list candidate | probe_available_for_USDT_KRW | probe_available_for_USDT_KRW | manual fee placeholder | already_supported_for_BTC_KRW_public_adapter; USDT/KRW adapter not implemented | User local probe result was ok / available; confirm again in `Tether Cross-Market Public Probe Alignment v0`. |
-| Bithumb | v0 domestic `USDT/KRW` executable/reference venue | `USDT/KRW` | probe_unknown | public ticker candidate | public orderbook candidate | public market list candidate | probe_unknown | probe_unknown | manual fee placeholder | already_supported_for_BTC_KRW_public_adapter; USDT/KRW adapter not implemented | User local probe result was ok / unknown; re-check Bithumb USDT/KRW pair availability before scaffolding. |
+| Upbit | v0 domestic `USDT/KRW` executable/reference venue | `USDT/KRW` | probe_available_for_USDT_KRW | public ticker candidate | public orderbook candidate | public market list candidate | probe_available_for_USDT_KRW | probe_available_for_USDT_KRW | manual fee placeholder | already_supported_for_BTC_KRW_public_adapter; USDT/KRW adapter not implemented | User local probe result was ok / available; confirm again in `Tether Cross-Market Bithumb USDT/KRW Recheck v0`. |
+| Bithumb | v0 domestic `USDT/KRW` executable/reference venue | `USDT/KRW` | probe_unknown_needs_recheck | public ticker candidate | public orderbook candidate | public market list candidate | probe_unknown | probe_unknown | manual fee placeholder | already_supported_for_BTC_KRW_public_adapter; USDT/KRW adapter not implemented | User local probe result was ok / unknown; next gate must re-check Bithumb USDT/KRW pair availability and response shape before scaffolding. |
 | Coinone | future domestic expansion candidate, not v0 | `USDT/KRW` or documented equivalent | skipped_unknown | public ticker/orderbook/market docs candidate | public ticker/orderbook/market docs candidate | public ticker/orderbook/market docs candidate | unknown_until_future_probe | unknown_until_future_probe | manual fee placeholder | not_implemented | Do not include in v0; future expansion requires task card and public probe. |
 | Korbit | future domestic expansion candidate, not v0 | `USDT/KRW` or documented equivalent | skipped_unknown | candidate_source | candidate_source | candidate_source | unknown_until_future_probe | unknown_until_future_probe | manual fee placeholder | not_implemented | Do not include in v0; future expansion requires task card and public probe. |
 
@@ -74,7 +74,7 @@ FX sources must not be used for current strategy readiness. If revisited in a fu
 | OKX | `USDT/USD`, `USDT/USDC`, `USDC/USDT`, documented equivalents | probe_available_for_reference | probe_available_for_reference | probe_available_for_reference | unknown_until_future_probe | Reference midpoint and depeg cross-check only | candidate_source; probe_available_for_reference | User local probe result was ok / available; use only as one global reference candidate. |
 
 ## USD/KRW FX reference sources
-FX reference remains deferred/out-of-scope for the current strategy. The rows below are retained for historical planning only and must not block `tether_cross_market_premium` public probe alignment.
+FX reference status is `deferred_out_of_scope_for_current_strategy`. FX reference remains deferred/out-of-scope for the current strategy. The rows below are retained for historical planning only and must not block `tether_cross_market_premium` public probe alignment.
 
 | source | role | requires_api_key | update_frequency_known | timestamp_available | reliability_level | implementation_status | notes |
 |---|---|---|---|---|---|---|---|
@@ -150,10 +150,10 @@ Aggregation must preserve source-level timestamps, reliability metadata, and ven
 
 ## Data availability matrix
 This planning matrix marks the near-term source set as:
-- Domestic v0: Upbit is `probe_available_for_USDT_KRW`; Bithumb is `probe_unknown` and needs pair availability verification.
+- Domestic v0: Upbit is `probe_available_for_USDT_KRW`; Bithumb is `probe_unknown_needs_recheck` and needs pair availability/response-shape verification.
 - Domestic future expansion: Coinone and Korbit remain `skipped_unknown` and are not v0.
 - Global v0 reference: Binance, Bybit, and OKX are `probe_available_for_reference`.
-- FX: deferred/out-of-scope for current strategy.
+- FX: `deferred_out_of_scope_for_current_strategy`; deferred/out-of-scope for current strategy.
 
 See [`docs/data_availability/usdt_krw_probe_review.md`](usdt_krw_probe_review.md) for the historical probe review and correction note.
 
@@ -171,17 +171,20 @@ See [`docs/data_availability/usdt_krw_probe_review.md`](usdt_krw_probe_review.md
 - stale FX reference and crypto timestamp vs FX timestamp mismatch are historical FX-basis risks only; FX is deferred for the current strategy
 
 ## Next implementation gate
-Next card: `Tether Cross-Market Public Probe Alignment v0`
+Next card: `Tether Cross-Market Bithumb USDT/KRW Recheck v0`
 
 Purpose:
-- Reuse probe outputs where possible.
-- Confirm Upbit `USDT/KRW`.
-- Re-check Bithumb `USDT/KRW` pair availability.
-- Keep Binance/Bybit/OKX global references.
+- Re-check Bithumb `USDT/KRW` public pair availability and response shape.
+- Keep Upbit confirmed as `probe_available_for_USDT_KRW`.
+- Keep Binance/Bybit/OKX global reference basket.
 - Remove FX from the required path.
 - Use no private API.
 - Do no trading.
 - Add no persistent adapter yet.
+- Add no OpportunityPacket builder.
+- Add no readiness/scenario yet.
+
+Alternative if Bithumb remains unknown: `Tether Cross-Market Upbit-Only Domestic Reference Scaffolding v0`, analysis-only, not executable domestic spread, still no trade.
 
 ## No-trade compliance
 - No private API.

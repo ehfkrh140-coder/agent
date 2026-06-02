@@ -3,7 +3,8 @@
 ## Overview
 This document reviews the user-observed `USDT/KRW Public Probe v0` results. It is retained as a planning and source-decision document only: it does not add live adapters, persistent adapters, OpportunityPacket builder support, readiness rules, scenario JSON, private API access, account/balance lookup, orders, transfers, or auto-trading.
 
-Correction note: User clarified FX is out of scope. This review is retained as historical planning, but near-term strategy uses domestic USDT/KRW and global USDT reference only. The near-term strategy is now `tether_cross_market_premium` / `usdt_krw_global_reference_v0`, not the earlier FX-based Kimchi Premium / FX Basis interpretation.
+## Current correction
+FX-based review is retained as historical planning. User clarified FX is out of scope, and the current near-term strategy ignores FX. The near-term strategy uses domestic USDT/KRW and global USDT reference only. Probe alignment focus is now Upbit/Bithumb domestic USDT/KRW plus Binance/Bybit/OKX global USDT reference. The near-term strategy is now `tether_cross_market_premium` / `usdt_krw_global_reference_v0`, not the earlier FX-based Kimchi Premium / FX Basis interpretation.
 
 ## Probe input summary
 Domestic results:
@@ -26,7 +27,7 @@ FX results retained as historical context only:
 
 | source | role | probe_status | pair_availability | planning note |
 |---|---|---|---|---|
-| Upbit | domestic_usdt_krw | ok | available | Primary domestic v0 candidate for USDT/KRW bid/ask/depth, subject to `Tether Cross-Market Public Probe Alignment v0`. |
+| Upbit | domestic_usdt_krw | ok | available | Primary domestic v0 candidate for USDT/KRW bid/ask/depth, subject to `Tether Cross-Market Bithumb USDT/KRW Recheck v0`. |
 | Bithumb | domestic_usdt_krw | ok | unknown | Secondary domestic v0 candidate; re-check Bithumb USDT/KRW pair availability before scaffolding. |
 | Coinone | future_domestic_expansion | skipped | unknown | Future expansion only; not v0. |
 | Korbit | future_domestic_expansion | skipped | unknown | Future expansion only; not v0. |
@@ -55,9 +56,9 @@ FX v0 source is not needed for the near-term strategy.
 The earlier FX source work showed unresolved USD/KRW candidates, but the user clarified that USD/KRW FX is out of scope. Do not continue FX cadence work as the next step for the current user-intended strategy. Do not calculate `fair_usdt_krw_price`, and do not calculate `premium_pct` against USD/KRW in current scope.
 
 ## Current blocker
-The previous FX blocker no longer blocks near-term work because FX is no longer a required source. The current blocker is alignment of the public probe results with the reframed source set:
-- Confirm Upbit `USDT/KRW` remains available.
-- Re-check Bithumb `USDT/KRW` pair availability.
+The previous FX blocker no longer blocks near-term work because FX is no longer a required source. The current blocker is Bithumb re-check after aligning public probe results with the reframed source set:
+- Keep Upbit `USDT/KRW` confirmed as the primary domestic public source.
+- Re-check Bithumb `USDT/KRW` pair availability and response shape.
 - Confirm Binance/Bybit/OKX global reference symbols are comparable enough for a depeg/reference basket.
 - Remove FX from the required path.
 
@@ -75,16 +76,19 @@ Proposed future source set for `tether_cross_market_premium`:
 - Out of current scope; not required.
 
 ## Next gate
-Next card: `Tether Cross-Market Public Probe Alignment v0`
+Next card: `Tether Cross-Market Bithumb USDT/KRW Recheck v0`
 
 Purpose:
-- Reuse existing probe outputs where possible.
-- Confirm Upbit `USDT/KRW`.
-- Re-check Bithumb `USDT/KRW` pair availability.
-- Keep Binance/Bybit/OKX global references.
+- Re-check Bithumb `USDT/KRW` public pair availability and response shape.
+- Keep Upbit confirmed.
+- Keep Binance/Bybit/OKX global reference basket.
 - Remove FX from the required path.
 - No adapter yet.
+- No OpportunityPacket builder.
+- No readiness/scenario yet.
 - No trading.
+
+Alternative if Bithumb remains unknown: `Tether Cross-Market Upbit-Only Domestic Reference Scaffolding v0`, analysis-only, not executable domestic spread, still no trade.
 
 ## No-trade compliance
 - No private API.

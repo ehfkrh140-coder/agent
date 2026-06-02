@@ -244,7 +244,7 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
             "auto-trading",
             "fair_usdt_krw_price = usd_krw_reference_rate * global_usdt_usd_reference",
             "premium_pct = ((domestic_usdt_krw_price - fair_usdt_krw_price) / fair_usdt_krw_price) * 100",
-            "Tether Cross-Market Public Probe Alignment v0",
+            "Tether Cross-Market Bithumb USDT/KRW Recheck v0",
         ]:
             self.assertIn(phrase, text)
 
@@ -267,9 +267,9 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
         for text in [playbook, catalog]:
             self.assertIn("stablecoin_krw_premium", text)
             self.assertIn("usdt_krw_kimchi_premium", text)
-        self.assertIn("Tether Cross-Market Public Probe Alignment v0", playbook)
+        self.assertIn("Tether Cross-Market Bithumb USDT/KRW Recheck v0", playbook)
         self.assertIn("orderbook_imbalance experimental path continues", playbook)
-        self.assertIn("tether_cross_market_premium requires public probe alignment", playbook)
+        self.assertIn("tether_cross_market_premium requires Bithumb USDT/KRW public re-check", playbook)
         self.assertIn("funding_rate and spot_futures_basis remain later", playbook)
 
     def test_usdt_krw_multi_source_matrix_exists_and_keeps_strategy_future(self):
@@ -312,17 +312,18 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
             "global_usdt_median",
             "single venue distortion",
             "stale FX reference",
-            "Tether Cross-Market Public Probe Alignment v0",
+            "Tether Cross-Market Bithumb USDT/KRW Recheck v0",
+            "Tether Cross-Market Upbit-Only Domestic Reference Scaffolding v0",
             "No private API",
             "No account/balance lookup",
             "No withdrawal/deposit/transfer",
-            "Tether Cross-Market Public Probe Alignment v0",
+            "Tether Cross-Market Bithumb USDT/KRW Recheck v0",
         ]:
             self.assertIn(phrase, text)
 
         card = Path("docs/strategy_task_cards/usdt_krw_kimchi_premium.md").read_text(encoding="utf-8")
         self.assertIn("docs/data_availability/usdt_krw_multi_source_matrix.md", card)
-        self.assertIn("Tether Cross-Market Public Probe Alignment", card)
+        self.assertIn("Tether Cross-Market Bithumb USDT/KRW Recheck", card)
 
         registry = yaml.safe_load(Path("configs/strategy_registry.yaml").read_text(encoding="utf-8"))
         stablecoin = next(item for item in registry["strategies"] if item["strategy_family"] == "stablecoin_krw_premium")
@@ -362,7 +363,8 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
             "Median of Binance, Bybit, and OKX",
             "usd_krw_reference_rate",
             "Out of current scope; not required",
-            "Tether Cross-Market Public Probe Alignment v0",
+            "Tether Cross-Market Bithumb USDT/KRW Recheck v0",
+            "Tether Cross-Market Upbit-Only Domestic Reference Scaffolding v0",
             "No private API",
             "No account/balance lookup",
             "No withdrawal/deposit/transfer",
@@ -372,14 +374,14 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
         matrix = Path("docs/data_availability/usdt_krw_multi_source_matrix.md").read_text(encoding="utf-8")
         self.assertIn("docs/data_availability/usdt_krw_probe_review.md", matrix)
         self.assertIn("probe_available_for_USDT_KRW", matrix)
-        self.assertIn("probe_unknown", matrix)
+        self.assertIn("probe_unknown_needs_recheck", matrix)
         self.assertIn("probe_available_for_reference", matrix)
-        self.assertIn("FX: deferred/out-of-scope for current strategy", matrix)
+        self.assertIn("FX: `deferred_out_of_scope_for_current_strategy`; deferred/out-of-scope for current strategy", matrix)
 
         card = Path("docs/strategy_task_cards/usdt_krw_kimchi_premium.md").read_text(encoding="utf-8")
         self.assertIn("docs/data_availability/usdt_krw_probe_review.md", card)
         self.assertIn("superseded for near-term implementation", card)
-        self.assertIn("Tether Cross-Market Public Probe Alignment", card)
+        self.assertIn("Tether Cross-Market Bithumb USDT/KRW Recheck", card)
 
         registry = yaml.safe_load(Path("configs/strategy_registry.yaml").read_text(encoding="utf-8"))
         stablecoin = next(item for item in registry["strategies"] if item["strategy_family"] == "stablecoin_krw_premium")
@@ -402,15 +404,20 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
             "This strategy does not require USD/KRW FX",
             "This strategy does not calculate `fair_usdt_krw_price`",
             "fair_usdt_krw_price` is not used",
-            "Domestic v0 venues are fixed to Upbit and Bithumb",
+            "Domestic v0 venues are Upbit and Bithumb only",
+            "Upbit `USDT/KRW` is the confirmed primary domestic public source",
+            "Bithumb `USDT/KRW` remains the domestic v0 secondary candidate",
+            "Coinone and Korbit are future domestic expansion, not v0",
             "Binance / Bybit / OKX",
+            "Global reference v0 venues are Binance, Bybit, and OKX",
             "Global venues can be expanded later only through a new task card and public probe first",
             "gross_gap_pct =",
             "(target_bid - source_ask) / source_ask * 100",
             "global_usdt_depeg_pct =",
             "global_usdt_depeg_flag =",
             "do not calculate `premium_pct` against USD/KRW",
-            "Tether Cross-Market Public Probe Alignment v0",
+            "Tether Cross-Market Bithumb USDT/KRW Recheck v0",
+            "Tether Cross-Market Upbit-Only Domestic Reference Scaffolding v0",
             "No private API",
             "No account/balance lookup",
             "No withdrawal/deposit/transfer",
@@ -436,6 +443,19 @@ class ProjectGuardrailsDocsTests(unittest.TestCase):
         self.assertNotEqual(stablecoin.get("status"), "active")
         self.assertIn("superseded_for_near_term_by_tether_cross_market_premium", " ".join(stablecoin["readiness_rules"]))
         self.assertEqual([item["strategy_id"] for item in active], ["cross_exchange_spot_spread_v1"])
+
+        probe_config = yaml.safe_load(Path("configs/usdt_krw_probe_sources.yaml").read_text(encoding="utf-8"))
+        by_id = {source["source_id"]: source for source in probe_config["sources"]}
+        self.assertTrue(by_id["upbit"]["enabled_for_probe"])
+        self.assertTrue(by_id["bithumb"]["enabled_for_probe"])
+        self.assertFalse(by_id["coinone"]["enabled_for_probe"])
+        self.assertFalse(by_id["korbit"]["enabled_for_probe"])
+        for source_id in ["binance", "bybit", "okx"]:
+            self.assertTrue(by_id[source_id]["enabled_for_probe"])
+        self.assertTrue(by_id["frankfurter_or_no_key_public_fx_candidate"]["enabled_for_probe"])
+        self.assertFalse(by_id["official_fx_source_candidate"]["enabled_for_probe"])
+        self.assertIn("out_of_scope_for_tether_cross_market", " ".join(probe_config["notes"]))
+        self.assertIn("out_of_scope_for_tether_cross_market", " ".join(by_id["frankfurter_or_no_key_public_fx_candidate"]["notes"]))
 
     def test_pr_trust_framework_docs_and_template_exist(self):
         required_paths = [

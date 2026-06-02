@@ -19,10 +19,20 @@ Define a read-only strategy plan that observes domestic `USDT/KRW` markets on Ko
 ## Current status
 - Future strategy only; not active and not experimental.
 - Active strategy remains `cross_exchange_spot_spread_v1`.
-- Domestic v0 venues are fixed to Upbit and Bithumb.
-- Initial global reference venues are Binance, Bybit, and OKX.
+- Domestic v0 venues are Upbit and Bithumb only.
+- Upbit `USDT/KRW` is the confirmed primary domestic public source from the prior probe (`ok / available`).
+- Bithumb `USDT/KRW` remains the domestic v0 secondary candidate, but prior probe status was `ok / unknown`; it requires re-check / alignment before scaffolding.
+- Coinone and Korbit are future domestic expansion, not v0.
+- Global reference v0 venues are Binance, Bybit, and OKX.
 - Overseas venues can be expanded later only by separate strategy task cards and public probe review first.
 - No live adapter, persistent adapter, OpportunityPacket builder change, readiness code, scenario JSON, Council handoff, private API, order, transfer, balance lookup, or auto-trading is included.
+
+## Probe alignment status
+- Prior probe result: Upbit `domestic_usdt_krw` was `ok / available`; treat it as the confirmed primary domestic public source for planning.
+- Prior probe result: Bithumb `domestic_usdt_krw` was `ok / unknown`; keep it as domestic v0 secondary candidate and re-check its public pair availability/response shape.
+- Prior probe result: Coinone and Korbit were `skipped / unknown`; they are future domestic expansion only, not v0.
+- Prior probe result: Binance, Bybit, and OKX `global_usdt_reference` were `ok / available`; keep them as the initial global USDT reference basket.
+- FX candidates are out-of-scope for current strategy and must not block the no-FX Tether cross-market path.
 
 ## Strategy concept
 
@@ -263,16 +273,18 @@ None. This is a documentation/registry planning task only.
 - No private API or trade behavior is added.
 
 ## Next gate
-Next card: `Tether Cross-Market Public Probe Alignment v0`
+Next card: `Tether Cross-Market Bithumb USDT/KRW Recheck v0`
 
 Purpose:
-- Reuse probe outputs where possible.
-- Confirm Upbit `USDT/KRW`.
-- Re-check Bithumb `USDT/KRW` pair availability.
-- Keep Binance/Bybit/OKX global references.
-- Remove FX from the required path.
+- Re-check Bithumb `USDT/KRW` public pair availability and response shape.
+- Keep Upbit confirmed as the primary domestic public source.
+- Keep Binance/Bybit/OKX global reference basket.
 - Add no adapter yet.
+- Add no OpportunityPacket builder.
+- Add no readiness/scenario yet.
 - Do no trading.
+
+Alternative if Bithumb remains unknown: `Tether Cross-Market Upbit-Only Domestic Reference Scaffolding v0`. This alternative is analysis-only, is not executable domestic spread, and still has no trade behavior.
 
 ## Non-goals
 - No FX-based `fair_usdt_krw_price` calculation.
