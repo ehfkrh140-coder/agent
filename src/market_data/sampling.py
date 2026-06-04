@@ -97,6 +97,8 @@ def _sample_record(index: int, collected_at: str, packet: OpportunityPacket, rea
         "readiness_status": readiness.get("status"),
         "readiness_pass": bool(readiness.get("readiness_pass")),
         "recommended_default_decision": readiness.get("recommended_default_decision"),
+        "successful_global_reference_count": _packet_extension_value(packet, "successful_global_reference_count"),
+        "failed_global_reference_venues": _packet_extension_value(packet, "failed_global_reference_venues"),
         "best_candidate": _best_candidate(packet.candidates),
         "latency": _latency_summary(packet),
         "opportunity_packet": packet.model_dump(mode="json"),
@@ -135,7 +137,21 @@ def _best_candidate(candidates: list[OpportunityCandidate]) -> dict[str, Any] | 
         "depth_levels_used": metrics.get("depth_levels_used"),
         "imbalance_pass": metrics.get("imbalance_pass"),
         "experimental_pass": metrics.get("experimental_pass"),
+        "global_reference_pass": metrics.get("global_reference_pass"),
+        "global_reference_venue_count": metrics.get("global_reference_venue_count"),
+        "global_usdt_depeg_flag": metrics.get("global_usdt_depeg_flag"),
+        "global_usdt_depeg_pct": metrics.get("global_usdt_depeg_pct"),
+        "global_usdt_mid": metrics.get("global_usdt_mid"),
+        "domestic_best_bid": metrics.get("domestic_best_bid"),
+        "domestic_best_ask": metrics.get("domestic_best_ask"),
+        "domestic_mid": metrics.get("domestic_mid"),
     }
+
+
+def _packet_extension_value(packet: OpportunityPacket, key: str) -> Any:
+    if isinstance(packet.extensions, dict):
+        return packet.extensions.get(key)
+    return None
 
 
 def _latency_summary(packet: OpportunityPacket) -> dict[str, Any]:
