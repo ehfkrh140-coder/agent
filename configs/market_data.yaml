@@ -56,6 +56,33 @@ adapters:
     size_or_notional_resolved: true
     note: "Experimental/non-active Mark-Orderbook Gap Hunt Binance adapter. Public read-only; NO_TRADE_ONLY; no sampling/Council/alert/execution."
 
+  live_bybit_mark_orderbook_gap_btcusdt:
+    type: bybit_mark_orderbook_gap_hunt
+    enabled: false
+    experimental: true
+    strategy_family: mark_orderbook_gap_hunt
+    strategy_id: mark_orderbook_gap_hunt_v0
+    base_url: https://api.bybit.com
+    category: linear
+    symbol: BTCUSDT
+    asset: BTC
+    quote: USDT
+    orderbook_limit: 5
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_slippage_buffer_pct: "0.20"
+    min_net_gap_pct: "0"
+    max_data_age_ms: 10000
+    require_freshness: true
+    liquidity_pass: true
+    size_or_notional_resolved: true
+    execution_policy: NO_TRADE_ONLY
+    experimental_strategy: true
+    non_active_strategy: true
+    no_trade_only: true
+    note: Public read-only Bybit V5 linear BTCUSDT Mark-Orderbook Gap Hunt adapter. Experimental/non-active/NO_TRADE_ONLY.
+
   live_bybit_mark_orderbook_gap:
     type: bybit_public
     base_url: https://api.bybit.com

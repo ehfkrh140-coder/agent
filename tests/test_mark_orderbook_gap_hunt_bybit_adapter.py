@@ -10,7 +10,7 @@ from unittest.mock import patch
 from src.market_data.adapters.base import MarketDataAdapterError
 from src.market_data.adapters.mark_orderbook_gap_hunt import BybitMarkOrderbookGapHuntAdapter
 from src.market_data.http_client import HttpJsonResponse
-from src.market_data.registry import list_adapters, load_market_data_config
+from src.market_data.registry import build_adapter, list_adapters, load_market_data_config
 from src.schemas.opportunity_packet import OpportunityPacket
 
 FIXTURE_DIR = Path("tests/fixtures/mark_orderbook_gap_hunt")
@@ -207,11 +207,55 @@ class BybitMarkOrderbookGapHuntAdapterTests(unittest.TestCase):
         getenv.assert_not_called()
         self.assertEqual(packet.strategy_family, "mark_orderbook_gap_hunt")
 
-    def test_adapter_is_not_registered_in_config_or_registry_in_this_pr(self) -> None:
+    def test_adapter_is_registered_as_disabled_no_trade_config(self) -> None:
+        config = load_market_data_config()
+        adapter_id = BybitMarkOrderbookGapHuntAdapter.DEFAULT_ADAPTER_ID
+
+        self.assertIn(adapter_id, list_adapters(config))
+        adapter_config = config["adapters"][adapter_id]
+        self.assertEqual(adapter_config["type"], "bybit_mark_orderbook_gap_hunt")
+        self.assertFalse(adapter_config["enabled"])
+        self.assertTrue(adapter_config["experimental"])
+        self.assertTrue(adapter_config["experimental_strategy"])
+        self.assertTrue(adapter_config["non_active_strategy"])
+        self.assertTrue(adapter_config["no_trade_only"])
+        self.assertEqual(adapter_config["execution_policy"], "NO_TRADE_ONLY")
+        self.assertEqual(adapter_config["base_url"], "https://api.bybit.com")
+        self.assertEqual(adapter_config["category"], "linear")
+        self.assertEqual(adapter_config["symbol"], "BTCUSDT")
+        forbidden_terms = (
+            "api_key",
+            "api_secret",
+            "authorization",
+            "bearer",
+            "balance",
+            "account",
+            "position",
+            "order/cancel",
+            "withdraw",
+            "deposit",
+            "transfer",
+        )
+        serialized_config = json.dumps(adapter_config).lower()
+        for term in forbidden_terms:
+            self.assertNotIn(term, serialized_config)
+
+    def test_registered_bybit_adapter_builds_expected_class_without_changing_binance(self) -> None:
         config = load_market_data_config()
 
-        self.assertNotIn(BybitMarkOrderbookGapHuntAdapter.DEFAULT_ADAPTER_ID, list_adapters(config))
-        self.assertNotIn("bybit_mark_orderbook_gap_hunt", json.dumps(config))
+        bybit_adapter = build_adapter(BybitMarkOrderbookGapHuntAdapter.DEFAULT_ADAPTER_ID, config)
+        self.assertIsInstance(bybit_adapter, BybitMarkOrderbookGapHuntAdapter)
+        self.assertEqual(bybit_adapter.adapter_id, "live_bybit_mark_orderbook_gap_btcusdt")
+        self.assertEqual(bybit_adapter.adapter_type, "bybit_mark_orderbook_gap_hunt")
+
+        binance_config = config["adapters"]["live_binance_mark_orderbook_gap_btcusdt"]
+        self.assertEqual(binance_config["type"], "binance_mark_orderbook_gap_hunt")
+
+    def test_active_strategy_remains_cross_exchange_spot_spread_v1(self) -> None:
+        strategy_current = Path("configs/strategy_current.yaml").read_text(encoding="utf-8")
+
+        self.assertIn("cross_exchange_spot_spread_v1", strategy_current)
+        self.assertIn("mark_orderbook_gap", strategy_current)
 
 
 if __name__ == "__main__":
