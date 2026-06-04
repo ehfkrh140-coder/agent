@@ -10,6 +10,7 @@ from unittest.mock import patch
 from src.market_data.adapters.base import MarketDataAdapterError
 from src.market_data.adapters.mark_orderbook_gap_hunt import BinanceMarkOrderbookGapHuntAdapter
 from src.market_data.http_client import HttpJsonResponse
+from src.market_data.registry import build_adapter, list_adapters, load_market_data_config
 from src.schemas.opportunity_packet import OpportunityPacket
 
 FIXTURE_DIR = Path("tests/fixtures/mark_orderbook_gap_hunt")
@@ -175,12 +176,24 @@ class BinanceMarkOrderbookGapHuntAdapterTests(unittest.TestCase):
         getenv.assert_not_called()
         self.assertEqual(packet.strategy_family, "mark_orderbook_gap_hunt")
 
-    def test_adapter_is_not_registered_in_config_or_registry(self) -> None:
-        config_text = Path("configs/market_data.yaml").read_text(encoding="utf-8")
-        registry_text = Path("src/market_data/registry.py").read_text(encoding="utf-8")
+    def test_adapter_is_registered_as_experimental_no_trade_only(self) -> None:
+        config = load_market_data_config()
+        adapter_id = "live_binance_mark_orderbook_gap_btcusdt"
 
-        self.assertNotIn("live_binance_mark_orderbook_gap_btcusdt", config_text)
-        self.assertNotIn("binance_mark_orderbook_gap_hunt", registry_text)
+        self.assertIn(adapter_id, list_adapters(config))
+        adapter_config = config["adapters"][adapter_id]
+        self.assertEqual(adapter_config["type"], "binance_mark_orderbook_gap_hunt")
+        self.assertFalse(adapter_config["enabled"])
+        self.assertEqual(adapter_config["strategy_family"], "mark_orderbook_gap_hunt")
+        self.assertEqual(adapter_config["strategy_id"], "mark_orderbook_gap_hunt_v0")
+        self.assertEqual(adapter_config["execution_policy"], "NO_TRADE_ONLY")
+        self.assertTrue(adapter_config["experimental_strategy"])
+        self.assertTrue(adapter_config["non_active_strategy"])
+        self.assertTrue(adapter_config["no_trade_only"])
+
+        adapter = build_adapter(adapter_id, config)
+        self.assertIsInstance(adapter, BinanceMarkOrderbookGapHuntAdapter)
+        self.assertEqual(adapter.adapter_id, adapter_id)
 
 
 if __name__ == "__main__":
