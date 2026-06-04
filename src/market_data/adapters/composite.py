@@ -100,22 +100,41 @@ class CompositeTetherCrossMarketAdapter(MarketDataAdapter):
             observations.extend(child_observations)
             domestic_metadata.append(snapshot.get("adapter_metadata") or {"adapter_id": child.adapter_id})
 
+        min_successful_global_references = int(self.config.get("min_successful_global_references") or 1)
+        global_reference_diagnostics: list[dict[str, Any]] = []
+
         for child in self.global_reference_adapters:
             try:
                 snapshot = child.fetch_snapshot()
             except Exception as exc:  # noqa: BLE001 - partial global failure is carried as metadata
-                failed_global_references.append({"adapter_id": child.adapter_id, "reason": str(exc)})
+                diagnostics = _diagnostics_from_exception(child.adapter_id, exc)
+                failed_global_references.append({"adapter_id": child.adapter_id, "reason": str(exc), "diagnostics": diagnostics})
+                global_reference_diagnostics.extend(diagnostics)
                 continue
             child_observations = snapshot.get("observations") or []
+            metadata = snapshot.get("adapter_metadata") or {"adapter_id": child.adapter_id}
+            diagnostics = list(metadata.get("global_reference_diagnostics") or snapshot.get("extensions", {}).get("global_reference_diagnostics") or [])
+            if diagnostics:
+                global_reference_diagnostics.extend(diagnostics)
             if not child_observations:
-                failed_global_references.append({"adapter_id": child.adapter_id, "reason": "no observations returned"})
+                failure = {
+                    "adapter_id": child.adapter_id,
+                    "venue_id": metadata.get("venue_id"),
+                    "reason": "no observations returned",
+                    "diagnostics": diagnostics or [{"adapter_id": child.adapter_id, "parser_stage": "parse", "error_message": "no observations returned"}],
+                }
+                failed_global_references.append(failure)
+                global_reference_diagnostics.extend(failure["diagnostics"] if not diagnostics else [])
                 continue
             observations.extend(child_observations)
-            global_metadata.append(snapshot.get("adapter_metadata") or {"adapter_id": child.adapter_id})
+            global_metadata.append(metadata)
 
-        if not global_metadata:
-            failed = ", ".join(item["adapter_id"] for item in failed_global_references) or "none"
-            raise MarketDataAdapterError(f"All global USDT reference adapters failed for {self.adapter_id}: {failed}")
+        if len(global_metadata) < min_successful_global_references:
+            failed = _format_global_reference_failures(failed_global_references)
+            raise MarketDataAdapterError(
+                f"Global USDT reference adapters below minimum for {self.adapter_id}: "
+                f"successful={len(global_metadata)} required={min_successful_global_references}; {failed}"
+            )
 
         domestic_ids = [child.adapter_id for child in self.domestic_adapters]
         global_ids = [child.adapter_id for child in self.global_reference_adapters]
@@ -140,7 +159,10 @@ class CompositeTetherCrossMarketAdapter(MarketDataAdapter):
                     "domestic": domestic_metadata,
                     "global_reference": global_metadata,
                 },
+                "successful_global_reference_count": len(global_metadata),
                 "failed_global_reference_venues": failed_global_references,
+                "global_reference_diagnostics": global_reference_diagnostics,
+                "min_successful_global_references": min_successful_global_references,
                 "public_read_only": True,
                 "no_private_api": True,
             },
@@ -153,8 +175,37 @@ class CompositeTetherCrossMarketAdapter(MarketDataAdapter):
                 "global_reference_child_adapters": global_ids,
                 "successful_global_reference_count": len(global_metadata),
                 "failed_global_reference_venues": failed_global_references,
+                "global_reference_diagnostics": global_reference_diagnostics,
+                "min_successful_global_references": min_successful_global_references,
             },
         }
+
+
+def _diagnostics_from_exception(adapter_id: str, exc: Exception) -> list[dict[str, Any]]:
+    diagnostics = getattr(exc, "diagnostics", None)
+    if isinstance(diagnostics, list):
+        return [item for item in diagnostics if isinstance(item, dict)]
+    return [{"adapter_id": adapter_id, "parser_stage": "unknown", "error_message": str(exc)}]
+
+
+def _format_global_reference_failures(failures: list[dict[str, Any]]) -> str:
+    parts: list[str] = []
+    for failure in failures:
+        diagnostics = failure.get("diagnostics") if isinstance(failure.get("diagnostics"), list) else []
+        if not diagnostics:
+            parts.append(f"{failure.get('adapter_id')} reason={failure.get('reason')}")
+            continue
+        for item in diagnostics:
+            params = item.get("request_params") or {}
+            symbol = params.get("symbol") or params.get("instId") or params
+            parts.append(
+                f"{item.get('adapter_id') or failure.get('adapter_id')}[{item.get('venue_id')}] "
+                f"endpoint={item.get('endpoint') or item.get('ticker_path')} symbol={symbol} "
+                f"stage={item.get('parser_stage')} status={item.get('http_status')} "
+                f"code={item.get('exchange_error_code')} "
+                f"message={item.get('exchange_error_message') or item.get('error_message')}"
+            )
+    return "; ".join(parts) or "no diagnostics"
 
 
 def _build_composite_snapshot(

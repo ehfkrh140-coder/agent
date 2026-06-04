@@ -30,6 +30,8 @@ class OpportunityPacketBuilder:
 
     def build(self, snapshot: dict[str, Any]) -> OpportunityPacket:
         strategy_family = snapshot.get("strategy_family")
+        if strategy_family == "mark_orderbook_gap_hunt":
+            return self.build_mark_orderbook_gap_hunt(snapshot)
         if strategy_family == "mark_orderbook_gap":
             return self.build_mark_orderbook_gap(snapshot)
         if strategy_family == "cross_exchange_spot_spread":
@@ -39,6 +41,19 @@ class OpportunityPacketBuilder:
         if strategy_family == "tether_cross_market_premium":
             return self.build_tether_cross_market_premium(snapshot)
         raise ValueError(f"Unsupported strategy_family: {strategy_family!r}")
+
+    def build_mark_orderbook_gap_hunt(self, snapshot: dict[str, Any]) -> OpportunityPacket:
+        """Build a Mark-Orderbook Gap Hunt packet from an adapter-produced packet dict.
+
+        The Binance Mark-Orderbook Gap Hunt adapter returns an analysis-only
+        OpportunityPacket JSON dictionary from ``fetch_snapshot`` so existing
+        collect_market_data flow can serialize a packet after builder
+        validation.  This path intentionally does not synthesize execution,
+        Council, alert, or sampling fields; it only validates the already
+        normalized public-read-only packet shape.
+        """
+
+        return OpportunityPacket.model_validate(snapshot)
 
     def build_mark_orderbook_gap(self, snapshot: dict[str, Any]) -> OpportunityPacket:
         raw_observations = snapshot.get("observations") or []
