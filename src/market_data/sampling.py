@@ -71,6 +71,7 @@ def run_market_sampling(
         samples_requested=samples_requested,
         max_errors=max_errors,
     )
+    summary = _enrich_sampling_summary(summary, records)
     result = {
         "schema_version": "market_sampling_v1",
         "adapter_id": adapter_id,
@@ -86,6 +87,11 @@ def run_market_sampling(
 
 
 def _sample_record(index: int, collected_at: str, packet: OpportunityPacket, readiness: dict[str, Any]) -> dict[str, Any]:
+    best_candidate = _best_candidate(packet.candidates)
+    first_observation = packet.observations[0] if packet.observations else None
+    readiness_status = _readiness_status(packet, readiness, best_candidate)
+    readiness_pass = _readiness_pass(packet, readiness, best_candidate)
+    recommended_default_decision = _recommended_default_decision(packet, readiness, best_candidate)
     return {
         "sample_index": index,
         "collected_at_utc": collected_at,
@@ -94,10 +100,28 @@ def _sample_record(index: int, collected_at: str, packet: OpportunityPacket, rea
         "packet_id": packet.packet_id,
         "candidate_count": len(packet.candidates),
         "strategy_family": packet.strategy_family,
-        "readiness_status": readiness.get("status"),
-        "readiness_pass": bool(readiness.get("readiness_pass")),
-        "recommended_default_decision": readiness.get("recommended_default_decision"),
-        "best_candidate": _best_candidate(packet.candidates),
+        "strategy_id": packet.strategy_id,
+        "readiness_status": readiness_status,
+        "readiness_pass": readiness_pass,
+        "recommended_default_decision": recommended_default_decision,
+        "successful_global_reference_count": _packet_extension_value(packet, "successful_global_reference_count"),
+        "failed_global_reference_venues": _packet_extension_value(packet, "failed_global_reference_venues"),
+        "best_candidate": best_candidate,
+        "long_gap_pct": (best_candidate or {}).get("long_gap_pct"),
+        "short_gap_pct": (best_candidate or {}).get("short_gap_pct"),
+        "gross_gap_pct": (best_candidate or {}).get("gross_gap_pct"),
+        "max_observed_gap_pct": (best_candidate or {}).get("max_observed_gap_pct"),
+        "estimated_net_gap_pct": (best_candidate or {}).get("estimated_net_gap_pct"),
+        "liquidity_pass": (best_candidate or {}).get("liquidity_pass"),
+        "freshness_pass": (best_candidate or {}).get("freshness_pass"),
+        "comparability_pass": (best_candidate or {}).get("comparability_pass"),
+        "required_missing_fields": (best_candidate or {}).get("required_missing_fields") or [],
+        "mark_price": getattr(first_observation, "mark_price", None),
+        "index_price": getattr(first_observation, "index_price", None),
+        "bid": getattr(first_observation, "bid", None),
+        "ask": getattr(first_observation, "ask", None),
+        "no_trade_only": _adapter_metadata_value(packet, "no_trade_only"),
+        "execution_policy": _adapter_metadata_value(packet, "execution_policy"),
         "latency": _latency_summary(packet),
         "opportunity_packet": packet.model_dump(mode="json"),
     }
@@ -119,7 +143,15 @@ def _best_candidate(candidates: list[OpportunityCandidate]) -> dict[str, Any] | 
         "target_venue_id": candidate.target_venue_id,
         "direction": candidate.direction,
         "gross_gap_pct": candidate.gross_gap_pct,
+        "max_observed_gap_pct": metrics.get("max_observed_gap_pct", candidate.gross_gap_pct),
         "estimated_net_gap_pct": candidate.estimated_net_gap_pct,
+        "long_gap_pct": candidate.long_gap_pct,
+        "short_gap_pct": candidate.short_gap_pct,
+        "readiness_status": metrics.get("readiness_status"),
+        "readiness_pass": metrics.get("readiness_pass"),
+        "recommended_default_decision": metrics.get("recommended_default_decision"),
+        "comparability_pass": metrics.get("comparability_pass"),
+        "required_missing_fields": list(candidate.required_missing_fields or []),
         "net_gap_pass": _metric_bool(candidate, "net_gap_pass", default_vwap),
         "liquidity_pass": candidate.liquidity_pass,
         "freshness_pass": candidate.freshness_pass,
@@ -135,7 +167,92 @@ def _best_candidate(candidates: list[OpportunityCandidate]) -> dict[str, Any] | 
         "depth_levels_used": metrics.get("depth_levels_used"),
         "imbalance_pass": metrics.get("imbalance_pass"),
         "experimental_pass": metrics.get("experimental_pass"),
+        "global_reference_pass": metrics.get("global_reference_pass"),
+        "global_reference_venue_count": metrics.get("global_reference_venue_count"),
+        "global_usdt_depeg_flag": metrics.get("global_usdt_depeg_flag"),
+        "global_usdt_depeg_pct": metrics.get("global_usdt_depeg_pct"),
+        "global_usdt_mid": metrics.get("global_usdt_mid"),
+        "domestic_best_bid": metrics.get("domestic_best_bid"),
+        "domestic_best_ask": metrics.get("domestic_best_ask"),
+        "domestic_mid": metrics.get("domestic_mid"),
     }
+
+
+def _enrich_sampling_summary(summary: dict[str, Any], records: list[dict[str, Any]]) -> dict[str, Any]:
+    enriched = dict(summary)
+    ok_samples = [sample for sample in records if sample.get("status") == "ok"]
+    readiness_counts: dict[str, int] = {}
+    for sample in ok_samples:
+        status = sample.get("readiness_status")
+        if status:
+            readiness_counts[str(status)] = readiness_counts.get(str(status), 0) + 1
+    gross_gaps = [_float_or_none(sample.get("gross_gap_pct")) for sample in ok_samples]
+    gross_gaps = [value for value in gross_gaps if value is not None]
+    positive_gross_gap_count = sum(1 for value in gross_gaps if value > 0)
+    enriched.update(
+        {
+            "positive_gross_gap_count": positive_gross_gap_count,
+            "readiness_status_counts": readiness_counts,
+            "watch_count": readiness_counts.get("WATCH", 0),
+            "reject_count": readiness_counts.get("REJECT", 0),
+            "need_data_count": readiness_counts.get("NEED_DATA", 0),
+        }
+    )
+    enriched.setdefault("max_gross_gap_pct", max(gross_gaps) if gross_gaps else None)
+    return enriched
+
+
+def _readiness_status(
+    packet: OpportunityPacket, readiness: dict[str, Any], best_candidate: dict[str, Any] | None
+) -> str | None:
+    packet_readiness = _packet_extension_value(packet, "readiness")
+    if isinstance(packet_readiness, dict) and packet_readiness.get("readiness_status"):
+        return packet_readiness.get("readiness_status")
+    if best_candidate and best_candidate.get("readiness_status") is not None:
+        return best_candidate.get("readiness_status")
+    return readiness.get("status")
+
+
+def _readiness_pass(packet: OpportunityPacket, readiness: dict[str, Any], best_candidate: dict[str, Any] | None) -> bool:
+    packet_readiness = _packet_extension_value(packet, "readiness")
+    if isinstance(packet_readiness, dict) and "readiness_pass" in packet_readiness:
+        return bool(packet_readiness.get("readiness_pass"))
+    if best_candidate and best_candidate.get("readiness_pass") is not None:
+        return bool(best_candidate.get("readiness_pass"))
+    return bool(readiness.get("readiness_pass"))
+
+
+def _recommended_default_decision(
+    packet: OpportunityPacket, readiness: dict[str, Any], best_candidate: dict[str, Any] | None
+) -> str | None:
+    packet_readiness = _packet_extension_value(packet, "readiness")
+    if isinstance(packet_readiness, dict) and packet_readiness.get("recommended_default_decision"):
+        return packet_readiness.get("recommended_default_decision")
+    if best_candidate and best_candidate.get("recommended_default_decision") is not None:
+        return best_candidate.get("recommended_default_decision")
+    return readiness.get("recommended_default_decision")
+
+
+def _adapter_metadata_value(packet: OpportunityPacket, key: str) -> Any:
+    metadata = _packet_extension_value(packet, "adapter_metadata")
+    if isinstance(metadata, dict):
+        return metadata.get(key)
+    return None
+
+
+def _float_or_none(value: Any) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _packet_extension_value(packet: OpportunityPacket, key: str) -> Any:
+    if isinstance(packet.extensions, dict):
+        return packet.extensions.get(key)
+    return None
 
 
 def _latency_summary(packet: OpportunityPacket) -> dict[str, Any]:

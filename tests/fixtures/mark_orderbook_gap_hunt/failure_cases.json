@@ -1,0 +1,91 @@
+{
+  "cases": [
+    {
+      "name": "missing_mark_response",
+      "venue_id": "binance",
+      "expected_readiness_status": "NEED_DATA",
+      "required_missing_fields": ["mark_response"],
+      "execution_allowed": false,
+      "council_auto_call": false
+    },
+    {
+      "name": "missing_orderbook_or_bid_ask",
+      "venue_id": "binance",
+      "expected_readiness_status": "NEED_DATA",
+      "required_missing_fields": ["bid", "ask"],
+      "execution_allowed": false,
+      "council_auto_call": false
+    },
+    {
+      "name": "missing_metadata",
+      "venue_id": "bybit",
+      "expected_readiness_status": "NEED_DATA",
+      "required_missing_fields": ["metadata_response"],
+      "execution_allowed": false,
+      "council_auto_call": false
+    },
+    {
+      "name": "instrument_mismatch_btcusdt_ethusdt",
+      "venue_id": "binance",
+      "expected_readiness_status": "NEED_DATA",
+      "required_missing_fields": ["instrument_match"],
+      "mismatch": {"mark_symbol": "BTCUSDT", "orderbook_symbol": "ETHUSDT"},
+      "execution_allowed": false,
+      "council_auto_call": false
+    },
+    {
+      "name": "bybit_category_type_mismatch",
+      "venue_id": "bybit",
+      "expected_readiness_status": "NEED_DATA",
+      "required_missing_fields": ["category_match"],
+      "mismatch": {"ticker_category": "linear", "orderbook_category": "inverse"},
+      "execution_allowed": false,
+      "council_auto_call": false
+    },
+    {
+      "name": "okx_inst_id_mismatch",
+      "venue_id": "okx",
+      "expected_readiness_status": "NEED_DATA",
+      "required_missing_fields": ["inst_id_match"],
+      "mismatch": {"mark_inst_id": "BTC-USDT-SWAP", "books_inst_id": "ETH-USDT-SWAP"},
+      "execution_allowed": false,
+      "council_auto_call": false
+    },
+    {
+      "name": "unknown_size_unit_missing_ctval_or_lot_size",
+      "venue_id": "okx",
+      "expected_readiness_status": "NEED_DATA",
+      "required_missing_fields": ["ctVal", "lotSz", "size_unit"],
+      "execution_allowed": false,
+      "council_auto_call": false
+    },
+    {
+      "name": "stale_timestamp_excessive_latency",
+      "venue_id": "bybit",
+      "expected_readiness_status": "NEED_DATA",
+      "required_missing_fields": ["fresh_timestamp"],
+      "latency_policy": "future readiness may choose REJECT after thresholds are defined",
+      "execution_allowed": false,
+      "council_auto_call": false
+    },
+    {
+      "name": "non_positive_gap_after_fee_slippage_buffer",
+      "venue_id": "binance",
+      "expected_readiness_status": "REJECT",
+      "required_missing_fields": [],
+      "net_gap_pass": false,
+      "execution_allowed": false,
+      "council_auto_call": false
+    },
+    {
+      "name": "positive_gap_complete_metadata_watch_only",
+      "venue_id": "okx",
+      "expected_readiness_status": "WATCH",
+      "required_missing_fields": [],
+      "net_gap_pass": true,
+      "comparability_pass": true,
+      "execution_allowed": false,
+      "council_auto_call": false
+    }
+  ]
+}
