@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from src.market_data.parsers.mark_orderbook_gap_hunt import parse_mark_orderbook_gap_snapshot
+from src.strategy.mark_orderbook_gap_hunt_readiness import evaluate_mark_orderbook_gap_readiness
 
 FIXTURE_DIR = Path("tests/fixtures/mark_orderbook_gap_hunt")
 
@@ -30,82 +31,13 @@ def _evaluate_readiness_contract(
     require_freshness: bool = False,
     size_or_notional_resolved: bool = True,
 ) -> dict[str, Any]:
-    required_missing_fields = set(parser_output.get("required_missing_fields") or [])
-    warnings: list[str] = []
-    mark = _decimal(parser_output.get("mark_price"))
-    bid = _decimal(parser_output.get("bid"))
-    ask = _decimal(parser_output.get("ask"))
-    fee_buffer = _decimal(fee_slippage_buffer_pct)
-
-    if parser_output.get("normalized_status") == "NEED_DATA":
-        required_missing_fields.add("parser_normalized_status")
-    if not parser_output.get("comparability_pass"):
-        required_missing_fields.add("comparability_pass")
-    if require_freshness and parser_output.get("freshness_pass") is not True:
-        required_missing_fields.add("freshness_pass")
-    for field_name, value in (("mark_price", mark), ("bid", bid), ("ask", ask)):
-        if value is None:
-            required_missing_fields.add(field_name)
-    if not size_or_notional_resolved:
-        required_missing_fields.add("size_or_notional_resolved")
-    if fee_buffer is None:
-        required_missing_fields.add("fee_slippage_buffer_pct")
-
-    metrics: dict[str, Any] = {
-        "long_gap_pct": None,
-        "short_gap_pct": None,
-        "max_observed_gap_pct": None,
-        "fee_slippage_buffer_pct": str(fee_buffer) if fee_buffer is not None else None,
-        "estimated_net_gap_pct": None,
-        "liquidity_pass": liquidity_pass,
-        "freshness_pass": parser_output.get("freshness_pass"),
-        "comparability_pass": parser_output.get("comparability_pass"),
-    }
-
-    if required_missing_fields:
-        return {
-            "readiness_status": "NEED_DATA",
-            "readiness_pass": False,
-            "recommended_default_decision": "NEED_DATA",
-            "required_missing_fields": sorted(required_missing_fields),
-            "warnings": warnings,
-            "metrics": metrics,
-        }
-
-    assert mark is not None and bid is not None and ask is not None and fee_buffer is not None
-    long_gap = ((mark - ask) / mark) * Decimal("100")
-    short_gap = ((bid - mark) / mark) * Decimal("100")
-    max_gap = max(long_gap, short_gap)
-    estimated_net_gap = max_gap - fee_buffer
-    metrics.update(
-        {
-            "long_gap_pct": str(long_gap),
-            "short_gap_pct": str(short_gap),
-            "max_observed_gap_pct": str(max_gap),
-            "estimated_net_gap_pct": str(estimated_net_gap),
-        }
+    return evaluate_mark_orderbook_gap_readiness(
+        parser_output,
+        fee_slippage_buffer_pct=fee_slippage_buffer_pct,
+        liquidity_pass=liquidity_pass,
+        require_freshness=require_freshness,
+        size_or_notional_resolved=size_or_notional_resolved,
     )
-
-    if liquidity_pass is False:
-        warnings.append("liquidity_insufficient")
-        status = "REJECT"
-    elif max_gap <= 0:
-        warnings.append("no_positive_gross_gap")
-        status = "REJECT"
-    elif estimated_net_gap <= 0:
-        warnings.append("non_positive_estimated_net_gap")
-        status = "REJECT"
-    else:
-        status = "WATCH"
-
-    return {
-        "readiness_status": status,
-        "readiness_pass": False,
-        "recommended_default_decision": status,
-        "required_missing_fields": [],
-        "warnings": warnings,
-        "metrics": metrics,
-    }
 
 
 def _binance_parser_output() -> dict[str, Any]:
