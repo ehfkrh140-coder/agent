@@ -1,0 +1,58 @@
+{
+  "venue_id": "binance",
+  "mark_response": {
+    "symbol": "BTCUSDT",
+    "markPrice": "62830.60000000",
+    "indexPrice": "62830.58760870",
+    "lastFundingRate": "0.00000655",
+    "time": 1780536386000
+  },
+  "depth_response": {
+    "lastUpdateId": 10704876096728,
+    "E": 1780536386900,
+    "T": 1780536386892,
+    "bids": [["62844.50", "10.948"]],
+    "asks": [["62844.60", "5.875"]]
+  },
+  "metadata_response": {
+    "symbols": [
+      {
+        "symbol": "BTCUSDT",
+        "pair": "BTCUSDT",
+        "contractType": "PERPETUAL",
+        "status": "TRADING",
+        "baseAsset": "BTC",
+        "quoteAsset": "USDT",
+        "marginAsset": "USDT",
+        "pricePrecision": 2,
+        "quantityPrecision": 3,
+        "filters": [
+          {"filterType": "PRICE_FILTER", "minPrice": "556.80", "maxPrice": "4529764", "tickSize": "0.10"},
+          {"filterType": "LOT_SIZE", "minQty": "0.001", "maxQty": "1000", "stepSize": "0.001"},
+          {"filterType": "MARKET_LOT_SIZE", "minQty": "0.001", "maxQty": "120", "stepSize": "0.001"},
+          {"filterType": "MIN_NOTIONAL", "notional": "50"}
+        ]
+      }
+    ]
+  },
+  "expected_normalized": {
+    "venue_id": "binance",
+    "instrument_id": "BTCUSDT",
+    "instrument_type": "linear_perpetual",
+    "mark_price": "62830.60000000",
+    "index_price": "62830.58760870",
+    "bid": "62844.50",
+    "ask": "62844.60",
+    "bid_size_raw": "10.948",
+    "ask_size_raw": "5.875",
+    "tick_size": "0.10",
+    "quantity_step": "0.001",
+    "min_order_size": "0.001",
+    "min_notional": "50",
+    "margin_asset": "USDT",
+    "comparability_pass": true,
+    "required_missing_fields": [],
+    "readiness_status": "WATCH",
+    "execution_allowed": false
+  }
+}
