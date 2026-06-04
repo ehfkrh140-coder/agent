@@ -169,8 +169,15 @@ adapters:
     instrument_type: reference
     ticker_path: /api/v3/ticker/bookTicker
     ticker_params:
-      symbol: USDTUSDC
+      symbol: USDCUSDT
     response_format: binance_book_ticker
+    normalize: inverse
+    ticker_candidates:
+      - ticker_path: /api/v3/ticker/bookTicker
+        ticker_params:
+          symbol: USDCUSDT
+        response_format: binance_book_ticker
+        normalize: inverse
     timeout_seconds: 10
     max_retries: 2
     user_agent: agent-council-market-data-v1
@@ -187,8 +194,16 @@ adapters:
     ticker_path: /v5/market/tickers
     ticker_params:
       category: spot
-      symbol: USDTUSDC
+      symbol: USDCUSDT
     response_format: bybit_v5_ticker
+    normalize: inverse
+    ticker_candidates:
+      - ticker_path: /v5/market/tickers
+        ticker_params:
+          category: spot
+          symbol: USDCUSDT
+        response_format: bybit_v5_ticker
+        normalize: inverse
     timeout_seconds: 10
     max_retries: 2
     user_agent: agent-council-market-data-v1
@@ -204,8 +219,15 @@ adapters:
     instrument_type: reference
     ticker_path: /api/v5/market/ticker
     ticker_params:
-      instId: USDT-USDC
+      instId: USDC-USDT
     response_format: okx_ticker
+    normalize: inverse
+    ticker_candidates:
+      - ticker_path: /api/v5/market/ticker
+        ticker_params:
+          instId: USDC-USDT
+        response_format: okx_ticker
+        normalize: inverse
     timeout_seconds: 10
     max_retries: 2
     user_agent: agent-council-market-data-v1
@@ -226,6 +248,7 @@ adapters:
       - live_binance_usdt_reference
       - live_bybit_usdt_reference
       - live_okx_usdt_reference
+    min_successful_global_references: 1
     thresholds:
       min_net_gap_pct: 0.2
       max_data_age_ms: 3000
