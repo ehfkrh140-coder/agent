@@ -16,6 +16,8 @@ class HttpJsonResponse:
     data: dict[str, Any]
     elapsed_ms: int
     url: str
+    http_status: int | None = None
+    safe_response_preview: str | None = None
 
 
 class ReadOnlyHttpClient:
@@ -57,9 +59,20 @@ class ReadOnlyHttpClient:
                     raise MarketDataAdapterError(f"Invalid JSON response from {url}") from exc
                 if not isinstance(data, dict):
                     raise MarketDataAdapterError(f"JSON response root is not an object from {url}")
-                return HttpJsonResponse(data=data, elapsed_ms=elapsed_ms, url=url)
+                return HttpJsonResponse(data=data, elapsed_ms=elapsed_ms, url=url, http_status=status, safe_response_preview=body[:500])
             except urllib.error.HTTPError as exc:
-                last_error = MarketDataAdapterError(f"HTTP status {exc.code} for {url}")
+                body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
+                error = MarketDataAdapterError(f"HTTP status {exc.code} for {url}")
+                setattr(error, "http_status", exc.code)
+                setattr(error, "safe_response_preview", body[:500])
+                try:
+                    payload = json.loads(body) if body else None
+                except json.JSONDecodeError:
+                    payload = None
+                if isinstance(payload, dict):
+                    setattr(error, "exchange_error_code", payload.get("code") or payload.get("retCode"))
+                    setattr(error, "exchange_error_message", payload.get("msg") or payload.get("message") or payload.get("retMsg"))
+                last_error = error
             except urllib.error.URLError as exc:
                 last_error = MarketDataAdapterError(f"Network error for {url}: {exc.reason}")
             except TimeoutError as exc:
@@ -70,4 +83,6 @@ class ReadOnlyHttpClient:
                 continue
         if last_error is None:
             raise MarketDataAdapterError(f"Unknown HTTP error for {url}")
+        if isinstance(last_error, MarketDataAdapterError):
+            raise last_error
         raise MarketDataAdapterError(str(last_error)) from last_error
