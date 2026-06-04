@@ -1,10 +1,10 @@
-# Mark-Orderbook Gap Hunt Bybit Sampling Baseline Planning v0
+# Mark-Orderbook Gap Hunt Bybit Sampling Baseline v0
 
 ## 1. Purpose
 
-Plan the sampling baseline scope for `live_bybit_mark_orderbook_gap_btcusdt` before any Bybit `sample_market_data` implementation or live sampling evidence PR.
+Document the Bybit sampling baseline scope for `live_bybit_mark_orderbook_gap_btcusdt`, including the mocked-first validation target and future user-local sampling evidence path.
 
-This document is planning-only. It does not modify sampling code, `tools/sample_market_data.py`, config, registry, parser/readiness/timestamp/freshness logic, alerts, Council behavior, active promotion, execution/private API, generated packet JSON, generated sampling JSON, OKX registration, multi-venue composite behavior, or generic/base adapter extraction.
+This document records the baseline scope and next gate. The accompanying implementation PR validates the existing sampling pipeline with mocked Bybit `mark_orderbook_gap_hunt` packets and exposes timestamp/data_age watch fields without changing parser/readiness/timestamp/freshness policy. It does not modify `tools/sample_market_data.py`, config, registry, parser/readiness logic, alerts, Council behavior, active promotion, execution/private API, generated packet JSON, generated sampling JSON, OKX registration, multi-venue composite behavior, or generic/base adapter extraction.
 
 ## 2. Current baseline
 
@@ -193,4 +193,4 @@ This plan does not add:
 
 ## 12. Next recommended step
 
-Open `Mark-Orderbook Gap Hunt Bybit Sampling Baseline v0` as a separate implementation PR only after this sampling baseline scope is reviewed. Keep that implementation mocked-first, analysis-only, and separate from user-local live sampling evidence.
+After this mocked-first sampling baseline is reviewed, open a separate `Mark-Orderbook Gap Hunt User-Local Bybit Sampling Smoke Evidence v0` PR. Keep generated sampling JSON out of git and carry the timestamp/data_age watch item forward without policy changes unless explicitly scoped.

@@ -92,6 +92,9 @@ def _sample_record(index: int, collected_at: str, packet: OpportunityPacket, rea
     readiness_status = _readiness_status(packet, readiness, best_candidate)
     readiness_pass = _readiness_pass(packet, readiness, best_candidate)
     recommended_default_decision = _recommended_default_decision(packet, readiness, best_candidate)
+    latency = _latency_summary(packet)
+    data_age_ms = latency.get("max_data_age_ms")
+    negative_data_age_observed = _is_negative_number(data_age_ms)
     return {
         "sample_index": index,
         "collected_at_utc": collected_at,
@@ -116,13 +119,20 @@ def _sample_record(index: int, collected_at: str, packet: OpportunityPacket, rea
         "freshness_pass": (best_candidate or {}).get("freshness_pass"),
         "comparability_pass": (best_candidate or {}).get("comparability_pass"),
         "required_missing_fields": (best_candidate or {}).get("required_missing_fields") or [],
+        "venue_id": getattr(first_observation, "venue_id", None),
+        "market_symbol": getattr(first_observation, "market_symbol", None),
+        "parser_normalized_status": _parser_normalized_status(packet, first_observation, best_candidate),
+        "diagnostics_count": _diagnostics_count(packet),
+        "data_age_ms": data_age_ms,
+        "timestamp_data_age_watch": negative_data_age_observed,
+        "negative_data_age_observed": negative_data_age_observed,
         "mark_price": getattr(first_observation, "mark_price", None),
         "index_price": getattr(first_observation, "index_price", None),
         "bid": getattr(first_observation, "bid", None),
         "ask": getattr(first_observation, "ask", None),
         "no_trade_only": _adapter_metadata_value(packet, "no_trade_only"),
         "execution_policy": _adapter_metadata_value(packet, "execution_policy"),
-        "latency": _latency_summary(packet),
+        "latency": latency,
         "opportunity_packet": packet.model_dump(mode="json"),
     }
 
@@ -150,6 +160,7 @@ def _best_candidate(candidates: list[OpportunityCandidate]) -> dict[str, Any] | 
         "readiness_status": metrics.get("readiness_status"),
         "readiness_pass": metrics.get("readiness_pass"),
         "recommended_default_decision": metrics.get("recommended_default_decision"),
+        "parser_normalized_status": metrics.get("parser_normalized_status"),
         "comparability_pass": metrics.get("comparability_pass"),
         "required_missing_fields": list(candidate.required_missing_fields or []),
         "net_gap_pass": _metric_bool(candidate, "net_gap_pass", default_vwap),
@@ -189,9 +200,14 @@ def _enrich_sampling_summary(summary: dict[str, Any], records: list[dict[str, An
     gross_gaps = [_float_or_none(sample.get("gross_gap_pct")) for sample in ok_samples]
     gross_gaps = [value for value in gross_gaps if value is not None]
     positive_gross_gap_count = sum(1 for value in gross_gaps if value > 0)
+    data_ages = [_float_or_none(sample.get("data_age_ms")) for sample in ok_samples]
+    data_ages = [value for value in data_ages if value is not None]
+    timestamp_data_age_watch_count = sum(1 for value in data_ages if value < 0)
     enriched.update(
         {
             "positive_gross_gap_count": positive_gross_gap_count,
+            "timestamp_data_age_watch_count": timestamp_data_age_watch_count,
+            "negative_data_age_observed": timestamp_data_age_watch_count > 0,
             "readiness_status_counts": readiness_counts,
             "watch_count": readiness_counts.get("WATCH", 0),
             "reject_count": readiness_counts.get("REJECT", 0),
@@ -238,6 +254,33 @@ def _adapter_metadata_value(packet: OpportunityPacket, key: str) -> Any:
     if isinstance(metadata, dict):
         return metadata.get(key)
     return None
+
+
+def _diagnostics_count(packet: OpportunityPacket) -> int | None:
+    diagnostics = _packet_extension_value(packet, "diagnostics")
+    if isinstance(diagnostics, list):
+        return len(diagnostics)
+    return None
+
+
+def _parser_normalized_status(
+    packet: OpportunityPacket, first_observation: Any | None, best_candidate: dict[str, Any] | None
+) -> Any:
+    if best_candidate and best_candidate.get("parser_normalized_status") is not None:
+        return best_candidate.get("parser_normalized_status")
+    if first_observation is not None and isinstance(getattr(first_observation, "extensions", None), dict):
+        observation_status = first_observation.extensions.get("parser_normalized_status")
+        if observation_status is not None:
+            return observation_status
+    parser_output = _packet_extension_value(packet, "parser_output")
+    if isinstance(parser_output, dict):
+        return parser_output.get("normalized_status")
+    return None
+
+
+def _is_negative_number(value: Any) -> bool:
+    number = _float_or_none(value)
+    return bool(number is not None and number < 0)
 
 
 def _float_or_none(value: Any) -> float | None:
