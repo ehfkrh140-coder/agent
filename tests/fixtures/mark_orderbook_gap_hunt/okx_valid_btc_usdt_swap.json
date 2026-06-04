@@ -1,0 +1,61 @@
+{
+  "venue_id": "okx",
+  "mark_response": {
+    "code": "0",
+    "data": [{"instId": "BTC-USDT-SWAP", "instType": "SWAP", "markPx": "62838.1", "ts": "1780536387323"}],
+    "msg": ""
+  },
+  "books_response": {
+    "code": "0",
+    "msg": "",
+    "data": [
+      {
+        "asks": [["62844", "1.78", "0", "6"]],
+        "bids": [["62843.9", "2104.66", "0", "53"]],
+        "ts": "1780536387405",
+        "seqId": 320237917986
+      }
+    ]
+  },
+  "metadata_response": {
+    "code": "0",
+    "data": [
+      {
+        "instId": "BTC-USDT-SWAP",
+        "instType": "SWAP",
+        "ctType": "linear",
+        "ctVal": "0.01",
+        "ctMult": "1",
+        "ctValCcy": "BTC",
+        "settleCcy": "USDT",
+        "tickSz": "0.1",
+        "lotSz": "0.01",
+        "minSz": "0.01",
+        "state": "live",
+        "uly": "BTC-USDT",
+        "instFamily": "BTC-USDT"
+      }
+    ]
+  },
+  "expected_normalized": {
+    "venue_id": "okx",
+    "instrument_id": "BTC-USDT-SWAP",
+    "instrument_type": "linear_swap",
+    "mark_price": "62838.1",
+    "bid": "62843.9",
+    "ask": "62844",
+    "bid_size_raw": "2104.66",
+    "ask_size_raw": "1.78",
+    "contract_value": "0.01",
+    "contract_multiplier": "1",
+    "contract_value_currency": "BTC",
+    "settle_currency": "USDT",
+    "tick_size": "0.1",
+    "lot_size": "0.01",
+    "min_order_size": "0.01",
+    "comparability_pass": true,
+    "required_missing_fields": [],
+    "readiness_status": "WATCH",
+    "execution_allowed": false
+  }
+}
