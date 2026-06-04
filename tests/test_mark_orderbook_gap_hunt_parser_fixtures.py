@@ -5,6 +5,8 @@ import unittest
 from pathlib import Path
 from typing import Any
 
+from src.market_data.parsers.mark_orderbook_gap_hunt import parse_mark_orderbook_gap_snapshot
+
 FIXTURE_DIR = Path("tests/fixtures/mark_orderbook_gap_hunt")
 
 
@@ -146,6 +148,42 @@ class MarkOrderbookGapHuntParserFixtureTests(unittest.TestCase):
         self.assertEqual(_normalize_okx_planning(fixture), fixture["expected_normalized"])
         self.assertEqual(fixture["expected_normalized"]["required_missing_fields"], [])
         self.assertFalse(fixture["expected_normalized"]["execution_allowed"])
+
+
+    def test_valid_fixtures_match_production_parser_core_fields(self) -> None:
+        cases = [
+            (
+                "binance_valid_btcusdt.json",
+                {"venue_id": "binance", "parser_mode": "binance_usdm", "mark_key": "mark_response", "book_key": "depth_response"},
+            ),
+            (
+                "bybit_valid_btcusdt_linear.json",
+                {"venue_id": "bybit", "parser_mode": "bybit_linear", "ticker_key": "ticker_response", "book_key": "orderbook_response"},
+            ),
+            (
+                "okx_valid_btc_usdt_swap.json",
+                {"venue_id": "okx", "parser_mode": "okx_swap", "mark_key": "mark_response", "book_key": "books_response"},
+            ),
+        ]
+        for fixture_name, config in cases:
+            with self.subTest(fixture=fixture_name):
+                fixture = _load_fixture(fixture_name)
+                parsed = parse_mark_orderbook_gap_snapshot(
+                    venue_id=config["venue_id"],
+                    parser_mode=config["parser_mode"],
+                    mark_response=fixture.get(config.get("mark_key", "")),
+                    ticker_response=fixture.get(config.get("ticker_key", "")),
+                    orderbook_response=fixture[config["book_key"]],
+                    metadata_response=fixture["metadata_response"],
+                )
+                expected = fixture["expected_normalized"]
+                self.assertEqual(parsed["normalized_status"], "OK")
+                self.assertEqual(parsed["instrument_id"], expected["instrument_id"])
+                self.assertEqual(parsed["mark_price"], expected["mark_price"])
+                self.assertEqual(parsed["bid"], expected["bid"])
+                self.assertEqual(parsed["ask"], expected["ask"])
+                self.assertTrue(parsed["comparability_pass"])
+                self.assertEqual(parsed["required_missing_fields"], [])
 
     def test_failure_cases_pin_expected_need_data_or_reject_statuses(self) -> None:
         payload = _load_fixture("failure_cases.json")
