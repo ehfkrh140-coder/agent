@@ -14,6 +14,10 @@ from src.market_data.adapters.composite import (
     CompositeTetherCrossMarketAdapter,
 )
 from src.market_data.adapters.global_usdt_reference import GlobalUsdtReferenceAdapter
+from src.market_data.adapters.mark_orderbook_gap_hunt import (
+    BinanceMarkOrderbookGapHuntAdapter,
+    BybitMarkOrderbookGapHuntAdapter,
+)
 from src.market_data.adapters.replay import ReplayMarketDataAdapter
 from src.market_data.adapters.upbit import UpbitPublicSpotAdapter
 
@@ -42,6 +46,10 @@ def build_adapter(adapter_id: str, config: dict[str, Any] | None = None) -> Mark
         return ReplayMarketDataAdapter(adapter_id, fixture_path=fixture_path, config=adapter_config)
     if adapter_type == "bybit_public":
         return BybitPublicMarketDataAdapter(adapter_id, config=adapter_config)
+    if adapter_type == "binance_mark_orderbook_gap_hunt":
+        return BinanceMarkOrderbookGapHuntAdapter(adapter_id, config=adapter_config)
+    if adapter_type == "bybit_mark_orderbook_gap_hunt":
+        return BybitMarkOrderbookGapHuntAdapter(adapter_id, config=adapter_config)
     if adapter_type == "upbit_public_spot":
         return UpbitPublicSpotAdapter(adapter_id, config=adapter_config)
     if adapter_type == "bithumb_public_spot":
