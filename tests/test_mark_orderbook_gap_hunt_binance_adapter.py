@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from src.market_data.adapters.base import MarketDataAdapterError
 from src.market_data.adapters.mark_orderbook_gap_hunt import BinanceMarkOrderbookGapHuntAdapter
+from src.market_data.packet_builder import OpportunityPacketBuilder
 from src.market_data.http_client import HttpJsonResponse
 from src.market_data.registry import build_adapter, list_adapters, load_market_data_config
 from src.schemas.opportunity_packet import OpportunityPacket
@@ -108,6 +109,18 @@ class BinanceMarkOrderbookGapHuntAdapterTests(unittest.TestCase):
         self.assertEqual(len(snapshot["observations"]), 1)
         self.assertEqual(len(snapshot["candidates"]), 1)
         self.assertEqual(snapshot["extensions"]["adapter_metadata"]["no_trade_only"], True)
+
+    def test_packet_builder_accepts_adapter_snapshot_for_collect_cli_flow(self) -> None:
+        snapshot = _adapter(FakeHttpClient(_binance_responses())).fetch_snapshot()
+        packet = OpportunityPacketBuilder().build(snapshot)
+
+        self.assertEqual(packet.strategy_family, "mark_orderbook_gap_hunt")
+        self.assertEqual(packet.strategy_id, "mark_orderbook_gap_hunt_v0")
+        self.assertEqual(packet.signal_type, "mark_orderbook_gap_hunt")
+        self.assertEqual(len(packet.observations), 1)
+        self.assertEqual(len(packet.candidates), 1)
+        self.assertEqual(packet.candidates[0].candidate_type, "mark_orderbook_gap_observation")
+        self.assertEqual(packet.extensions["adapter_metadata"]["execution_policy"], "NO_TRADE_ONLY")
 
     def test_parser_output_ok_feeds_readiness_helper(self) -> None:
         packet = _adapter(FakeHttpClient(_binance_responses())).fetch_packet()
