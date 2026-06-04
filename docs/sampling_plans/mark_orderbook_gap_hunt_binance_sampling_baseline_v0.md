@@ -137,3 +137,8 @@ A future `Mark-Orderbook Gap Hunt Binance Sampling Baseline v0` implementation P
 - include a handoff evidence file;
 - include user-local smoke only as evidence, not as a Codex workspace merge requirement;
 - keep Bybit/OKX and multi-venue composite work out of scope.
+
+
+## Implementation note from Sampling Baseline v0
+
+The follow-up Sampling Baseline v0 implementation should preserve this planning scope. The first implementation target is minimal summary-field extraction in `src/market_data/sampling.py` plus mocked tests for `mark_orderbook_gap_hunt` packet consumption. Any user-local sampling JSON remains a smoke artifact and must not be committed. Future work after implementation should record user-local sampling evidence separately and must not add alert, Council auto-call, active promotion, execution, private API, Bybit/OKX registration, or multi-venue composite behavior.
