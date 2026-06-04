@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
+import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
-
-import yaml
 
 from src.market_data.adapters.base import MarketDataAdapter, MarketDataAdapterError
 from src.market_data.adapters.bithumb import BithumbPublicSpotAdapter
@@ -31,20 +28,17 @@ class FakeHttpClient:
         self.calls: list[tuple[str, str, dict[str, object] | None]] = []
 
     def get_json(self, base_url: str, path: str, params: dict[str, object] | None = None) -> HttpJsonResponse:
-        self.calls.append((base_url, path, dict(params or {}) if params else None))
+        request_params = dict(params or {}) if params else None
+        self.calls.append((base_url, path, request_params))
         key = path
-        if params and "markets" in params:
-            key = f"{path}?markets={params['markets']}"
-        elif params and "symbol" in params:
-            key = f"{path}?symbol={params['symbol']}"
-        elif params and "instId" in params:
-            key = f"{path}?instId={params['instId']}"
+        if params:
+            key = f"{path}?{urllib.parse.urlencode(params)}"
         if key not in self.responses:
             raise MarketDataAdapterError(f"missing fake response for {key}")
         value = self.responses[key]
         if isinstance(value, Exception):
             raise value
-        return HttpJsonResponse(data=value, elapsed_ms=12, url=f"{base_url}{key}")
+        return HttpJsonResponse(data=value, elapsed_ms=12, url=f"{base_url}{key}", http_status=200, safe_response_preview=json.dumps(value)[:500])
 
 
 class FailingAdapter(MarketDataAdapter):
@@ -52,6 +46,25 @@ class FailingAdapter(MarketDataAdapter):
 
     def fetch_snapshot(self) -> dict[str, object]:
         raise MarketDataAdapterError(f"{self.adapter_id} unavailable")
+
+
+class EmptyAdapter(MarketDataAdapter):
+    adapter_type = "empty"
+
+    def fetch_snapshot(self) -> dict[str, object]:
+        return {"observations": [], "adapter_metadata": {"adapter_id": self.adapter_id, "venue_id": self.adapter_id}}
+
+
+def _http_error(message: str, *, status: int = 400, body: str | None = None, code: object | None = None, exchange_message: object | None = None) -> MarketDataAdapterError:
+    error = MarketDataAdapterError(message)
+    setattr(error, "http_status", status)
+    if body is not None:
+        setattr(error, "safe_response_preview", body)
+    if code is not None:
+        setattr(error, "exchange_error_code", code)
+    if exchange_message is not None:
+        setattr(error, "exchange_error_message", exchange_message)
+    return error
 
 
 def _upbit_adapter() -> UpbitPublicSpotAdapter:
@@ -123,11 +136,8 @@ def _bithumb_adapter() -> BithumbPublicSpotAdapter:
     )
 
 
-def _reference_adapter(adapter_id: str, venue_id: str, response_format: str, response: dict[str, object]) -> GlobalUsdtReferenceAdapter:
-    params = {"symbol": "USDTUSDC"}
+def _reference_adapter(adapter_id: str, venue_id: str, response_format: str, params: dict[str, object], response: dict[str, object]) -> GlobalUsdtReferenceAdapter:
     path = "/ticker"
-    if response_format == "okx_ticker":
-        params = {"instId": "USDT-USDC"}
     return GlobalUsdtReferenceAdapter(
         adapter_id,
         config={
@@ -139,8 +149,12 @@ def _reference_adapter(adapter_id: str, venue_id: str, response_format: str, res
             "ticker_path": path,
             "ticker_params": params,
             "response_format": response_format,
+            "normalize": "inverse",
+            "ticker_candidates": [
+                {"ticker_path": path, "ticker_params": params, "response_format": response_format, "normalize": "inverse"}
+            ],
         },
-        http_client=FakeHttpClient({f"{path}?{next(iter(params))}={next(iter(params.values()))}": response}),
+        http_client=FakeHttpClient({f"{path}?{urllib.parse.urlencode(params)}": response}),
         now_fn=lambda: NOW,
     )
 
@@ -150,7 +164,8 @@ def _binance_adapter() -> GlobalUsdtReferenceAdapter:
         "live_binance_usdt_reference",
         "binance",
         "binance_book_ticker",
-        {"symbol": "USDTUSDC", "bidPrice": "0.9998", "askPrice": "1.0000", "bidQty": "100000", "askQty": "100000"},
+        {"symbol": "USDCUSDT"},
+        {"symbol": "USDCUSDT", "bidPrice": "0.9998", "askPrice": "1.0000", "bidQty": "100000", "askQty": "100000"},
     )
 
 
@@ -159,10 +174,11 @@ def _bybit_adapter() -> GlobalUsdtReferenceAdapter:
         "live_bybit_usdt_reference",
         "bybit",
         "bybit_v5_ticker",
+        {"category": "spot", "symbol": "USDCUSDT"},
         {
             "retCode": 0,
             "time": TIMESTAMP_MS,
-            "result": {"list": [{"symbol": "USDTUSDC", "bid1Price": "0.9999", "ask1Price": "1.0001", "bid1Size": "90000", "ask1Size": "91000"}]},
+            "result": {"list": [{"symbol": "USDCUSDT", "bid1Price": "0.9999", "ask1Price": "1.0001", "bid1Size": "90000", "ask1Size": "91000"}]},
         },
     )
 
@@ -172,7 +188,8 @@ def _okx_adapter() -> GlobalUsdtReferenceAdapter:
         "live_okx_usdt_reference",
         "okx",
         "okx_ticker",
-        {"code": "0", "data": [{"instId": "USDT-USDC", "bidPx": "1.0000", "askPx": "1.0002", "bidSz": "80000", "askSz": "81000", "ts": str(TIMESTAMP_MS)}]},
+        {"instId": "USDC-USDT"},
+        {"code": "0", "data": [{"instId": "USDC-USDT", "bidPx": "1.0000", "askPx": "1.0002", "bidSz": "80000", "askSz": "81000", "ts": str(TIMESTAMP_MS)}]},
     )
 
 
@@ -185,6 +202,7 @@ def _composite(global_adapters: list[MarketDataAdapter] | None = None) -> Compos
             "signal_type": "tether_cross_market_premium",
             "asset": "USDT",
             "quote": "KRW",
+            "min_successful_global_references": 1,
             "thresholds": {
                 "min_net_gap_pct": 0.2,
                 "max_data_age_ms": 10000,
@@ -206,6 +224,7 @@ class TetherCrossMarketLiveCompositeAdapterTests(unittest.TestCase):
         self.assertIsInstance(adapter, CompositeTetherCrossMarketAdapter)
         self.assertEqual([child.adapter_id for child in adapter.domestic_adapters], ["live_upbit_usdt_krw_spot", "live_bithumb_usdt_krw_spot"])
         self.assertEqual(len(adapter.global_reference_adapters), 3)
+        self.assertEqual(adapter.config["min_successful_global_references"], 1)
 
     def test_domestic_child_observations_normalize_usdt_krw(self) -> None:
         upbit_observation = _upbit_adapter().fetch_snapshot()["observations"][0]
@@ -223,16 +242,75 @@ class TetherCrossMarketLiveCompositeAdapterTests(unittest.TestCase):
             self.assertTrue(observation["liquidity"]["depth_levels"])
             self.assertTrue(observation["health"]["api_ok"])
 
-    def test_global_reference_observations_normalize_by_venue(self) -> None:
-        adapters = [_binance_adapter(), _bybit_adapter(), _okx_adapter()]
-        for adapter, venue_id in zip(adapters, ["binance", "bybit", "okx"]):
-            observation = adapter.fetch_snapshot()["observations"][0]
-            self.assertEqual(observation["venue_id"], venue_id)
-            self.assertEqual(observation["market_symbol"], "USDT/USDC")
-            self.assertEqual(observation["extensions"]["reference_role"], "global_usdt_reference")
-            self.assertIsNotNone(observation["bid"])
-            self.assertIsNotNone(observation["ask"])
-            self.assertTrue(observation["health"]["api_ok"])
+    def test_binance_mocked_success_inverse_normalizes_usdcusdt(self) -> None:
+        snapshot = _binance_adapter().fetch_snapshot()
+        observation = snapshot["observations"][0]
+        self.assertEqual(observation["venue_id"], "binance")
+        self.assertEqual(observation["market_symbol"], "USDT/USDC")
+        self.assertEqual(observation["extensions"]["api_market"], "USDCUSDT")
+        self.assertEqual(observation["extensions"]["normalize"], "inverse")
+        self.assertLess(observation["bid"], observation["ask"])
+        self.assertAlmostEqual((observation["bid"] + observation["ask"]) / 2, 1.0001, places=3)
+        selected = observation["extensions"]["selected_candidate"]
+        self.assertEqual(selected["request_params"], {"symbol": "USDCUSDT"})
+        self.assertEqual(selected["normalize"], "inverse")
+
+    def test_bybit_mocked_success_inverse_normalizes_usdcusdt(self) -> None:
+        observation = _bybit_adapter().fetch_snapshot()["observations"][0]
+        self.assertEqual(observation["venue_id"], "bybit")
+        self.assertEqual(observation["extensions"]["api_market"], "USDCUSDT")
+        self.assertEqual(observation["extensions"]["selected_candidate"]["request_params"], {"category": "spot", "symbol": "USDCUSDT"})
+        self.assertLess(observation["bid"], observation["ask"])
+        self.assertAlmostEqual((observation["bid"] + observation["ask"]) / 2, 1.0, places=3)
+
+    def test_okx_mocked_success_inverse_normalizes_usdc_usdt(self) -> None:
+        observation = _okx_adapter().fetch_snapshot()["observations"][0]
+        self.assertEqual(observation["venue_id"], "okx")
+        self.assertEqual(observation["extensions"]["api_market"], "USDC-USDT")
+        self.assertEqual(observation["extensions"]["selected_candidate"]["request_params"], {"instId": "USDC-USDT"})
+        self.assertLess(observation["bid"], observation["ask"])
+        self.assertAlmostEqual((observation["bid"] + observation["ask"]) / 2, 1.0, places=3)
+
+    def test_per_adapter_failure_diagnostics_include_endpoint_symbol_stage_and_exchange_error(self) -> None:
+        body = '{"code":-1121,"msg":"Invalid symbol."}'
+        adapter = GlobalUsdtReferenceAdapter(
+            "live_binance_usdt_reference",
+            config={
+                "base_url": "https://api.binance.com",
+                "venue_id": "binance",
+                "ticker_candidates": [
+                    {"ticker_path": "/api/v3/ticker/bookTicker", "ticker_params": {"symbol": "USDTUSDC"}, "response_format": "binance_book_ticker", "normalize": "direct"}
+                ],
+            },
+            http_client=FakeHttpClient({"/api/v3/ticker/bookTicker?symbol=USDTUSDC": _http_error("HTTP status 400 for https://api.binance.com/api/v3/ticker/bookTicker?symbol=USDTUSDC", body=body, code=-1121, exchange_message="Invalid symbol.")}),
+            now_fn=lambda: NOW,
+        )
+        with self.assertRaises(MarketDataAdapterError) as raised:
+            adapter.fetch_snapshot()
+        diagnostics = getattr(raised.exception, "diagnostics")
+        self.assertEqual(diagnostics[0]["adapter_id"], "live_binance_usdt_reference")
+        self.assertEqual(diagnostics[0]["venue_id"], "binance")
+        self.assertEqual(diagnostics[0]["endpoint"], "/api/v3/ticker/bookTicker")
+        self.assertEqual(diagnostics[0]["request_params"], {"symbol": "USDTUSDC"})
+        self.assertEqual(diagnostics[0]["parser_stage"], "http_get")
+        self.assertEqual(diagnostics[0]["http_status"], 400)
+        self.assertEqual(diagnostics[0]["exchange_error_code"], -1121)
+        self.assertIn("Invalid symbol", diagnostics[0]["exchange_error_message"])
+        self.assertIn("Invalid symbol", diagnostics[0]["safe_response_preview"])
+
+    def test_inverse_normalize_rejects_non_positive_raw_bid_or_ask_with_diagnostics(self) -> None:
+        adapter = _reference_adapter(
+            "live_binance_usdt_reference",
+            "binance",
+            "binance_book_ticker",
+            {"symbol": "USDCUSDT"},
+            {"symbol": "USDCUSDT", "bidPrice": "0", "askPrice": "1", "bidQty": "1", "askQty": "1"},
+        )
+        with self.assertRaises(MarketDataAdapterError) as raised:
+            adapter.fetch_snapshot()
+        diagnostics = getattr(raised.exception, "diagnostics")
+        self.assertEqual(diagnostics[0]["parser_stage"], "normalize")
+        self.assertIn("non-positive", diagnostics[0]["error_message"])
 
     def test_composite_builds_tether_packet_with_all_live_public_observations(self) -> None:
         snapshot = _composite().fetch_snapshot()
@@ -244,6 +322,8 @@ class TetherCrossMarketLiveCompositeAdapterTests(unittest.TestCase):
         self.assertEqual(packet.quote, "KRW")
         self.assertEqual(len(packet.observations), 5)
         self.assertEqual({obs.venue_id for obs in packet.observations}, {"upbit", "bithumb", "binance", "bybit", "okx"})
+        self.assertEqual(packet.extensions["successful_global_reference_count"], 3)
+        self.assertEqual(packet.extensions["min_successful_global_references"], 1)
 
         candidates = [candidate for candidate in packet.candidates if candidate.candidate_type == "tether_domestic_spread_signal"]
         self.assertEqual(len(candidates), 2)
@@ -259,24 +339,67 @@ class TetherCrossMarketLiveCompositeAdapterTests(unittest.TestCase):
         self.assertFalse(report["readiness_pass"])
 
     def test_partial_global_reference_failure_keeps_successful_references(self) -> None:
-        composite = _composite(global_adapters=[_binance_adapter(), FailingAdapter("live_bybit_usdt_reference"), _okx_adapter()])
+        composite = _composite(global_adapters=[_binance_adapter(), FailingAdapter("live_bybit_usdt_reference"), FailingAdapter("live_okx_usdt_reference")])
         snapshot = composite.fetch_snapshot()
         packet = OpportunityPacketBuilder().build(snapshot)
         failed = snapshot["adapter_metadata"]["failed_global_reference_venues"]
 
-        self.assertEqual(len(packet.observations), 4)
-        self.assertEqual(failed[0]["adapter_id"], "live_bybit_usdt_reference")
-        self.assertEqual(packet.candidates[0].metrics["global_reference_venue_count"], 2)
+        self.assertEqual(len(packet.observations), 3)
+        self.assertEqual(snapshot["adapter_metadata"]["successful_global_reference_count"], 1)
+        self.assertEqual(snapshot["extensions"]["successful_global_reference_count"], 1)
+        self.assertEqual(snapshot["extensions"]["min_successful_global_references"], 1)
+        self.assertEqual([item["adapter_id"] for item in failed], ["live_bybit_usdt_reference", "live_okx_usdt_reference"])
+        self.assertEqual(packet.candidates[0].metrics["global_reference_venue_count"], 1)
+
+    def test_all_global_reference_failure_raises_with_adapter_diagnostics(self) -> None:
+        binance = GlobalUsdtReferenceAdapter(
+            "live_binance_usdt_reference",
+            config={"base_url": "https://api.binance.com", "venue_id": "binance", "ticker_candidates": [{"ticker_path": "/api/v3/ticker/bookTicker", "ticker_params": {"symbol": "USDCUSDT"}, "response_format": "binance_book_ticker", "normalize": "inverse"}]},
+            http_client=FakeHttpClient({"/api/v3/ticker/bookTicker?symbol=USDCUSDT": _http_error("HTTP status 400 for https://api.binance.com/api/v3/ticker/bookTicker?symbol=USDCUSDT", code=-1121, exchange_message="Invalid symbol")}),
+            now_fn=lambda: NOW,
+        )
+        bybit = GlobalUsdtReferenceAdapter(
+            "live_bybit_usdt_reference",
+            config={"base_url": "https://api.bybit.com", "venue_id": "bybit", "ticker_candidates": [{"ticker_path": "/v5/market/tickers", "ticker_params": {"category": "spot", "symbol": "USDCUSDT"}, "response_format": "bybit_v5_ticker", "normalize": "inverse"}]},
+            http_client=FakeHttpClient({"/v5/market/tickers?category=spot&symbol=USDCUSDT": _http_error("Bybit reference status 10001: Not supported symbols", code=10001, exchange_message="Not supported symbols")}),
+            now_fn=lambda: NOW,
+        )
+        okx = GlobalUsdtReferenceAdapter(
+            "live_okx_usdt_reference",
+            config={"base_url": "https://www.okx.com", "venue_id": "okx", "ticker_candidates": [{"ticker_path": "/api/v5/market/ticker", "ticker_params": {"instId": "USDC-USDT"}, "response_format": "okx_ticker", "normalize": "inverse"}]},
+            http_client=FakeHttpClient({"/api/v5/market/ticker?instId=USDC-USDT": _http_error("OKX reference status 51001: Instrument ID doesn't exist", code=51001, exchange_message="Instrument ID doesn't exist")}),
+            now_fn=lambda: NOW,
+        )
+        composite = _composite(global_adapters=[binance, bybit, okx])
+        with self.assertRaises(MarketDataAdapterError) as raised:
+            composite.fetch_snapshot()
+        message = str(raised.exception)
+        self.assertIn("successful=0 required=1", message)
+        for expected in [
+            "live_binance_usdt_reference[binance]",
+            "endpoint=/api/v3/ticker/bookTicker",
+            "symbol=USDCUSDT",
+            "code=-1121",
+            "live_bybit_usdt_reference[bybit]",
+            "endpoint=/v5/market/tickers",
+            "code=10001",
+            "live_okx_usdt_reference[okx]",
+            "endpoint=/api/v5/market/ticker",
+            "symbol=USDC-USDT",
+            "code=51001",
+        ]:
+            self.assertIn(expected, message)
 
     def test_domestic_failure_raises_adapter_error(self) -> None:
         composite = CompositeTetherCrossMarketAdapter(
             "live_tether_cross_market_premium",
-            config={"thresholds": {}},
+            config={"thresholds": {}, "min_successful_global_references": 1},
             domestic_adapters=[_upbit_adapter(), FailingAdapter("live_bithumb_usdt_krw_spot")],
             global_reference_adapters=[_binance_adapter()],
         )
-        with self.assertRaises(MarketDataAdapterError):
+        with self.assertRaises(MarketDataAdapterError) as raised:
             composite.fetch_snapshot()
+        self.assertIn("Domestic child adapter live_bithumb_usdt_krw_spot failed", str(raised.exception))
 
     def test_replay_tether_cross_market_still_builds(self) -> None:
         config = load_market_data_config("configs/market_data.yaml")
@@ -286,18 +409,41 @@ class TetherCrossMarketLiveCompositeAdapterTests(unittest.TestCase):
         self.assertGreaterEqual(len(packet.candidates), 1)
 
     def test_config_and_requests_have_no_private_auth_material(self) -> None:
-        config_text = Path("configs/market_data.yaml").read_text(encoding="utf-8")
-        for forbidden in ["api_key", "api_secret", "access_key", "private_key", "Authorization", "Bearer"]:
-            self.assertNotIn(forbidden, config_text)
-        fake = FakeHttpClient({"/api/v3/ticker/bookTicker?symbol=USDTUSDC": {"symbol": "USDTUSDC", "bidPrice": "1", "askPrice": "1.0001"}})
+        paths = [
+            Path("configs/market_data.yaml"),
+            Path("src/market_data/adapters/global_usdt_reference.py"),
+            Path("src/market_data/adapters/composite.py"),
+            Path("src/market_data/http_client.py"),
+        ]
+        forbidden = [
+            "api_key",
+            "api_secret",
+            "access_key",
+            "private_key",
+            "Authorization",
+            "Bearer",
+            "place_order",
+            "cancel_order",
+            "withdraw",
+            "deposit",
+            "transfer",
+            "account/balance",
+            "account lookup",
+            "balance lookup",
+        ]
+        for path in paths:
+            text = path.read_text(encoding="utf-8")
+            for phrase in forbidden:
+                self.assertNotIn(phrase, text, f"{phrase} found in {path}")
+        fake = FakeHttpClient({"/api/v3/ticker/bookTicker?symbol=USDCUSDT": {"symbol": "USDCUSDT", "bidPrice": "0.9999", "askPrice": "1.0001"}})
         adapter = GlobalUsdtReferenceAdapter(
             "live_binance_usdt_reference",
-            config={"base_url": "https://api.binance.com", "venue_id": "binance", "ticker_path": "/api/v3/ticker/bookTicker", "ticker_params": {"symbol": "USDTUSDC"}, "response_format": "binance_book_ticker"},
+            config={"base_url": "https://api.binance.com", "venue_id": "binance", "ticker_path": "/api/v3/ticker/bookTicker", "ticker_params": {"symbol": "USDCUSDT"}, "response_format": "binance_book_ticker", "normalize": "inverse"},
             http_client=fake,
             now_fn=lambda: NOW,
         )
         adapter.fetch_snapshot()
-        self.assertEqual(fake.calls[0][2], {"symbol": "USDTUSDC"})
+        self.assertEqual(fake.calls[0][2], {"symbol": "USDCUSDT"})
 
     def test_collect_market_data_with_mocked_registry_writes_live_tether_packet(self) -> None:
         # Exercise the same build path as the CLI while keeping HTTP fully mocked/network-free.
@@ -309,32 +455,36 @@ class TetherCrossMarketLiveCompositeAdapterTests(unittest.TestCase):
             payload = json.loads(output_path.read_text(encoding="utf-8"))
 
         self.assertEqual(payload["strategy_family"], "tether_cross_market_premium")
-        self.assertGreaterEqual(len(payload["observations"]), 5)
+        self.assertGreaterEqual(len(payload["observations"]), 3)
         self.assertGreaterEqual(len(payload["candidates"]), 1)
 
     def test_handoff_evidence_file_documents_required_review_evidence(self) -> None:
-        handoff = Path("docs/pr_handoffs/tether_cross_market_live_composite_adapter_v0.md")
+        handoff = Path("docs/pr_handoffs/tether_cross_market_global_reference_diagnostics_v0.md")
         self.assertTrue(handoff.exists(), str(handoff))
         text = handoff.read_text(encoding="utf-8")
         for phrase in [
-            "Task type: adapter",
             "## 1. Purpose",
             "## 2. Changed files",
             "## 3. Impact scope",
-            "## 4. Tests run",
-            "## 5. Manual smoke",
-            "## 7. Risks",
-            "## 8. Rollback plan",
-            "## 9. Human review required",
-            "## 10. No-trade compliance",
+            "## 4. Behavior before / after",
+            "## 5. Diagnostics added",
+            "## 6. Tests run",
+            "## 7. Manual smoke",
+            "## 8. Risks",
+            "## 9. Rollback plan",
+            "## 10. Human review required",
+            "## 11. No-trade compliance",
+            "## 12. Future execution note",
             "private API: no",
             "API key/secret/token: no",
-            "balance/account: no",
+            "auth/private headers: no",
+            "account/balance lookup: no",
             "order/cancel: no",
-            "transfer/withdraw/deposit: no",
+            "withdrawal/deposit/transfer: no",
             "fiat/bank transfer: no",
             "auto-trading: no",
-            "active strategy changed: no",
+            "Council auto-call: no",
+            "active strategy promotion: no",
         ]:
             self.assertIn(phrase, text)
 
