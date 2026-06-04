@@ -1,0 +1,81 @@
+{
+  "venue_id": "bybit",
+  "ticker_response": {
+    "retCode": 0,
+    "retMsg": "OK",
+    "result": {
+      "category": "linear",
+      "list": [
+        {
+          "symbol": "BTCUSDT",
+          "indexPrice": "62868.33",
+          "markPrice": "62830.36",
+          "fundingRate": "-0.00000239",
+          "nextFundingTime": "1780560000000"
+        }
+      ]
+    },
+    "time": 1780536387150
+  },
+  "orderbook_response": {
+    "retCode": 0,
+    "retMsg": "OK",
+    "result": {
+      "s": "BTCUSDT",
+      "a": [["62841.00", "0.946"]],
+      "b": [["62840.90", "6.030"]],
+      "ts": 1780536387136,
+      "u": 3797999,
+      "seq": 584271322300,
+      "cts": 1780536387135
+    },
+    "time": 1780536387150
+  },
+  "metadata_response": {
+    "retCode": 0,
+    "result": {
+      "category": "linear",
+      "list": [
+        {
+          "symbol": "BTCUSDT",
+          "contractType": "LinearPerpetual",
+          "status": "Trading",
+          "baseCoin": "BTC",
+          "quoteCoin": "USDT",
+          "settleCoin": "USDT",
+          "priceScale": "2",
+          "priceFilter": {"tickSize": "0.10"},
+          "lotSizeFilter": {
+            "maxOrderQty": "1500.000",
+            "minOrderQty": "0.001",
+            "qtyStep": "0.001",
+            "maxMktOrderQty": "150.000",
+            "minNotionalValue": "5"
+          },
+          "fundingInterval": 480
+        }
+      ]
+    }
+  },
+  "expected_normalized": {
+    "venue_id": "bybit",
+    "instrument_id": "BTCUSDT",
+    "instrument_type": "linear_perpetual",
+    "mark_price": "62830.36",
+    "index_price": "62868.33",
+    "bid": "62840.90",
+    "ask": "62841.00",
+    "bid_size_raw": "6.030",
+    "ask_size_raw": "0.946",
+    "tick_size": "0.10",
+    "quantity_step": "0.001",
+    "min_order_size": "0.001",
+    "min_notional": "5",
+    "settle_coin": "USDT",
+    "funding_interval": 480,
+    "comparability_pass": true,
+    "required_missing_fields": [],
+    "readiness_status": "WATCH",
+    "execution_allowed": false
+  }
+}
