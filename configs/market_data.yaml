@@ -29,6 +29,87 @@ adapters:
     strategy_id: usdt_krw_global_reference_v0
     fixture_path: data/fixtures/market_data/tether_cross_market_snapshot.json
     note: "Experimental/non-active Tether cross-market replay packet. No trading, no Council handoff."
+
+  live_binance_mark_orderbook_gap_btcusdt:
+    type: binance_mark_orderbook_gap_hunt
+    enabled: false
+    experimental: true
+    experimental_strategy: true
+    non_active_strategy: true
+    no_trade_only: true
+    execution_policy: NO_TRADE_ONLY
+    strategy_family: mark_orderbook_gap_hunt
+    strategy_id: mark_orderbook_gap_hunt_v0
+    base_url: https://fapi.binance.com
+    symbol: BTCUSDT
+    asset: BTC
+    quote: USDT
+    orderbook_limit: 5
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_slippage_buffer_pct: 0.20
+    min_net_gap_pct: 0
+    max_data_age_ms: 10000
+    require_freshness: true
+    liquidity_pass: true
+    size_or_notional_resolved: true
+    note: "Experimental/non-active Mark-Orderbook Gap Hunt Binance adapter. Public read-only; NO_TRADE_ONLY; no sampling/Council/alert/execution."
+
+  live_bybit_mark_orderbook_gap_btcusdt:
+    type: bybit_mark_orderbook_gap_hunt
+    enabled: false
+    experimental: true
+    strategy_family: mark_orderbook_gap_hunt
+    strategy_id: mark_orderbook_gap_hunt_v0
+    base_url: https://api.bybit.com
+    category: linear
+    symbol: BTCUSDT
+    asset: BTC
+    quote: USDT
+    orderbook_limit: 5
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_slippage_buffer_pct: "0.20"
+    min_net_gap_pct: "0"
+    max_data_age_ms: 10000
+    require_freshness: true
+    liquidity_pass: true
+    size_or_notional_resolved: true
+    execution_policy: NO_TRADE_ONLY
+    experimental_strategy: true
+    non_active_strategy: true
+    no_trade_only: true
+    note: Public read-only Bybit V5 linear BTCUSDT Mark-Orderbook Gap Hunt adapter. Experimental/non-active/NO_TRADE_ONLY.
+
+  live_okx_mark_orderbook_gap_btc_usdt_swap:
+    type: okx_mark_orderbook_gap_hunt
+    enabled: false
+    experimental: true
+    strategy_family: mark_orderbook_gap_hunt
+    strategy_id: mark_orderbook_gap_hunt_v0
+    base_url: https://www.okx.com
+    inst_type: SWAP
+    inst_id: BTC-USDT-SWAP
+    asset: BTC
+    quote: USDT
+    orderbook_size: 5
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_slippage_buffer_pct: "0.20"
+    min_net_gap_pct: "0"
+    max_data_age_ms: 10000
+    require_freshness: true
+    liquidity_pass: true
+    size_or_notional_resolved: true
+    execution_policy: NO_TRADE_ONLY
+    experimental_strategy: true
+    non_active_strategy: true
+    no_trade_only: true
+    note: Public read-only OKX BTC-USDT-SWAP Mark-Orderbook Gap Hunt adapter. Experimental/non-active/NO_TRADE_ONLY.
+
   live_bybit_mark_orderbook_gap:
     type: bybit_public
     base_url: https://api.bybit.com
@@ -169,8 +250,15 @@ adapters:
     instrument_type: reference
     ticker_path: /api/v3/ticker/bookTicker
     ticker_params:
-      symbol: USDTUSDC
+      symbol: USDCUSDT
     response_format: binance_book_ticker
+    normalize: inverse
+    ticker_candidates:
+      - ticker_path: /api/v3/ticker/bookTicker
+        ticker_params:
+          symbol: USDCUSDT
+        response_format: binance_book_ticker
+        normalize: inverse
     timeout_seconds: 10
     max_retries: 2
     user_agent: agent-council-market-data-v1
@@ -187,8 +275,16 @@ adapters:
     ticker_path: /v5/market/tickers
     ticker_params:
       category: spot
-      symbol: USDTUSDC
+      symbol: USDCUSDT
     response_format: bybit_v5_ticker
+    normalize: inverse
+    ticker_candidates:
+      - ticker_path: /v5/market/tickers
+        ticker_params:
+          category: spot
+          symbol: USDCUSDT
+        response_format: bybit_v5_ticker
+        normalize: inverse
     timeout_seconds: 10
     max_retries: 2
     user_agent: agent-council-market-data-v1
@@ -204,8 +300,15 @@ adapters:
     instrument_type: reference
     ticker_path: /api/v5/market/ticker
     ticker_params:
-      instId: USDT-USDC
+      instId: USDC-USDT
     response_format: okx_ticker
+    normalize: inverse
+    ticker_candidates:
+      - ticker_path: /api/v5/market/ticker
+        ticker_params:
+          instId: USDC-USDT
+        response_format: okx_ticker
+        normalize: inverse
     timeout_seconds: 10
     max_retries: 2
     user_agent: agent-council-market-data-v1
@@ -226,6 +329,7 @@ adapters:
       - live_binance_usdt_reference
       - live_bybit_usdt_reference
       - live_okx_usdt_reference
+    min_successful_global_references: 1
     thresholds:
       min_net_gap_pct: 0.2
       max_data_age_ms: 3000
