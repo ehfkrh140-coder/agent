@@ -95,6 +95,8 @@ def _sample_record(index: int, collected_at: str, packet: OpportunityPacket, rea
     latency = _latency_summary(packet)
     data_age_ms = latency.get("max_data_age_ms")
     negative_data_age_observed = _is_negative_number(data_age_ms)
+    index_price_null_observed = first_observation is not None and getattr(first_observation, "index_price", None) is None
+    stale_assumption_wording_observed = _stale_assumption_wording_observed(packet)
     return {
         "sample_index": index,
         "collected_at_utc": collected_at,
@@ -128,10 +130,12 @@ def _sample_record(index: int, collected_at: str, packet: OpportunityPacket, rea
         "negative_data_age_observed": negative_data_age_observed,
         "mark_price": getattr(first_observation, "mark_price", None),
         "index_price": getattr(first_observation, "index_price", None),
+        "index_price_null_observed": index_price_null_observed,
         "bid": getattr(first_observation, "bid", None),
         "ask": getattr(first_observation, "ask", None),
         "no_trade_only": _adapter_metadata_value(packet, "no_trade_only"),
         "execution_policy": _adapter_metadata_value(packet, "execution_policy"),
+        "stale_assumption_wording_observed": stale_assumption_wording_observed,
         "latency": latency,
         "opportunity_packet": packet.model_dump(mode="json"),
     }
@@ -203,11 +207,17 @@ def _enrich_sampling_summary(summary: dict[str, Any], records: list[dict[str, An
     data_ages = [_float_or_none(sample.get("data_age_ms")) for sample in ok_samples]
     data_ages = [value for value in data_ages if value is not None]
     timestamp_data_age_watch_count = sum(1 for value in data_ages if value < 0)
+    index_price_null_count = sum(1 for sample in ok_samples if sample.get("index_price_null_observed"))
+    stale_assumption_wording_count = sum(1 for sample in ok_samples if sample.get("stale_assumption_wording_observed"))
     enriched.update(
         {
             "positive_gross_gap_count": positive_gross_gap_count,
             "timestamp_data_age_watch_count": timestamp_data_age_watch_count,
             "negative_data_age_observed": timestamp_data_age_watch_count > 0,
+            "index_price_null_count": index_price_null_count,
+            "index_price_null_observed": index_price_null_count > 0,
+            "stale_assumption_wording_count": stale_assumption_wording_count,
+            "stale_assumption_wording_observed": stale_assumption_wording_count > 0,
             "readiness_status_counts": readiness_counts,
             "watch_count": readiness_counts.get("WATCH", 0),
             "reject_count": readiness_counts.get("REJECT", 0),
@@ -247,6 +257,20 @@ def _recommended_default_decision(
     if best_candidate and best_candidate.get("recommended_default_decision") is not None:
         return best_candidate.get("recommended_default_decision")
     return readiness.get("recommended_default_decision")
+
+
+def _stale_assumption_wording_observed(packet: OpportunityPacket) -> bool:
+    stale_phrases = (
+        "no config registration in this pr",
+        "no registry integration in this pr",
+        "no sampling integration in this pr",
+    )
+    for candidate in packet.candidates:
+        for assumption in candidate.assumptions or []:
+            text = str(assumption).casefold()
+            if any(phrase in text for phrase in stale_phrases):
+                return True
+    return False
 
 
 def _adapter_metadata_value(packet: OpportunityPacket, key: str) -> Any:
