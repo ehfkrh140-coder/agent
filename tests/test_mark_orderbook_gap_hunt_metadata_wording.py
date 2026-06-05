@@ -317,10 +317,14 @@ class MarkOrderbookGapHuntMetadataWordingTests(unittest.TestCase):
             self.assertEqual(candidate.metrics["readiness_status"], readiness["readiness_status"])
             self.assertEqual(candidate.metrics["recommended_default_decision"], readiness["recommended_default_decision"])
             self.assertEqual(candidate.metrics["readiness_pass"], readiness["readiness_pass"])
+            self.assertEqual(candidate.metrics["estimated_net_gap_pct"], readiness["metrics"]["estimated_net_gap_pct"])
+            self.assertEqual(candidate.metrics["max_observed_gap_pct"], readiness["metrics"]["max_observed_gap_pct"])
+            self.assertEqual(candidate.metrics["parser_normalized_status"], packet.extensions["parser_output"]["normalized_status"])
             self.assertEqual(str(candidate.gross_gap_pct), str(float(readiness["metrics"]["max_observed_gap_pct"])))
             self.assertEqual(str(candidate.estimated_net_gap_pct), str(float(readiness["metrics"]["estimated_net_gap_pct"])))
             self.assertEqual(candidate.required_missing_fields, readiness["required_missing_fields"])
             self.assertEqual(candidate.assumptions, expected_candidate_assumptions)
+            self.assertEqual(candidate.extensions["warnings"], readiness["warnings"])
             self.assertIn("non_positive_estimated_net_gap", readiness["warnings"])
 
 

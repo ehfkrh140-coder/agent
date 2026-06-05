@@ -99,6 +99,36 @@ def _mark_orderbook_gap_add_response_diagnostic_fields(
     )
 
 
+def _mark_orderbook_gap_candidate_readiness_fields(
+    *,
+    readiness: dict[str, Any],
+    parser_output: dict[str, Any],
+) -> dict[str, Any]:
+    metrics = readiness.get("metrics") or {}
+    return {
+        "gross_gap_pct": _float_or_none(metrics.get("max_observed_gap_pct")),
+        "estimated_net_gap_pct": _float_or_none(metrics.get("estimated_net_gap_pct")),
+        "long_gap_pct": _float_or_none(metrics.get("long_gap_pct")),
+        "short_gap_pct": _float_or_none(metrics.get("short_gap_pct")),
+        "liquidity_pass": metrics.get("liquidity_pass"),
+        "freshness_pass": metrics.get("freshness_pass"),
+        "gap_pass": readiness.get("readiness_status") == "WATCH",
+        "metrics": {
+            "readiness_status": readiness.get("readiness_status"),
+            "recommended_default_decision": readiness.get("recommended_default_decision"),
+            "readiness_pass": readiness.get("readiness_pass"),
+            "comparability_pass": metrics.get("comparability_pass"),
+            "fee_slippage_buffer_pct": metrics.get("fee_slippage_buffer_pct"),
+            "estimated_net_gap_pct": metrics.get("estimated_net_gap_pct"),
+            "max_observed_gap_pct": metrics.get("max_observed_gap_pct"),
+            "parser_normalized_status": parser_output.get("normalized_status"),
+        },
+        "required_missing_fields": list(readiness.get("required_missing_fields") or []),
+        "warnings": list(readiness.get("warnings") or []),
+        "comparability_pass": metrics.get("comparability_pass"),
+    }
+
+
 class BinanceMarkOrderbookGapHuntAdapter(MarketDataAdapter):
     """Public read-only Binance USDⓈ-M BTCUSDT Mark-Orderbook Gap adapter.
 
@@ -306,7 +336,10 @@ class BinanceMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 "parser_normalized_status": parser_output.get("normalized_status"),
             },
         )
-        metrics = readiness.get("metrics") or {}
+        candidate_readiness_fields = _mark_orderbook_gap_candidate_readiness_fields(
+            readiness=readiness,
+            parser_output=parser_output,
+        )
         candidate = OpportunityCandidate(
             candidate_id=f"{observation_id}_candidate",
             candidate_type="mark_orderbook_gap_observation",
@@ -315,24 +348,15 @@ class BinanceMarkOrderbookGapHuntAdapter(MarketDataAdapter):
             source_observation_id=observation_id,
             source_venue_id="binance",
             direction="analysis_only_mark_orderbook_gap_observation",
-            gross_gap_pct=_float_or_none(metrics.get("max_observed_gap_pct")),
-            estimated_net_gap_pct=_float_or_none(metrics.get("estimated_net_gap_pct")),
-            long_gap_pct=_float_or_none(metrics.get("long_gap_pct")),
-            short_gap_pct=_float_or_none(metrics.get("short_gap_pct")),
-            liquidity_pass=metrics.get("liquidity_pass"),
-            freshness_pass=metrics.get("freshness_pass"),
-            gap_pass=readiness.get("readiness_status") == "WATCH",
+            gross_gap_pct=candidate_readiness_fields["gross_gap_pct"],
+            estimated_net_gap_pct=candidate_readiness_fields["estimated_net_gap_pct"],
+            long_gap_pct=candidate_readiness_fields["long_gap_pct"],
+            short_gap_pct=candidate_readiness_fields["short_gap_pct"],
+            liquidity_pass=candidate_readiness_fields["liquidity_pass"],
+            freshness_pass=candidate_readiness_fields["freshness_pass"],
+            gap_pass=candidate_readiness_fields["gap_pass"],
             guard_pass=True,
-            metrics={
-                "readiness_status": readiness.get("readiness_status"),
-                "recommended_default_decision": readiness.get("recommended_default_decision"),
-                "readiness_pass": readiness.get("readiness_pass"),
-                "comparability_pass": metrics.get("comparability_pass"),
-                "fee_slippage_buffer_pct": metrics.get("fee_slippage_buffer_pct"),
-                "estimated_net_gap_pct": metrics.get("estimated_net_gap_pct"),
-                "max_observed_gap_pct": metrics.get("max_observed_gap_pct"),
-                "parser_normalized_status": parser_output.get("normalized_status"),
-            },
+            metrics=candidate_readiness_fields["metrics"],
             thresholds={
                 "fee_slippage_buffer_pct": self.fee_slippage_buffer_pct,
                 "min_net_gap_pct": self.min_net_gap_pct,
@@ -340,11 +364,11 @@ class BinanceMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 "require_freshness": self.require_freshness,
                 "size_or_notional_resolved": self.size_or_notional_resolved,
             },
-            required_missing_fields=list(readiness.get("required_missing_fields") or []),
+            required_missing_fields=candidate_readiness_fields["required_missing_fields"],
             assumptions=_mark_orderbook_gap_candidate_assumptions(),
             extensions={
-                "warnings": list(readiness.get("warnings") or []),
-                "comparability_pass": metrics.get("comparability_pass"),
+                "warnings": candidate_readiness_fields["warnings"],
+                "comparability_pass": candidate_readiness_fields["comparability_pass"],
             },
         )
         return OpportunityPacket(
@@ -592,7 +616,10 @@ class BybitMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 "parser_normalized_status": parser_output.get("normalized_status"),
             },
         )
-        metrics = readiness.get("metrics") or {}
+        candidate_readiness_fields = _mark_orderbook_gap_candidate_readiness_fields(
+            readiness=readiness,
+            parser_output=parser_output,
+        )
         candidate = OpportunityCandidate(
             candidate_id=f"{observation_id}_candidate",
             candidate_type="mark_orderbook_gap_observation",
@@ -601,24 +628,15 @@ class BybitMarkOrderbookGapHuntAdapter(MarketDataAdapter):
             source_observation_id=observation_id,
             source_venue_id="bybit",
             direction="analysis_only_mark_orderbook_gap_observation",
-            gross_gap_pct=_float_or_none(metrics.get("max_observed_gap_pct")),
-            estimated_net_gap_pct=_float_or_none(metrics.get("estimated_net_gap_pct")),
-            long_gap_pct=_float_or_none(metrics.get("long_gap_pct")),
-            short_gap_pct=_float_or_none(metrics.get("short_gap_pct")),
-            liquidity_pass=metrics.get("liquidity_pass"),
-            freshness_pass=metrics.get("freshness_pass"),
-            gap_pass=readiness.get("readiness_status") == "WATCH",
+            gross_gap_pct=candidate_readiness_fields["gross_gap_pct"],
+            estimated_net_gap_pct=candidate_readiness_fields["estimated_net_gap_pct"],
+            long_gap_pct=candidate_readiness_fields["long_gap_pct"],
+            short_gap_pct=candidate_readiness_fields["short_gap_pct"],
+            liquidity_pass=candidate_readiness_fields["liquidity_pass"],
+            freshness_pass=candidate_readiness_fields["freshness_pass"],
+            gap_pass=candidate_readiness_fields["gap_pass"],
             guard_pass=True,
-            metrics={
-                "readiness_status": readiness.get("readiness_status"),
-                "recommended_default_decision": readiness.get("recommended_default_decision"),
-                "readiness_pass": readiness.get("readiness_pass"),
-                "comparability_pass": metrics.get("comparability_pass"),
-                "fee_slippage_buffer_pct": metrics.get("fee_slippage_buffer_pct"),
-                "estimated_net_gap_pct": metrics.get("estimated_net_gap_pct"),
-                "max_observed_gap_pct": metrics.get("max_observed_gap_pct"),
-                "parser_normalized_status": parser_output.get("normalized_status"),
-            },
+            metrics=candidate_readiness_fields["metrics"],
             thresholds={
                 "fee_slippage_buffer_pct": self.fee_slippage_buffer_pct,
                 "min_net_gap_pct": self.min_net_gap_pct,
@@ -626,11 +644,11 @@ class BybitMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 "require_freshness": self.require_freshness,
                 "size_or_notional_resolved": self.size_or_notional_resolved,
             },
-            required_missing_fields=list(readiness.get("required_missing_fields") or []),
+            required_missing_fields=candidate_readiness_fields["required_missing_fields"],
             assumptions=_mark_orderbook_gap_candidate_assumptions(),
             extensions={
-                "warnings": list(readiness.get("warnings") or []),
-                "comparability_pass": metrics.get("comparability_pass"),
+                "warnings": candidate_readiness_fields["warnings"],
+                "comparability_pass": candidate_readiness_fields["comparability_pass"],
             },
         )
         return OpportunityPacket(
@@ -894,7 +912,10 @@ class OkxMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 "parser_normalized_status": parser_output.get("normalized_status"),
             },
         )
-        metrics = readiness.get("metrics") or {}
+        candidate_readiness_fields = _mark_orderbook_gap_candidate_readiness_fields(
+            readiness=readiness,
+            parser_output=parser_output,
+        )
         candidate = OpportunityCandidate(
             candidate_id=f"{observation_id}_candidate",
             candidate_type="mark_orderbook_gap_observation",
@@ -903,24 +924,15 @@ class OkxMarkOrderbookGapHuntAdapter(MarketDataAdapter):
             source_observation_id=observation_id,
             source_venue_id="okx",
             direction="analysis_only_mark_orderbook_gap_observation",
-            gross_gap_pct=_float_or_none(metrics.get("max_observed_gap_pct")),
-            estimated_net_gap_pct=_float_or_none(metrics.get("estimated_net_gap_pct")),
-            long_gap_pct=_float_or_none(metrics.get("long_gap_pct")),
-            short_gap_pct=_float_or_none(metrics.get("short_gap_pct")),
-            liquidity_pass=metrics.get("liquidity_pass"),
-            freshness_pass=metrics.get("freshness_pass"),
-            gap_pass=readiness.get("readiness_status") == "WATCH",
+            gross_gap_pct=candidate_readiness_fields["gross_gap_pct"],
+            estimated_net_gap_pct=candidate_readiness_fields["estimated_net_gap_pct"],
+            long_gap_pct=candidate_readiness_fields["long_gap_pct"],
+            short_gap_pct=candidate_readiness_fields["short_gap_pct"],
+            liquidity_pass=candidate_readiness_fields["liquidity_pass"],
+            freshness_pass=candidate_readiness_fields["freshness_pass"],
+            gap_pass=candidate_readiness_fields["gap_pass"],
             guard_pass=True,
-            metrics={
-                "readiness_status": readiness.get("readiness_status"),
-                "recommended_default_decision": readiness.get("recommended_default_decision"),
-                "readiness_pass": readiness.get("readiness_pass"),
-                "comparability_pass": metrics.get("comparability_pass"),
-                "fee_slippage_buffer_pct": metrics.get("fee_slippage_buffer_pct"),
-                "estimated_net_gap_pct": metrics.get("estimated_net_gap_pct"),
-                "max_observed_gap_pct": metrics.get("max_observed_gap_pct"),
-                "parser_normalized_status": parser_output.get("normalized_status"),
-            },
+            metrics=candidate_readiness_fields["metrics"],
             thresholds={
                 "fee_slippage_buffer_pct": self.fee_slippage_buffer_pct,
                 "min_net_gap_pct": self.min_net_gap_pct,
@@ -928,11 +940,11 @@ class OkxMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 "require_freshness": self.require_freshness,
                 "size_or_notional_resolved": self.size_or_notional_resolved,
             },
-            required_missing_fields=list(readiness.get("required_missing_fields") or []),
+            required_missing_fields=candidate_readiness_fields["required_missing_fields"],
             assumptions=_mark_orderbook_gap_candidate_assumptions(),
             extensions={
-                "warnings": list(readiness.get("warnings") or []),
-                "comparability_pass": metrics.get("comparability_pass"),
+                "warnings": candidate_readiness_fields["warnings"],
+                "comparability_pass": candidate_readiness_fields["comparability_pass"],
             },
         )
         return OpportunityPacket(
