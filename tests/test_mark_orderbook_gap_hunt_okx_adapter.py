@@ -7,10 +7,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
+import yaml
+
 from src.market_data.adapters.base import MarketDataAdapterError
 from src.market_data.adapters.mark_orderbook_gap_hunt import OkxMarkOrderbookGapHuntAdapter
 from src.market_data.http_client import HttpJsonResponse
-from src.market_data.registry import list_adapters, load_market_data_config
+from src.market_data.registry import build_adapter, list_adapters, load_market_data_config
 from src.schemas.opportunity_packet import OpportunityPacket
 
 FIXTURE_DIR = Path("tests/fixtures/mark_orderbook_gap_hunt")
@@ -223,13 +225,84 @@ class OkxMarkOrderbookGapHuntAdapterTests(unittest.TestCase):
         getenv.assert_not_called()
         self.assertEqual(packet.strategy_family, "mark_orderbook_gap_hunt")
 
-    def test_adapter_is_not_registered_in_config_or_registry_in_this_pr(self) -> None:
+    def test_adapter_is_registered_disabled_no_trade_only_in_config_and_registry(self) -> None:
         config = load_market_data_config()
-        serialized_config = json.dumps(config).lower()
+        adapter_id = OkxMarkOrderbookGapHuntAdapter.DEFAULT_ADAPTER_ID
 
-        self.assertNotIn(OkxMarkOrderbookGapHuntAdapter.DEFAULT_ADAPTER_ID, list_adapters(config))
-        self.assertNotIn("okx_mark_orderbook_gap_hunt", serialized_config)
-        self.assertNotIn("live_okx_mark_orderbook_gap_btc_usdt_swap", serialized_config)
+        self.assertIn(adapter_id, list_adapters(config))
+        adapter_config = config["adapters"][adapter_id]
+        self.assertEqual(adapter_config["type"], "okx_mark_orderbook_gap_hunt")
+        self.assertFalse(adapter_config["enabled"])
+        self.assertTrue(adapter_config["experimental"])
+        self.assertEqual(adapter_config["strategy_family"], "mark_orderbook_gap_hunt")
+        self.assertEqual(adapter_config["strategy_id"], "mark_orderbook_gap_hunt_v0")
+        self.assertEqual(adapter_config["base_url"], "https://www.okx.com")
+        self.assertEqual(adapter_config["inst_type"], "SWAP")
+        self.assertEqual(adapter_config["inst_id"], "BTC-USDT-SWAP")
+        self.assertEqual(adapter_config["asset"], "BTC")
+        self.assertEqual(adapter_config["quote"], "USDT")
+        self.assertEqual(adapter_config["orderbook_size"], 5)
+        self.assertEqual(adapter_config["timeout_seconds"], 10)
+        self.assertEqual(adapter_config["max_retries"], 2)
+        self.assertEqual(adapter_config["user_agent"], "agent-council-market-data-v1")
+        self.assertEqual(adapter_config["fee_slippage_buffer_pct"], "0.20")
+        self.assertEqual(adapter_config["min_net_gap_pct"], "0")
+        self.assertEqual(adapter_config["max_data_age_ms"], 10000)
+        self.assertTrue(adapter_config["require_freshness"])
+        self.assertTrue(adapter_config["liquidity_pass"])
+        self.assertTrue(adapter_config["size_or_notional_resolved"])
+        self.assertEqual(adapter_config["execution_policy"], "NO_TRADE_ONLY")
+        self.assertTrue(adapter_config["experimental_strategy"])
+        self.assertTrue(adapter_config["non_active_strategy"])
+        self.assertTrue(adapter_config["no_trade_only"])
+
+        adapter = build_adapter(adapter_id, config)
+        self.assertIsInstance(adapter, OkxMarkOrderbookGapHuntAdapter)
+        self.assertEqual(adapter.adapter_id, adapter_id)
+        self.assertEqual(adapter.adapter_type, "okx_mark_orderbook_gap_hunt")
+
+    def test_okx_registration_does_not_add_private_or_index_reference_semantics(self) -> None:
+        config = load_market_data_config()
+        adapter_config = config["adapters"][OkxMarkOrderbookGapHuntAdapter.DEFAULT_ADAPTER_ID]
+        serialized_config = json.dumps(adapter_config).lower()
+
+        for forbidden in (
+            "api_key",
+            "api_secret",
+            "authorization",
+            "bearer",
+            "account",
+            "balance",
+            "position",
+            "order_id",
+            "client_order",
+            "cancel",
+            "withdraw",
+            "deposit",
+            "transfer",
+            "private",
+        ):
+            self.assertNotIn(forbidden, serialized_config)
+
+        self.assertNotIn("index_price", adapter_config)
+        self.assertNotIn("index_reference", adapter_config)
+        self.assertNotIn("ticker_path", adapter_config)
+        self.assertNotIn("council_auto_call", adapter_config)
+        self.assertNotIn("alert_trigger", adapter_config)
+        self.assertNotIn("execution_allowed", adapter_config)
+
+    def test_okx_registration_does_not_change_active_strategy_or_existing_mark_adapters(self) -> None:
+        current = yaml.safe_load(Path("configs/strategy_current.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(current["active_strategy"]["strategy_id"], "cross_exchange_spot_spread_v1")
+
+        config = load_market_data_config()
+        adapters = config["adapters"]
+        self.assertEqual(adapters["live_binance_mark_orderbook_gap_btcusdt"]["type"], "binance_mark_orderbook_gap_hunt")
+        self.assertEqual(adapters["live_binance_mark_orderbook_gap_btcusdt"]["execution_policy"], "NO_TRADE_ONLY")
+        self.assertFalse(adapters["live_binance_mark_orderbook_gap_btcusdt"]["enabled"])
+        self.assertEqual(adapters["live_bybit_mark_orderbook_gap_btcusdt"]["type"], "bybit_mark_orderbook_gap_hunt")
+        self.assertEqual(adapters["live_bybit_mark_orderbook_gap_btcusdt"]["execution_policy"], "NO_TRADE_ONLY")
+        self.assertFalse(adapters["live_bybit_mark_orderbook_gap_btcusdt"]["enabled"])
 
 
 if __name__ == "__main__":

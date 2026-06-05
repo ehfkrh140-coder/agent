@@ -83,6 +83,33 @@ adapters:
     no_trade_only: true
     note: Public read-only Bybit V5 linear BTCUSDT Mark-Orderbook Gap Hunt adapter. Experimental/non-active/NO_TRADE_ONLY.
 
+  live_okx_mark_orderbook_gap_btc_usdt_swap:
+    type: okx_mark_orderbook_gap_hunt
+    enabled: false
+    experimental: true
+    strategy_family: mark_orderbook_gap_hunt
+    strategy_id: mark_orderbook_gap_hunt_v0
+    base_url: https://www.okx.com
+    inst_type: SWAP
+    inst_id: BTC-USDT-SWAP
+    asset: BTC
+    quote: USDT
+    orderbook_size: 5
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_slippage_buffer_pct: "0.20"
+    min_net_gap_pct: "0"
+    max_data_age_ms: 10000
+    require_freshness: true
+    liquidity_pass: true
+    size_or_notional_resolved: true
+    execution_policy: NO_TRADE_ONLY
+    experimental_strategy: true
+    non_active_strategy: true
+    no_trade_only: true
+    note: Public read-only OKX BTC-USDT-SWAP Mark-Orderbook Gap Hunt adapter. Experimental/non-active/NO_TRADE_ONLY.
+
   live_bybit_mark_orderbook_gap:
     type: bybit_public
     base_url: https://api.bybit.com
