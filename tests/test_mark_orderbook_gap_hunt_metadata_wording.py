@@ -248,6 +248,82 @@ class MarkOrderbookGapHuntMetadataWordingTests(unittest.TestCase):
             self.assertIn("msg", diagnostic)
 
 
+    def test_venue_specific_boundaries_and_candidate_mapping_are_locked(self) -> None:
+        binance = BinanceMarkOrderbookGapHuntAdapter(
+            http_client=FakeHttpClient(_binance_responses()),
+            now_fn=lambda: NOW,
+            config=_config(),
+        ).fetch_packet()
+        bybit = BybitMarkOrderbookGapHuntAdapter(
+            http_client=FakeHttpClient(_bybit_responses()),
+            now_fn=lambda: NOW - timedelta(seconds=10),
+            config=_config(),
+        ).fetch_packet()
+        okx = OkxMarkOrderbookGapHuntAdapter(
+            http_client=FakeHttpClient(_okx_responses()),
+            now_fn=lambda: NOW - timedelta(seconds=10),
+            config=_config(),
+        ).fetch_packet()
+
+        self.assertEqual(binance.extensions["adapter_metadata"]["venue_id"], "binance")
+        self.assertEqual(binance.extensions["parser_output"]["parser_mode"], "binance_usdm")
+        self.assertEqual(binance.observations[0].market_symbol, "BTCUSDT")
+        self.assertEqual(binance.observations[0].extensions["bid_size_unit"], "base_asset")
+        self.assertEqual(binance.observations[0].extensions["ask_size_unit"], "base_asset")
+        self.assertEqual(binance.extensions["parser_output"]["min_order_size"], "0.001")
+        self.assertEqual(binance.extensions["parser_output"]["min_notional"], "50")
+        self.assertEqual(binance.extensions["parser_output"]["parser_warnings"], [])
+
+        self.assertEqual(bybit.extensions["adapter_metadata"]["venue_id"], "bybit")
+        self.assertEqual(bybit.extensions["adapter_metadata"]["category"], "linear")
+        self.assertEqual(bybit.extensions["parser_output"]["parser_mode"], "bybit_linear")
+        self.assertEqual(bybit.observations[0].market_symbol, "BTCUSDT")
+        self.assertEqual(bybit.observations[0].extensions["bid_size_unit"], "base_asset")
+        self.assertEqual(bybit.observations[0].extensions["ask_size_unit"], "base_asset")
+        self.assertIn("funding_interval=480", bybit.extensions["parser_output"]["parser_warnings"])
+        self.assertIn("funding_interval=480", bybit.extensions["readiness"]["warnings"])
+        self.assertLess(bybit.extensions["parser_output"]["data_age_ms"], 0)
+        self.assertLess(bybit.observations[0].data_quality.max_data_age_ms, 0)
+
+        self.assertEqual(okx.extensions["adapter_metadata"]["venue_id"], "okx")
+        self.assertEqual(okx.extensions["adapter_metadata"]["instType"], "SWAP")
+        self.assertEqual(okx.extensions["adapter_metadata"]["instId"], "BTC-USDT-SWAP")
+        self.assertEqual(okx.extensions["parser_output"]["parser_mode"], "okx_swap")
+        self.assertEqual(okx.observations[0].market_symbol, "BTC-USDT-SWAP")
+        self.assertIsNone(okx.extensions["parser_output"]["index_price"])
+        self.assertIsNone(okx.observations[0].index_price)
+        self.assertEqual(okx.observations[0].extensions["bid_size_unit"], "contracts")
+        self.assertEqual(okx.observations[0].extensions["ask_size_unit"], "contracts")
+        self.assertEqual(okx.observations[0].extensions["contract_value"], "0.01")
+        self.assertEqual(okx.observations[0].extensions["contract_multiplier"], "1")
+        self.assertEqual(okx.observations[0].extensions["lot_size"], "0.01")
+        self.assertEqual(okx.observations[0].extensions["min_order_size"], "0.01")
+        self.assertLess(okx.extensions["parser_output"]["data_age_ms"], 0)
+        self.assertLess(okx.observations[0].data_quality.max_data_age_ms, 0)
+
+        expected_candidate_assumptions = [
+            "mark price is not executable",
+            "WATCH is analysis-only",
+            "no private API",
+            "no trading behavior",
+        ]
+        for packet in (binance, bybit, okx):
+            metadata = packet.extensions["adapter_metadata"]
+            self.assertTrue(metadata["no_trade_only"])
+            self.assertEqual(metadata["execution_policy"], "NO_TRADE_ONLY")
+
+            readiness = packet.extensions["readiness"]
+            candidate = packet.candidates[0]
+            self.assertEqual(candidate.metrics["readiness_status"], readiness["readiness_status"])
+            self.assertEqual(candidate.metrics["recommended_default_decision"], readiness["recommended_default_decision"])
+            self.assertEqual(candidate.metrics["readiness_pass"], readiness["readiness_pass"])
+            self.assertEqual(str(candidate.gross_gap_pct), str(float(readiness["metrics"]["max_observed_gap_pct"])))
+            self.assertEqual(str(candidate.estimated_net_gap_pct), str(float(readiness["metrics"]["estimated_net_gap_pct"])))
+            self.assertEqual(candidate.required_missing_fields, readiness["required_missing_fields"])
+            self.assertEqual(candidate.assumptions, expected_candidate_assumptions)
+            self.assertIn("non_positive_estimated_net_gap", readiness["warnings"])
+
+
 
 if __name__ == "__main__":
     unittest.main()
