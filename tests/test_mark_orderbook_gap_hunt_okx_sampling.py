@@ -20,6 +20,17 @@ class StaticPacketAdapter:
         return copy.deepcopy(self.packet)
 
 
+class SequencePacketAdapter:
+    def __init__(self, packets: list[dict]) -> None:
+        self.packets = [copy.deepcopy(packet) for packet in packets]
+        self.index = 0
+
+    def fetch_snapshot(self) -> dict:
+        packet = self.packets[self.index]
+        self.index += 1
+        return copy.deepcopy(packet)
+
+
 def _okx_mark_packet(
     *,
     readiness_status: str = "REJECT",
@@ -243,6 +254,67 @@ class OkxMarkOrderbookGapHuntSamplingTests(unittest.TestCase):
         self.assertEqual(summary["stale_assumption_wording_count"], 0)
         self.assertFalse(summary["stale_assumption_wording_observed"])
         self.assertFalse(result["council_recommended"])
+
+    def test_three_sample_okx_summary_fields_are_under_summary_key(self) -> None:
+        result = run_market_sampling(
+            SequencePacketAdapter(
+                [
+                    _okx_mark_packet(data_age_ms=124),
+                    _okx_mark_packet(data_age_ms=98),
+                    _okx_mark_packet(data_age_ms=131),
+                ]
+            ),
+            adapter_id="live_okx_mark_orderbook_gap_btc_usdt_swap",
+            samples_requested=3,
+            interval_seconds=0,
+            now_fn=lambda: NOW,
+        )
+
+        self.assertNotIn("samples_ok", result)
+        summary = result["summary"]
+        self.assertEqual(result["samples_requested"], 3)
+        self.assertEqual(summary["samples_requested"], 3)
+        self.assertEqual(summary["samples_ok"], 3)
+        self.assertEqual(summary["samples_error"], 0)
+        self.assertEqual(summary["candidate_seen_count"], 3)
+        self.assertEqual(summary["positive_gross_gap_count"], 3)
+        self.assertEqual(summary["positive_net_gap_count"], 0)
+        self.assertEqual(summary["readiness_status_counts"], {"REJECT": 3})
+        self.assertEqual(summary["watch_count"], 0)
+        self.assertEqual(summary["reject_count"], 3)
+        self.assertEqual(summary["need_data_count"], 0)
+        self.assertEqual(summary["max_estimated_net_gap_pct"], -0.19497984092370926)
+        self.assertEqual(summary["avg_estimated_net_gap_pct"], -0.19497984092370926)
+        self.assertEqual(summary["max_gross_gap_pct"], 0.0050201590762907295)
+        self.assertEqual(summary["avg_latency_ms"], 17)
+        self.assertEqual(summary["max_latency_ms"], 17)
+        self.assertEqual(summary["persistence_status"], "NO_PERSISTENT_EDGE")
+        self.assertEqual(summary["recommended_default_decision"], "REJECT")
+        self.assertFalse(result["council_recommended"])
+        self.assertEqual(summary["timestamp_data_age_watch_count"], 0)
+        self.assertFalse(summary["negative_data_age_observed"])
+        self.assertEqual(summary["index_price_null_count"], 3)
+        self.assertTrue(summary["index_price_null_observed"])
+        self.assertEqual(summary["stale_assumption_wording_count"], 0)
+        self.assertFalse(summary["stale_assumption_wording_observed"])
+        self.assertEqual([sample["status"] for sample in result["samples"]], ["ok", "ok", "ok"])
+        self.assertEqual([sample["readiness_status"] for sample in result["samples"]], ["REJECT", "REJECT", "REJECT"])
+        self.assertEqual([sample["venue_id"] for sample in result["samples"]], ["okx", "okx", "okx"])
+        self.assertEqual(
+            [sample["market_symbol"] for sample in result["samples"]],
+            ["BTC-USDT-SWAP", "BTC-USDT-SWAP", "BTC-USDT-SWAP"],
+        )
+        self.assertEqual([sample["parser_normalized_status"] for sample in result["samples"]], ["OK", "OK", "OK"])
+        self.assertEqual([sample["data_age_ms"] for sample in result["samples"]], [124, 98, 131])
+        self.assertEqual([sample["index_price"] for sample in result["samples"]], [None, None, None])
+        self.assertEqual([sample["index_price_null_observed"] for sample in result["samples"]], [True, True, True])
+        self.assertEqual([sample["timestamp_data_age_watch"] for sample in result["samples"]], [False, False, False])
+        self.assertEqual([sample["stale_assumption_wording_observed"] for sample in result["samples"]], [False, False, False])
+        self.assertEqual([sample["no_trade_only"] for sample in result["samples"]], [True, True, True])
+        self.assertEqual(
+            [sample["execution_policy"] for sample in result["samples"]],
+            ["NO_TRADE_ONLY", "NO_TRADE_ONLY", "NO_TRADE_ONLY"],
+        )
 
     def test_negative_data_age_is_surfaced_without_clamping_or_reinterpretation(self) -> None:
         result = run_market_sampling(

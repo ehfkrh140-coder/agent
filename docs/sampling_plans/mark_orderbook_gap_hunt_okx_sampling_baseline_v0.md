@@ -160,3 +160,17 @@ Future `Mark-Orderbook Gap Hunt OKX Sampling Baseline v0` PR should:
 ## 12. Next recommended step
 
 Open a separate `Mark-Orderbook Gap Hunt OKX Sampling Baseline v0` implementation PR after human review. Keep it mocked-first, `NO_TRADE_ONLY`, generated-artifact-free, and separate from alert/Council/execution/private API, multi-venue composite, generic/base adapter extraction, timestamp policy, and OKX index/reference semantics changes.
+
+## 13. Inspection path clarification
+
+`market_sampling_v1` output is an envelope with sample records at `samples[]` and aggregate sampling metrics under the nested `summary` object. Inspect aggregate fields with `summary.<field>` rather than top-level `<field>` lookups. For example:
+
+```python
+summary = payload["summary"]
+print(summary["samples_ok"])
+print(summary["candidate_seen_count"])
+print(summary["readiness_status_counts"])
+print(summary["index_price_null_observed"])
+```
+
+Top-level fields remain reserved for envelope metadata such as `schema_version`, `adapter_id`, `created_at_utc`, `samples_requested`, `interval_seconds`, `max_errors`, `samples`, `summary`, and Council handoff metadata. A top-level `payload.get("samples_ok")` returning `None` is therefore an inspection-path mismatch, not by itself an OKX collection, parser, readiness, serialization, or summary-enrichment failure.
