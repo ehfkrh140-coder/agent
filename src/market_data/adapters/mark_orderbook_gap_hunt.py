@@ -70,6 +70,35 @@ def _mark_orderbook_gap_candidate_assumptions() -> list[str]:
     return list(MARK_ORDERBOOK_GAP_CANDIDATE_ASSUMPTIONS)
 
 
+def _mark_orderbook_gap_public_get_diagnostic(
+    *,
+    path: str,
+    params: dict[str, Any],
+    parser_stage: str,
+) -> dict[str, Any]:
+    return {
+        "endpoint": path,
+        "params": dict(params),
+        "parser_stage": parser_stage,
+    }
+
+
+def _mark_orderbook_gap_add_response_diagnostic_fields(
+    diagnostic: dict[str, Any],
+    *,
+    response: HttpJsonResponse,
+    data: Any,
+) -> None:
+    diagnostic.update(
+        {
+            "http_status": getattr(response, "http_status", None),
+            "safe_response_preview": getattr(response, "safe_response_preview", None) or _safe_preview(data),
+            "elapsed_ms": getattr(response, "elapsed_ms", None),
+            "url": getattr(response, "url", None),
+        }
+    )
+
+
 class BinanceMarkOrderbookGapHuntAdapter(MarketDataAdapter):
     """Public read-only Binance USDⓈ-M BTCUSDT Mark-Orderbook Gap adapter.
 
@@ -182,11 +211,11 @@ class BinanceMarkOrderbookGapHuntAdapter(MarketDataAdapter):
         parser_stage: str,
         diagnostics: list[dict[str, Any]],
     ) -> HttpJsonResponse:
-        diagnostic: dict[str, Any] = {
-            "endpoint": path,
-            "params": dict(params),
-            "parser_stage": parser_stage,
-        }
+        diagnostic = _mark_orderbook_gap_public_get_diagnostic(
+            path=path,
+            params=params,
+            parser_stage=parser_stage,
+        )
         try:
             response = self.http_client.get_json(self.base_url, path, params)
         except Exception as exc:  # noqa: BLE001 - attach safe diagnostics to adapter error
@@ -195,13 +224,10 @@ class BinanceMarkOrderbookGapHuntAdapter(MarketDataAdapter):
             error = MarketDataAdapterError(f"Binance mark-orderbook public fetch failed at {parser_stage}: {exc}")
             setattr(error, "diagnostics", diagnostics)
             raise error from exc
-        diagnostic.update(
-            {
-                "http_status": getattr(response, "http_status", None),
-                "safe_response_preview": getattr(response, "safe_response_preview", None) or _safe_preview(response.data),
-                "elapsed_ms": getattr(response, "elapsed_ms", None),
-                "url": getattr(response, "url", None),
-            }
+        _mark_orderbook_gap_add_response_diagnostic_fields(
+            diagnostic,
+            response=response,
+            data=response.data,
         )
         diagnostics.append(diagnostic)
         return response
@@ -469,11 +495,11 @@ class BybitMarkOrderbookGapHuntAdapter(MarketDataAdapter):
         parser_stage: str,
         diagnostics: list[dict[str, Any]],
     ) -> HttpJsonResponse:
-        diagnostic: dict[str, Any] = {
-            "endpoint": path,
-            "params": dict(params),
-            "parser_stage": parser_stage,
-        }
+        diagnostic = _mark_orderbook_gap_public_get_diagnostic(
+            path=path,
+            params=params,
+            parser_stage=parser_stage,
+        )
         try:
             response = self.http_client.get_json(self.base_url, path, params)
         except Exception as exc:  # noqa: BLE001 - attach safe diagnostics to adapter error
@@ -486,13 +512,10 @@ class BybitMarkOrderbookGapHuntAdapter(MarketDataAdapter):
         if isinstance(data, dict):
             diagnostic["retCode"] = data.get("retCode")
             diagnostic["retMsg"] = data.get("retMsg")
-        diagnostic.update(
-            {
-                "http_status": getattr(response, "http_status", None),
-                "safe_response_preview": getattr(response, "safe_response_preview", None) or _safe_preview(data),
-                "elapsed_ms": getattr(response, "elapsed_ms", None),
-                "url": getattr(response, "url", None),
-            }
+        _mark_orderbook_gap_add_response_diagnostic_fields(
+            diagnostic,
+            response=response,
+            data=data,
         )
         diagnostics.append(diagnostic)
         if isinstance(data, dict) and data.get("retCode") not in (None, 0, "0"):
@@ -762,11 +785,11 @@ class OkxMarkOrderbookGapHuntAdapter(MarketDataAdapter):
         parser_stage: str,
         diagnostics: list[dict[str, Any]],
     ) -> HttpJsonResponse:
-        diagnostic: dict[str, Any] = {
-            "endpoint": path,
-            "params": dict(params),
-            "parser_stage": parser_stage,
-        }
+        diagnostic = _mark_orderbook_gap_public_get_diagnostic(
+            path=path,
+            params=params,
+            parser_stage=parser_stage,
+        )
         try:
             response = self.http_client.get_json(self.base_url, path, params)
         except Exception as exc:  # noqa: BLE001 - attach safe diagnostics to adapter error
@@ -779,13 +802,10 @@ class OkxMarkOrderbookGapHuntAdapter(MarketDataAdapter):
         if isinstance(data, dict):
             diagnostic["code"] = data.get("code")
             diagnostic["msg"] = data.get("msg")
-        diagnostic.update(
-            {
-                "http_status": getattr(response, "http_status", None),
-                "safe_response_preview": getattr(response, "safe_response_preview", None) or _safe_preview(data),
-                "elapsed_ms": getattr(response, "elapsed_ms", None),
-                "url": getattr(response, "url", None),
-            }
+        _mark_orderbook_gap_add_response_diagnostic_fields(
+            diagnostic,
+            response=response,
+            data=data,
         )
         diagnostics.append(diagnostic)
         if isinstance(data, dict) and data.get("code") not in (None, "0", 0):

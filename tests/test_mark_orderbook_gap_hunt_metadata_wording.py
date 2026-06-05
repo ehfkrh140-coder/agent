@@ -166,6 +166,88 @@ class MarkOrderbookGapHuntMetadataWordingTests(unittest.TestCase):
                 readiness["recommended_default_decision"],
             )
 
+    def test_diagnostics_common_envelope_and_venue_status_fields_are_preserved(self) -> None:
+        binance = BinanceMarkOrderbookGapHuntAdapter(
+            http_client=FakeHttpClient(_binance_responses()),
+            now_fn=lambda: NOW,
+            config=_config(),
+        ).fetch_packet()
+        bybit = BybitMarkOrderbookGapHuntAdapter(
+            http_client=FakeHttpClient(_bybit_responses()),
+            now_fn=lambda: NOW,
+            config=_config(),
+        ).fetch_packet()
+        okx = OkxMarkOrderbookGapHuntAdapter(
+            http_client=FakeHttpClient(_okx_responses()),
+            now_fn=lambda: NOW,
+            config=_config(),
+        ).fetch_packet()
+
+        expected_paths_and_params = {
+            "binance": [
+                (BinanceMarkOrderbookGapHuntAdapter.MARK_PRICE_PATH, {"symbol": "BTCUSDT"}, "mark_price"),
+                (
+                    BinanceMarkOrderbookGapHuntAdapter.ORDERBOOK_PATH,
+                    {"symbol": "BTCUSDT", "limit": 5},
+                    "orderbook",
+                ),
+                (BinanceMarkOrderbookGapHuntAdapter.METADATA_PATH, {}, "metadata"),
+            ],
+            "bybit": [
+                (BybitMarkOrderbookGapHuntAdapter.TICKER_PATH, {"category": "linear", "symbol": "BTCUSDT"}, "ticker"),
+                (
+                    BybitMarkOrderbookGapHuntAdapter.ORDERBOOK_PATH,
+                    {"category": "linear", "symbol": "BTCUSDT", "limit": 5},
+                    "orderbook",
+                ),
+                (
+                    BybitMarkOrderbookGapHuntAdapter.METADATA_PATH,
+                    {"category": "linear", "symbol": "BTCUSDT"},
+                    "metadata",
+                ),
+            ],
+            "okx": [
+                (
+                    OkxMarkOrderbookGapHuntAdapter.MARK_PRICE_PATH,
+                    {"instType": "SWAP", "instId": "BTC-USDT-SWAP"},
+                    "mark_price",
+                ),
+                (
+                    OkxMarkOrderbookGapHuntAdapter.ORDERBOOK_PATH,
+                    {"instId": "BTC-USDT-SWAP", "sz": 5},
+                    "orderbook",
+                ),
+                (
+                    OkxMarkOrderbookGapHuntAdapter.METADATA_PATH,
+                    {"instType": "SWAP", "instId": "BTC-USDT-SWAP"},
+                    "metadata",
+                ),
+            ],
+        }
+
+        for venue_id, packet in (("binance", binance), ("bybit", bybit), ("okx", okx)):
+            diagnostics = packet.extensions["diagnostics"]
+            self.assertEqual(len(diagnostics), 3)
+            for diagnostic, (endpoint, params, parser_stage) in zip(
+                diagnostics, expected_paths_and_params[venue_id], strict=True
+            ):
+                self.assertEqual(diagnostic["endpoint"], endpoint)
+                self.assertEqual(diagnostic["params"], params)
+                self.assertEqual(diagnostic["parser_stage"], parser_stage)
+                self.assertEqual(diagnostic["http_status"], 200)
+                self.assertTrue(diagnostic["safe_response_preview"])
+                self.assertEqual(diagnostic["elapsed_ms"], 7)
+                self.assertTrue(diagnostic["url"].endswith(endpoint))
+
+        for diagnostic in bybit.extensions["diagnostics"]:
+            self.assertIn("retCode", diagnostic)
+            self.assertIn("retMsg", diagnostic)
+
+        for diagnostic in okx.extensions["diagnostics"]:
+            self.assertIn("code", diagnostic)
+            self.assertIn("msg", diagnostic)
+
+
 
 if __name__ == "__main__":
     unittest.main()
