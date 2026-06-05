@@ -4,17 +4,17 @@
 
 PR #116~#119 refactor 이후 Binance / Bybit / OKX `mark_orderbook_gap_hunt_v0` live public-read-only sampling path가 계속 정상인지 확인하기 위한 post-refactor smoke evidence handoff 문서다.
 
-Important limitation for this handoff:
+Correction note for this handoff:
 
-- The user-local result block provided to Codex was the literal placeholder `PASTE_USER_LOCAL_RESULT_HERE`.
-- Therefore this document records the required user-local commands, interpretation rules, no-trade boundaries, and the exact evidence fields that must be checked, but it does not fabricate venue-level result metrics.
-- Reviewers should replace the placeholder with actual user-local output in a follow-up evidence update if exact Binance / Bybit / OKX result values are required for merge evidence.
+- Initial PR #120 received the literal placeholder `PASTE_USER_LOCAL_RESULT_HERE`, so Codex recorded venue-level metrics as `not_provided` rather than fabricating values.
+- This follow-up correction reflects the actual user-local summary lines provided later by the user.
+- The generated JSON summary files remain smoke artifacts and are not committed.
 
 This evidence is intended as post-refactor runtime smoke evidence. It is not profitability evidence and does not prove a persistent edge.
 
 ## 2. User-local commands
 
-The user-local public-read-only smoke commands to record for the post-refactor check are:
+The user-local public-read-only smoke commands recorded for the post-refactor check are:
 
 ```bash
 python tools/sample_market_data.py --adapter live_binance_mark_orderbook_gap_btcusdt --samples 3 --interval 2 --output data/market_samples/mark_orderbook_gap_binance_post_refactor_smoke_3x_summary.json
@@ -32,84 +32,89 @@ These commands write generated sampling artifacts under `data/market_samples/`. 
 
 ## 3. Evidence summary
 
-### Input received by Codex
+### Input received for this correction
 
-- User-local result payload: `PASTE_USER_LOCAL_RESULT_HERE`
-- Exact venue-level metrics supplied: no
-- Generated JSON supplied for commit: no
-- Generated JSON committed by this PR: no
+The user provided these post-refactor user-local command summaries:
 
-Because exact user-local JSON output was not provided in the prompt, the venue-level fields below are intentionally left as `not_provided` rather than inferred.
+- Binance output path: `data\market_samples\mark_orderbook_gap_binance_post_refactor_smoke_3x_summary.json`
+- Binance summary: `status=NO_PERSISTENT_EDGE ok=3 errors=0 council_recommended=False`
+- Bybit output path: `data\market_samples\mark_orderbook_gap_bybit_post_refactor_smoke_3x_summary.json`
+- Bybit summary: `status=NO_PERSISTENT_EDGE ok=3 errors=0 council_recommended=False`
+- OKX output path: `data\market_samples\mark_orderbook_gap_okx_post_refactor_smoke_3x_summary.json`
+- OKX summary: `status=NO_PERSISTENT_EDGE ok=3 errors=0 council_recommended=False`
+
+Generated JSON files were not supplied for commit and are not committed by this PR.
 
 ### Binance
 
 - `adapter_id`: `live_binance_mark_orderbook_gap_btcusdt`
-- `samples_requested`: not_provided
-- `samples_ok`: not_provided
-- `samples_error`: not_provided
-- `candidate_seen_count`: not_provided
-- `readiness_status`: not_provided
-- `recommended_default_decision`: not_provided
-- `persistence_status` or summary status: not_provided
-- `council_recommended`: not_provided
-- `positive_net_gap_count`: not_provided
-- `no_trade_only`: not_provided
-- `execution_policy`: not_provided
-- `diagnostics_count`: not_provided
-- `stale_assumption_wording_observed`: not_provided
+- `samples_requested`: 3
+- `samples_ok`: 3
+- `samples_error`: 0
+- `summary status / persistence_status`: `NO_PERSISTENT_EDGE`
+- `council_recommended`: false
+- exact command output path: `data\market_samples\mark_orderbook_gap_binance_post_refactor_smoke_3x_summary.json`
+- exact `candidate_seen_count`: not_provided in pasted summary
+- exact `readiness_status`: not_provided in pasted summary
+- exact `recommended_default_decision`: not_provided in pasted summary
+- exact `positive_net_gap_count`: not_provided in pasted summary
+- exact `diagnostics_count`: not_provided in pasted summary
+- exact `stale_assumption_wording_observed`: not_provided in pasted summary
 
 ### Bybit
 
 - `adapter_id`: `live_bybit_mark_orderbook_gap_btcusdt`
-- `samples_requested`: not_provided
-- `samples_ok`: not_provided
-- `samples_error`: not_provided
-- `candidate_seen_count`: not_provided
-- `readiness_status`: not_provided
-- `recommended_default_decision`: not_provided
-- `persistence_status` or summary status: not_provided
-- `council_recommended`: not_provided
-- `positive_net_gap_count`: not_provided
-- `no_trade_only`: not_provided
-- `execution_policy`: not_provided
-- `diagnostics_count`: not_provided
-- `stale_assumption_wording_observed`: not_provided
+- `samples_requested`: 3
+- `samples_ok`: 3
+- `samples_error`: 0
+- `summary status / persistence_status`: `NO_PERSISTENT_EDGE`
+- `council_recommended`: false
+- exact command output path: `data\market_samples\mark_orderbook_gap_bybit_post_refactor_smoke_3x_summary.json`
+- exact `candidate_seen_count`: not_provided in pasted summary
+- exact `readiness_status`: not_provided in pasted summary
+- exact `recommended_default_decision`: not_provided in pasted summary
+- exact `positive_net_gap_count`: not_provided in pasted summary
+- exact `diagnostics_count`: not_provided in pasted summary
+- exact `stale_assumption_wording_observed`: not_provided in pasted summary
+- negative `data_age_ms`: keep as a watch item based on previous 30-sample evidence; this pasted 3-line summary does not include the exact post-refactor count.
 
 ### OKX
 
 - `adapter_id`: `live_okx_mark_orderbook_gap_btc_usdt_swap`
-- `samples_requested`: not_provided
-- `samples_ok`: not_provided
-- `samples_error`: not_provided
-- `candidate_seen_count`: not_provided
-- `readiness_status`: not_provided
-- `recommended_default_decision`: not_provided
-- `persistence_status` or summary status: not_provided
-- `council_recommended`: not_provided
-- `positive_net_gap_count`: not_provided
-- `no_trade_only`: not_provided
-- `execution_policy`: not_provided
-- `diagnostics_count`: not_provided
-- `stale_assumption_wording_observed`: not_provided
+- `samples_requested`: 3
+- `samples_ok`: 3
+- `samples_error`: 0
+- `summary status / persistence_status`: `NO_PERSISTENT_EDGE`
+- `council_recommended`: false
+- exact command output path: `data\market_samples\mark_orderbook_gap_okx_post_refactor_smoke_3x_summary.json`
+- exact `candidate_seen_count`: not_provided in pasted summary
+- exact `readiness_status`: not_provided in pasted summary
+- exact `recommended_default_decision`: not_provided in pasted summary
+- exact `positive_net_gap_count`: not_provided in pasted summary
+- exact `diagnostics_count`: not_provided in pasted summary
+- exact `stale_assumption_wording_observed`: not_provided in pasted summary
+- OKX `index_price=None`: keep as a watch item based on previous 30-sample evidence; this pasted 3-line summary does not include the exact post-refactor count.
+- OKX negative `data_age_ms`: keep as a watch item based on previous 30-sample evidence; this pasted 3-line summary does not include the exact post-refactor count.
 
 ## 4. Watch items
 
-The following observations should be separated as watch items, not automatic failures:
+The following observations remain watch items, not failures:
 
-- Bybit negative `data_age_ms` observation: not_provided in the placeholder result; if observed, keep it as a timestamp/clock-skew policy watch item.
-- OKX negative `data_age_ms` observation: not_provided in the placeholder result; if observed, keep it as a timestamp/clock-skew policy watch item.
-- OKX `index_price=None` observation: not_provided in the placeholder result; if observed, keep it as an OKX index/reference semantics watch item.
-- Positive gross gap with negative estimated net gap: if observed, this can still be a normal no-edge `REJECT` outcome.
+- Bybit negative `data_age_ms` is a timestamp/clock-skew policy watch item based on previous 30-sample evidence.
+- OKX negative `data_age_ms` is a timestamp/clock-skew policy watch item based on previous 30-sample evidence.
+- OKX `index_price=None` is an OKX index/reference semantics watch item based on previous 30-sample evidence.
+- The pasted 3-line post-refactor summaries do not include exact watch counts, so this correction does not infer or estimate those counts.
+- Positive gross gap with negative estimated net gap, if present in the generated JSON, can still be a normal no-edge `REJECT` outcome.
 
 These watch items do not justify timestamp policy changes, OKX index endpoint implementation, alerts, Council auto-call, execution, or active strategy promotion in this PR.
 
 ## 5. Interpretation
 
-- The intended user-local runs are post-refactor sampling pipeline smoke checks.
-- The placeholder result supplied to Codex does not provide enough venue-level metrics to claim actual Binance / Bybit / OKX smoke success in this handoff.
-- This document does not prove profitable edge.
-- This document does not prove persistent edge.
-- `REJECT`, `NO_PERSISTENT_EDGE`, and `council_recommended=false`, when present in actual user-local output, can be normal no-edge outcomes.
+- This user-local smoke result is post-refactor sampling pipeline smoke success evidence.
+- `samples_ok=3` and `samples_error=0` for Binance / Bybit / OKX confirm that the 3-sample smoke path completed without sampling errors for all three venues.
+- `NO_PERSISTENT_EDGE` and `council_recommended=false` can be normal no-edge outcomes.
+- This evidence does not prove profitable edge.
+- This evidence does not prove persistent edge.
 - Mark price is not an executable price.
 - `WATCH` and `REJECT` are analysis-only labels.
 - `NO_TRADE_ONLY` remains mandatory.
@@ -143,19 +148,21 @@ Generated packet/sampling files remain smoke artifacts only and must not be comm
 - `data/market_samples/*.json`
 - `data/generated_packets/*.json`
 
-This PR intentionally adds only this handoff document and does not add generated JSON.
+This PR intentionally updates only this handoff document and does not add generated JSON.
 
 ## 8. Rollback plan
 
 Rollback path:
 
-1. Revert this docs-only PR.
-2. Remove `docs/pr_handoffs/mark_orderbook_gap_post_refactor_user_local_smoke_evidence_2026_06_05.md`.
+1. Revert this docs-only correction PR.
+2. Restore the previous version of `docs/pr_handoffs/mark_orderbook_gap_post_refactor_user_local_smoke_evidence_2026_06_05.md`.
 3. No code/config/registry/runtime/parser/readiness/generated-data rollback is required.
 
 ## 9. Next PR candidates
 
-- Timestamp / clock-skew policy planning
-- OKX index/reference semantics planning
-- Mark-Orderbook Gap multi-venue comparative summary
-- 이후 후보: next experimental strategy planning
+Recommended order after this correction:
+
+1. Timestamp / clock-skew policy planning
+2. OKX index/reference semantics planning
+3. Mark-Orderbook Gap multi-venue comparative summary
+4. 이후 후보: next experimental strategy planning
