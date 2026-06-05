@@ -20,6 +20,56 @@ from src.schemas.opportunity_packet import (
 from src.strategy.mark_orderbook_gap_hunt_readiness import evaluate_mark_orderbook_gap_readiness
 
 
+MARK_ORDERBOOK_GAP_EXECUTION_POLICY = "NO_TRADE_ONLY"
+MARK_ORDERBOOK_GAP_COMMON_METADATA = {
+    "experimental_strategy": True,
+    "non_active_strategy": True,
+    "no_trade_only": True,
+    "execution_policy": MARK_ORDERBOOK_GAP_EXECUTION_POLICY,
+}
+MARK_ORDERBOOK_GAP_EXTENSION_ASSUMPTIONS = (
+    "public no-key endpoints only",
+    "analysis-only packet",
+    "adapter may be registered but remains disabled/experimental/non-active unless explicitly enabled in config",
+    "sampling integration is separate from packet generation",
+    "timestamp/data_age policy unchanged",
+    "no private API",
+    "no trading behavior",
+)
+MARK_ORDERBOOK_GAP_CANDIDATE_ASSUMPTIONS = (
+    "mark price is not executable",
+    "WATCH is analysis-only",
+    "no private API",
+    "no trading behavior",
+)
+
+
+def _mark_orderbook_gap_adapter_metadata(
+    *,
+    adapter_id: str,
+    adapter_type: str,
+    venue_fields: dict[str, Any],
+    endpoints: list[str],
+    fetched_at_utc: datetime,
+) -> dict[str, Any]:
+    return {
+        "adapter_id": adapter_id,
+        "adapter_type": adapter_type,
+        **venue_fields,
+        **MARK_ORDERBOOK_GAP_COMMON_METADATA,
+        "endpoints": endpoints,
+        "fetched_at_utc": fetched_at_utc.isoformat(),
+    }
+
+
+def _mark_orderbook_gap_extension_assumptions() -> list[str]:
+    return list(MARK_ORDERBOOK_GAP_EXTENSION_ASSUMPTIONS)
+
+
+def _mark_orderbook_gap_candidate_assumptions() -> list[str]:
+    return list(MARK_ORDERBOOK_GAP_CANDIDATE_ASSUMPTIONS)
+
+
 class BinanceMarkOrderbookGapHuntAdapter(MarketDataAdapter):
     """Public read-only Binance USDⓈ-M BTCUSDT Mark-Orderbook Gap adapter.
 
@@ -265,12 +315,7 @@ class BinanceMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 "size_or_notional_resolved": self.size_or_notional_resolved,
             },
             required_missing_fields=list(readiness.get("required_missing_fields") or []),
-            assumptions=[
-                "mark price is not executable",
-                "WATCH is analysis-only",
-                "no private API",
-                "no trading behavior",
-            ],
+            assumptions=_mark_orderbook_gap_candidate_assumptions(),
             extensions={
                 "warnings": list(readiness.get("warnings") or []),
                 "comparability_pass": metrics.get("comparability_pass"),
@@ -297,29 +342,17 @@ class BinanceMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 ],
             ),
             extensions={
-                "adapter_metadata": {
-                    "adapter_id": self.adapter_id,
-                    "adapter_type": self.adapter_type,
-                    "venue_id": "binance",
-                    "experimental_strategy": True,
-                    "non_active_strategy": True,
-                    "no_trade_only": True,
-                    "execution_policy": "NO_TRADE_ONLY",
-                    "endpoints": [self.MARK_PRICE_PATH, self.ORDERBOOK_PATH, self.METADATA_PATH],
-                    "fetched_at_utc": collected_at.isoformat(),
-                },
+                "adapter_metadata": _mark_orderbook_gap_adapter_metadata(
+                    adapter_id=self.adapter_id,
+                    adapter_type=self.adapter_type,
+                    venue_fields={"venue_id": "binance"},
+                    endpoints=[self.MARK_PRICE_PATH, self.ORDERBOOK_PATH, self.METADATA_PATH],
+                    fetched_at_utc=collected_at,
+                ),
                 "parser_output": parser_output,
                 "readiness": readiness,
                 "diagnostics": diagnostics,
-                "assumptions": [
-                    "public no-key endpoints only",
-                    "analysis-only packet",
-                    "adapter may be registered but remains disabled/experimental/non-active unless explicitly enabled in config",
-                    "sampling integration is separate from packet generation",
-                    "timestamp/data_age policy unchanged",
-                    "no private API",
-                    "no trading behavior",
-                ],
+                "assumptions": _mark_orderbook_gap_extension_assumptions(),
             },
         )
 
@@ -571,12 +604,7 @@ class BybitMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 "size_or_notional_resolved": self.size_or_notional_resolved,
             },
             required_missing_fields=list(readiness.get("required_missing_fields") or []),
-            assumptions=[
-                "mark price is not executable",
-                "WATCH is analysis-only",
-                "no private API",
-                "no trading behavior",
-            ],
+            assumptions=_mark_orderbook_gap_candidate_assumptions(),
             extensions={
                 "warnings": list(readiness.get("warnings") or []),
                 "comparability_pass": metrics.get("comparability_pass"),
@@ -603,31 +631,21 @@ class BybitMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 ],
             ),
             extensions={
-                "adapter_metadata": {
-                    "adapter_id": self.adapter_id,
-                    "adapter_type": self.adapter_type,
-                    "venue_id": "bybit",
-                    "venue_name": "Bybit Derivatives V5",
-                    "category": self.category,
-                    "experimental_strategy": True,
-                    "non_active_strategy": True,
-                    "no_trade_only": True,
-                    "execution_policy": "NO_TRADE_ONLY",
-                    "endpoints": [self.TICKER_PATH, self.ORDERBOOK_PATH, self.METADATA_PATH],
-                    "fetched_at_utc": collected_at.isoformat(),
-                },
+                "adapter_metadata": _mark_orderbook_gap_adapter_metadata(
+                    adapter_id=self.adapter_id,
+                    adapter_type=self.adapter_type,
+                    venue_fields={
+                        "venue_id": "bybit",
+                        "venue_name": "Bybit Derivatives V5",
+                        "category": self.category,
+                    },
+                    endpoints=[self.TICKER_PATH, self.ORDERBOOK_PATH, self.METADATA_PATH],
+                    fetched_at_utc=collected_at,
+                ),
                 "parser_output": parser_output,
                 "readiness": readiness,
                 "diagnostics": diagnostics,
-                "assumptions": [
-                    "public no-key endpoints only",
-                    "analysis-only packet",
-                    "adapter may be registered but remains disabled/experimental/non-active unless explicitly enabled in config",
-                    "sampling integration is separate from packet generation",
-                    "timestamp/data_age policy unchanged",
-                    "no private API",
-                    "no trading behavior",
-                ],
+                "assumptions": _mark_orderbook_gap_extension_assumptions(),
             },
         )
 
@@ -891,12 +909,7 @@ class OkxMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 "size_or_notional_resolved": self.size_or_notional_resolved,
             },
             required_missing_fields=list(readiness.get("required_missing_fields") or []),
-            assumptions=[
-                "mark price is not executable",
-                "WATCH is analysis-only",
-                "no private API",
-                "no trading behavior",
-            ],
+            assumptions=_mark_orderbook_gap_candidate_assumptions(),
             extensions={
                 "warnings": list(readiness.get("warnings") or []),
                 "comparability_pass": metrics.get("comparability_pass"),
@@ -923,32 +936,22 @@ class OkxMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 ],
             ),
             extensions={
-                "adapter_metadata": {
-                    "adapter_id": self.adapter_id,
-                    "adapter_type": self.adapter_type,
-                    "venue_id": "okx",
-                    "venue_name": "OKX",
-                    "instType": self.inst_type,
-                    "instId": self.inst_id,
-                    "experimental_strategy": True,
-                    "non_active_strategy": True,
-                    "no_trade_only": True,
-                    "execution_policy": "NO_TRADE_ONLY",
-                    "endpoints": [self.MARK_PRICE_PATH, self.ORDERBOOK_PATH, self.METADATA_PATH],
-                    "fetched_at_utc": collected_at.isoformat(),
-                },
+                "adapter_metadata": _mark_orderbook_gap_adapter_metadata(
+                    adapter_id=self.adapter_id,
+                    adapter_type=self.adapter_type,
+                    venue_fields={
+                        "venue_id": "okx",
+                        "venue_name": "OKX",
+                        "instType": self.inst_type,
+                        "instId": self.inst_id,
+                    },
+                    endpoints=[self.MARK_PRICE_PATH, self.ORDERBOOK_PATH, self.METADATA_PATH],
+                    fetched_at_utc=collected_at,
+                ),
                 "parser_output": parser_output,
                 "readiness": readiness,
                 "diagnostics": diagnostics,
-                "assumptions": [
-                    "public no-key endpoints only",
-                    "analysis-only packet",
-                    "adapter may be registered but remains disabled/experimental/non-active unless explicitly enabled in config",
-                    "sampling integration is separate from packet generation",
-                    "timestamp/data_age policy unchanged",
-                    "no private API",
-                    "no trading behavior",
-                ],
+                "assumptions": _mark_orderbook_gap_extension_assumptions(),
             },
         )
 
