@@ -108,6 +108,21 @@ class BybitMarkOrderbookGapHuntAdapterTests(unittest.TestCase):
         self.assertTrue(metadata["no_trade_only"])
         self.assertEqual(metadata["execution_policy"], "NO_TRADE_ONLY")
 
+        assumptions = packet.extensions["assumptions"]
+        assumptions_text = " | ".join(assumptions).lower()
+        self.assertIn("public no-key endpoints only", assumptions)
+        self.assertIn("analysis-only packet", assumptions)
+        self.assertIn(
+            "adapter may be registered but remains disabled/experimental/non-active unless explicitly enabled in config",
+            assumptions,
+        )
+        self.assertIn("no private api", assumptions_text)
+        self.assertIn("no trading behavior", assumptions_text)
+        self.assertIn("sampling integration is separate from packet generation", assumptions)
+        self.assertIn("timestamp/data_age policy unchanged", assumptions)
+        self.assertNotIn("no config registration in this pr", assumptions_text)
+        self.assertNotIn("no registry integration in this pr", assumptions_text)
+
     def test_fetch_snapshot_returns_packet_json_dict(self) -> None:
         snapshot = _adapter(FakeHttpClient(_bybit_responses())).fetch_snapshot()
 

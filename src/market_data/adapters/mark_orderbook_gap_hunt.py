@@ -25,8 +25,9 @@ class BinanceMarkOrderbookGapHuntAdapter(MarketDataAdapter):
 
     The adapter fetches only public no-key market-data endpoints, delegates
     parsing/readiness to pure helpers, and returns an analysis-only
-    ``OpportunityPacket``. It is intentionally not registered in market-data
-    config or registry in this PR.
+    ``OpportunityPacket``. Registration/configuration is controlled outside the
+    adapter; configured entries must remain disabled/experimental/non-active
+    unless explicitly enabled by config review.
     """
 
     adapter_type = "binance_mark_orderbook_gap_hunt"
@@ -313,9 +314,11 @@ class BinanceMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 "assumptions": [
                     "public no-key endpoints only",
                     "analysis-only packet",
-                    "no config registration in this PR",
-                    "no registry integration in this PR",
-                    "no sampling integration in this PR",
+                    "adapter may be registered but remains disabled/experimental/non-active unless explicitly enabled in config",
+                    "sampling integration is separate from packet generation",
+                    "timestamp/data_age policy unchanged",
+                    "no private API",
+                    "no trading behavior",
                 ],
             },
         )
@@ -326,8 +329,9 @@ class BybitMarkOrderbookGapHuntAdapter(MarketDataAdapter):
 
     The adapter fetches only public no-key Bybit market-data endpoints, delegates
     parsing/readiness to pure shared helpers, and returns an analysis-only
-    ``OpportunityPacket``. It is intentionally not registered in market-data
-    config or registry in this PR.
+    ``OpportunityPacket``. Registration/configuration is controlled outside the
+    adapter; configured entries must remain disabled/experimental/non-active
+    unless explicitly enabled by config review.
     """
 
     adapter_type = "bybit_mark_orderbook_gap_hunt"
@@ -618,9 +622,11 @@ class BybitMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 "assumptions": [
                     "public no-key endpoints only",
                     "analysis-only packet",
-                    "no config registration in this PR",
-                    "no registry integration in this PR",
-                    "no sampling integration in this PR",
+                    "adapter may be registered but remains disabled/experimental/non-active unless explicitly enabled in config",
+                    "sampling integration is separate from packet generation",
+                    "timestamp/data_age policy unchanged",
+                    "no private API",
+                    "no trading behavior",
                 ],
             },
         )
@@ -631,8 +637,9 @@ class OkxMarkOrderbookGapHuntAdapter(MarketDataAdapter):
 
     The adapter fetches only public no-key OKX market-data endpoints, delegates
     parsing/readiness to pure shared helpers, and returns an analysis-only
-    ``OpportunityPacket``. It is intentionally not registered in market-data
-    config or registry in this PR.
+    ``OpportunityPacket``. Registration/configuration is controlled outside the
+    adapter; configured entries must remain disabled/experimental/non-active
+    unless explicitly enabled by config review.
     """
 
     adapter_type = "okx_mark_orderbook_gap_hunt"
@@ -936,10 +943,11 @@ class OkxMarkOrderbookGapHuntAdapter(MarketDataAdapter):
                 "assumptions": [
                     "public no-key endpoints only",
                     "analysis-only packet",
-                    "no config registration in this PR",
-                    "no registry integration in this PR",
-                    "no sampling integration in this PR",
+                    "adapter may be registered but remains disabled/experimental/non-active unless explicitly enabled in config",
+                    "sampling integration is separate from packet generation",
                     "timestamp/data_age policy unchanged",
+                    "no private API",
+                    "no trading behavior",
                 ],
             },
         )
