@@ -110,6 +110,33 @@ adapters:
     no_trade_only: true
     note: Public read-only OKX BTC-USDT-SWAP Mark-Orderbook Gap Hunt adapter. Experimental/non-active/NO_TRADE_ONLY.
 
+  live_binance_spot_futures_basis_btcusdt:
+    type: binance_spot_futures_basis
+    enabled: false
+    experimental: true
+    experimental_strategy: true
+    non_active_strategy: true
+    no_trade_only: true
+    execution_policy: NO_TRADE_ONLY
+    strategy_family: spot_futures_basis
+    strategy_id: spot_futures_basis_v0
+    source_venue_id: binance
+    signal_type: spot_futures_basis
+    asset: BTC
+    quote: USDT
+    comparison_type: same_exchange_spot_perp_basis
+    spot_base_url: https://api.binance.com
+    futures_base_url: https://fapi.binance.com
+    spot_symbol: BTCUSDT
+    perp_symbol: BTCUSDT
+    depth_limit: 5
+    timeout_seconds: 10
+    max_retries: 2
+    user_agent: agent-council-market-data-v1
+    fee_slippage_buffer_pct: 0.20
+    private_api_required: false
+    note: "Public read-only Binance Spot/Futures Basis adapter candidate. Experimental/non-active/NO_TRADE_ONLY; not active; no execution; no Council auto-call."
+
   live_bybit_mark_orderbook_gap:
     type: bybit_public
     base_url: https://api.bybit.com
