@@ -20,6 +20,7 @@ from src.market_data.adapters.mark_orderbook_gap_hunt import (
     OkxMarkOrderbookGapHuntAdapter,
 )
 from src.market_data.adapters.replay import ReplayMarketDataAdapter
+from src.market_data.adapters.spot_futures_basis import BinanceSpotFuturesBasisAdapter
 from src.market_data.adapters.upbit import UpbitPublicSpotAdapter
 
 DEFAULT_CONFIG_PATH = Path("configs/market_data.yaml")
@@ -53,6 +54,8 @@ def build_adapter(adapter_id: str, config: dict[str, Any] | None = None) -> Mark
         return BybitMarkOrderbookGapHuntAdapter(adapter_id, config=adapter_config)
     if adapter_type == "okx_mark_orderbook_gap_hunt":
         return OkxMarkOrderbookGapHuntAdapter(adapter_id, config=adapter_config)
+    if adapter_type == "binance_spot_futures_basis":
+        return BinanceSpotFuturesBasisAdapter(adapter_id, config=adapter_config)
     if adapter_type == "upbit_public_spot":
         return UpbitPublicSpotAdapter(adapter_id, config=adapter_config)
     if adapter_type == "bithumb_public_spot":
