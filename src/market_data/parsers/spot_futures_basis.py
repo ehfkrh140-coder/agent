@@ -72,7 +72,7 @@ def parse_binance_spot_observation(
     symbol_info = _first_symbol(exchange_info, required_missing_fields, parser_warnings, "spot_exchange_info")
     price_filter = _find_filter(symbol_info, "PRICE_FILTER")
     lot_size = _find_filter(symbol_info, "LOT_SIZE")
-    min_notional = _find_filter(symbol_info, "MIN_NOTIONAL")
+    min_notional_filter = _find_first_filter(symbol_info, ("MIN_NOTIONAL", "NOTIONAL"))
 
     best_bid = _positive_float_field(book_ticker, "bidPrice", "spot_bid_missing", required_missing_fields, parser_warnings)
     best_bid_qty = _positive_float_field(
@@ -98,8 +98,7 @@ def parse_binance_spot_observation(
 
     tick_size = _float_or_none(price_filter.get("tickSize")) if price_filter else None
     step_size = _float_or_none(lot_size.get("stepSize")) if lot_size else None
-    min_notional_value = _first_present(min_notional, ("notional", "minNotional")) if min_notional else None
-    min_notional = _float_or_none(min_notional_value)
+    min_notional = _extract_min_notional(min_notional_filter)
     if tick_size is None:
         _add_missing(required_missing_fields, "spot_tick_size_missing")
     if step_size is None:
@@ -190,8 +189,7 @@ def parse_binance_perp_observation(
 
     tick_size = _float_or_none(price_filter.get("tickSize")) if price_filter else None
     step_size = _float_or_none(lot_size.get("stepSize")) if lot_size else None
-    min_notional_value = _first_present(min_notional_filter, ("notional", "minNotional")) if min_notional_filter else None
-    min_notional = _float_or_none(min_notional_value)
+    min_notional = _extract_min_notional(min_notional_filter)
     if tick_size is None:
         _add_missing(required_missing_fields, "perp_tick_size_missing")
     if step_size is None:
@@ -297,13 +295,23 @@ def _first_symbol(
 
 
 def _find_filter(symbol_info: dict[str, Any], filter_type: str) -> dict[str, Any] | None:
+    return _find_first_filter(symbol_info, (filter_type,))
+
+
+def _find_first_filter(symbol_info: dict[str, Any], filter_types: tuple[str, ...]) -> dict[str, Any] | None:
     filters = symbol_info.get("filters")
     if not isinstance(filters, list):
         return None
     for item in filters:
-        if isinstance(item, dict) and item.get("filterType") == filter_type:
+        if isinstance(item, dict) and item.get("filterType") in filter_types:
             return item
     return None
+
+
+def _extract_min_notional(filter_payload: dict[str, Any] | None) -> float | None:
+    if not filter_payload:
+        return None
+    return _float_or_none(_first_present(filter_payload, ("minNotional", "notional")))
 
 
 def _parse_depth_levels(

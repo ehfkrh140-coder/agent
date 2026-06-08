@@ -160,9 +160,22 @@ class SpotFuturesBasisMockedReadinessTest(unittest.TestCase):
         readiness = evaluate_spot_futures_basis_readiness(bundle)
 
         self.assertEqual("NEED_DATA", readiness["readiness_status"])
-        self.assertIn("spot_spot_ask_missing", readiness["required_missing_fields"])
+        self.assertIn("spot_ask_missing", readiness["required_missing_fields"])
+        self.assertNotIn("spot_spot_ask_missing", readiness["required_missing_fields"])
         self.assertIn("parser_required_missing_fields_present", readiness["warnings"])
         self.assertIn("parser_status_not_ok", readiness["warnings"])
+
+    def test_readiness_does_not_double_prefix_spot_missing_fields(self):
+        bundle = copy.deepcopy(self.bundle)
+        bundle["spot_observation"]["parser_normalized_status"] = "NEED_DATA"
+        bundle["spot_observation"]["required_missing_fields"] = ["spot_min_notional_missing"]
+
+        readiness = evaluate_spot_futures_basis_readiness(bundle)
+
+        self.assertEqual("NEED_DATA", readiness["readiness_status"])
+        self.assertIn("spot_min_notional_missing", readiness["required_missing_fields"])
+        self.assertNotIn("spot_spot_min_notional_missing", readiness["required_missing_fields"])
+        self.assertIn("parser_required_missing_fields_present", readiness["warnings"])
 
     def test_mark_or_last_price_not_executable(self):
         bundle = copy.deepcopy(self.bundle)

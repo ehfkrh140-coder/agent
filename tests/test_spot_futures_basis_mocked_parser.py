@@ -1,3 +1,4 @@
+import copy
 import json
 import unittest
 from pathlib import Path
@@ -26,6 +27,16 @@ FORBIDDEN_FIELD_SUBSTRINGS = (
     "transfer",
     "privateKey",
 )
+
+
+def _spot_exchange_info_with_min_notional_filter(exchange_info, *, filter_type, key, value="5.00000000"):
+    patched = copy.deepcopy(exchange_info)
+    symbol = patched["symbols"][0]
+    symbol["filters"] = [
+        item for item in symbol["filters"] if item.get("filterType") not in {"MIN_NOTIONAL", "NOTIONAL"}
+    ]
+    symbol["filters"].append({"filterType": filter_type, key: value})
+    return patched
 
 
 def _load_fixture(filename):
@@ -79,6 +90,50 @@ class SpotFuturesBasisMockedParserTest(unittest.TestCase):
         self.assertNotIn("recommended_default_decision", spot)
         self.assertNotIn("schema_version", spot)
         self._assert_no_forbidden_fields(spot)
+
+    def test_parse_binance_spot_observation_accepts_live_like_notional_filter(self):
+        live_like_exchange_info = _spot_exchange_info_with_min_notional_filter(
+            self.spot_exchange_info,
+            filter_type="NOTIONAL",
+            key="minNotional",
+        )
+
+        spot = parse_binance_spot_observation(
+            self.spot_book_ticker,
+            self.spot_depth,
+            live_like_exchange_info,
+        )
+
+        self.assertEqual("OK", spot["parser_normalized_status"])
+        self.assertEqual([], spot["required_missing_fields"])
+        self.assertAlmostEqual(5.0, spot["min_notional"])
+        self.assertNotIn("spot_min_notional_missing", spot["required_missing_fields"])
+
+    def test_parse_binance_spot_observation_accepts_min_notional_and_notional_aliases(self):
+        cases = (
+            ("MIN_NOTIONAL", "minNotional"),
+            ("MIN_NOTIONAL", "notional"),
+            ("NOTIONAL", "minNotional"),
+            ("NOTIONAL", "notional"),
+        )
+        for filter_type, key in cases:
+            with self.subTest(filter_type=filter_type, key=key):
+                exchange_info = _spot_exchange_info_with_min_notional_filter(
+                    self.spot_exchange_info,
+                    filter_type=filter_type,
+                    key=key,
+                )
+
+                spot = parse_binance_spot_observation(
+                    self.spot_book_ticker,
+                    self.spot_depth,
+                    exchange_info,
+                )
+
+                self.assertEqual("OK", spot["parser_normalized_status"])
+                self.assertEqual([], spot["required_missing_fields"])
+                self.assertAlmostEqual(5.0, spot["min_notional"])
+                self.assertNotIn("spot_min_notional_missing", spot["required_missing_fields"])
 
     def test_parse_binance_perp_observation_from_mocked_fixtures(self):
         perp = parse_binance_perp_observation(

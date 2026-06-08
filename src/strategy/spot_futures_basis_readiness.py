@@ -221,10 +221,17 @@ def _merge_parser_missing(
     if isinstance(parser_missing, list) and parser_missing:
         _add_warning(warnings, "parser_required_missing_fields_present")
         for field in parser_missing:
-            _add_missing(required_missing_fields, f"{prefix}_{field}")
+            _add_missing(required_missing_fields, _prefix_parser_missing_field(prefix, field))
     if parser_status not in (None, "OK"):
         _add_warning(warnings, "parser_status_not_ok")
         _add_missing(required_missing_fields, f"{prefix}_parser_normalized_status")
+
+
+def _prefix_parser_missing_field(prefix: str, field: Any) -> str:
+    field_text = str(field)
+    if field_text.startswith(("spot_", "perp_")):
+        return field_text
+    return f"{prefix}_{field_text}"
 
 
 def _extract_executable_values(

@@ -63,6 +63,31 @@ def _fixture_payloads() -> dict[str, dict[str, Any]]:
     }
 
 
+def _spot_exchange_info_with_notional_filter(*, key: str = "minNotional", value: str = "5.00000000") -> dict[str, Any]:
+    exchange_info = _load_fixture("binance_spot_exchange_info_btcusdt.json")
+    symbol = exchange_info["symbols"][0]
+    symbol["filters"] = [
+        item for item in symbol["filters"] if item.get("filterType") not in {"MIN_NOTIONAL", "NOTIONAL"}
+    ]
+    symbol["filters"].append({"filterType": "NOTIONAL", key: value})
+    return exchange_info
+
+
+def _source_bundle_with_spot_exchange_info(spot_exchange_info: dict[str, Any]) -> dict[str, Any]:
+    spot = parse_binance_spot_observation(
+        _load_fixture("binance_spot_book_ticker_btcusdt.json"),
+        _load_fixture("binance_spot_depth_btcusdt.json"),
+        spot_exchange_info,
+    )
+    perp = parse_binance_perp_observation(
+        _load_fixture("binance_futures_book_ticker_btcusdt.json"),
+        _load_fixture("binance_futures_depth_btcusdt.json"),
+        _load_fixture("binance_futures_premium_index_btcusdt.json"),
+        _load_fixture("binance_futures_exchange_info_btcusdt.json"),
+    )
+    return build_spot_futures_basis_source_bundle(spot, perp)
+
+
 class MockResponse:
     def __init__(self, data: dict[str, Any], *, path: str) -> None:
         self.data = data
@@ -181,6 +206,30 @@ class SpotFuturesBasisCollectPathTest(unittest.TestCase):
         self.assertTrue(dumped["extensions"]["no_trade_only"])
         self.assertEqual(-558, perp_observation["data_quality"]["max_data_age_ms"])
         self.assertEqual(-558.491943359375, perp_observation["extensions"]["raw_data_age_ms"])
+
+    def test_collect_path_live_shape_notional_packet_no_need_data_from_min_notional(self):
+        bundle = _source_bundle_with_spot_exchange_info(_spot_exchange_info_with_notional_filter())
+        spot = bundle["spot_observation"]
+        readiness = evaluate_spot_futures_basis_readiness(bundle)
+        packet_dict = build_spot_futures_basis_opportunity_packet(
+            bundle,
+            readiness,
+            created_at_utc=CREATED_AT_UTC,
+            packet_id="collect_path_live_shape_notional_test_packet",
+        )
+
+        packet = OpportunityPacketBuilder().build(packet_dict)
+        dumped = packet.model_dump(mode="json", exclude_none=True)
+
+        self.assertEqual("OK", spot["parser_normalized_status"])
+        self.assertNotIn("spot_min_notional_missing", spot["required_missing_fields"])
+        self.assertNotIn("spot_min_notional_missing", readiness["required_missing_fields"])
+        self.assertNotIn("spot_spot_min_notional_missing", readiness["required_missing_fields"])
+        self.assertNotEqual("NEED_DATA", readiness["readiness_status"])
+        self.assertEqual("opportunity_packet_v0", dumped["schema_version"])
+        self.assertEqual("spot_futures_basis", dumped["signal_type"])
+        self.assertEqual("spot_futures_basis_v0", dumped["strategy_id"])
+        self.assertTrue(dumped["extensions"]["no_trade_only"])
 
     def test_builder_rejects_or_errors_on_unsupported_strategy_still(self):
         snapshot = {
