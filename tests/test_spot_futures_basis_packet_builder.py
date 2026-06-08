@@ -4,6 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
+from src.market_data.packet_builder import OpportunityPacketBuilder
 from src.market_data.parsers.spot_futures_basis import (
     build_spot_futures_basis_source_bundle,
     parse_binance_perp_observation,
@@ -176,6 +177,69 @@ class SpotFuturesBasisPacketBuilderTest(unittest.TestCase):
         self.assertEqual("NEED_DATA", candidate["metrics"]["recommended_default_decision"])
         self.assertTrue(candidate["required_missing_fields"])
         self._assert_no_forbidden_fields(packet)
+
+
+    def test_fractional_negative_data_age_ms_validates_as_int_and_preserves_raw(self):
+        bundle = copy.deepcopy(self.bundle)
+        bundle["spot_observation"]["data_age_ms"] = 12.987
+        bundle["perp_observation"]["data_age_ms"] = -558.491943359375
+        readiness = evaluate_spot_futures_basis_readiness(bundle)
+        packet_dict = build_spot_futures_basis_opportunity_packet(
+            bundle,
+            readiness,
+            created_at_utc=CREATED_AT_UTC,
+        )
+
+        validated = OpportunityPacketBuilder().build(packet_dict).model_dump(mode="json", exclude_none=True)
+        spot_observation, perp_observation = validated["observations"]
+
+        self.assertIsInstance(spot_observation["data_quality"]["max_data_age_ms"], int)
+        self.assertEqual(12, spot_observation["data_quality"]["max_data_age_ms"])
+        self.assertEqual(12.987, spot_observation["extensions"]["raw_data_age_ms"])
+        self.assertIsInstance(perp_observation["data_quality"]["max_data_age_ms"], int)
+        self.assertLess(perp_observation["data_quality"]["max_data_age_ms"], 0)
+        self.assertNotEqual(0, perp_observation["data_quality"]["max_data_age_ms"])
+        self.assertEqual(-558, perp_observation["data_quality"]["max_data_age_ms"])
+        self.assertEqual(-558.491943359375, perp_observation["extensions"]["raw_data_age_ms"])
+
+    def test_fractional_latency_ms_validates_as_int_and_preserves_raw(self):
+        bundle = copy.deepcopy(self.bundle)
+        bundle["spot_observation"]["latency_ms"] = 123.987
+        bundle["perp_observation"]["latency_ms"] = "456.789"
+        readiness = evaluate_spot_futures_basis_readiness(bundle)
+        packet_dict = build_spot_futures_basis_opportunity_packet(
+            bundle,
+            readiness,
+            created_at_utc=CREATED_AT_UTC,
+        )
+
+        validated = OpportunityPacketBuilder().build(packet_dict).model_dump(mode="json", exclude_none=True)
+        spot_observation, perp_observation = validated["observations"]
+
+        self.assertIsInstance(spot_observation["data_quality"]["latency_ms"], int)
+        self.assertEqual(123, spot_observation["data_quality"]["latency_ms"])
+        self.assertEqual(123.987, spot_observation["extensions"]["raw_latency_ms"])
+        self.assertIsInstance(perp_observation["data_quality"]["latency_ms"], int)
+        self.assertEqual(456, perp_observation["data_quality"]["latency_ms"])
+        self.assertEqual(456.789, perp_observation["extensions"]["raw_latency_ms"])
+
+    def test_data_age_not_clamped_to_zero(self):
+        bundle = copy.deepcopy(self.bundle)
+        bundle["perp_observation"]["data_age_ms"] = -1.75
+        readiness = evaluate_spot_futures_basis_readiness(bundle)
+        packet_dict = build_spot_futures_basis_opportunity_packet(
+            bundle,
+            readiness,
+            created_at_utc=CREATED_AT_UTC,
+        )
+
+        validated = OpportunityPacketBuilder().build(packet_dict).model_dump(mode="json", exclude_none=True)
+        perp_observation = validated["observations"][1]
+
+        self.assertEqual(-1, perp_observation["data_quality"]["max_data_age_ms"])
+        self.assertNotEqual(0, perp_observation["data_quality"]["max_data_age_ms"])
+        self.assertLess(perp_observation["data_quality"]["max_data_age_ms"], 0)
+        self.assertEqual(-1.75, perp_observation["extensions"]["raw_data_age_ms"])
 
     def test_no_private_or_execution_fields(self):
         self._assert_no_forbidden_fields(self.packet)

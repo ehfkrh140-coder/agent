@@ -164,6 +164,24 @@ class SpotFuturesBasisCollectPathTest(unittest.TestCase):
         self.assertIn("WATCH does not trigger Council auto-call, alert, or execution", candidate["assumptions"])
         self._assert_no_forbidden_fields(dumped)
 
+
+    def test_collect_path_builder_accepts_live_like_fractional_data_age_packet(self):
+        bundle = _source_bundle()
+        bundle["spot_observation"]["data_age_ms"] = 42.4242
+        bundle["perp_observation"]["data_age_ms"] = -558.491943359375
+        packet_dict = _packet_from_bundle(bundle)
+
+        packet = OpportunityPacketBuilder().build(packet_dict)
+        dumped = packet.model_dump(mode="json", exclude_none=True)
+        perp_observation = dumped["observations"][1]
+
+        self.assertEqual("opportunity_packet_v0", dumped["schema_version"])
+        self.assertEqual("spot_futures_basis", dumped["signal_type"])
+        self.assertEqual("spot_futures_basis_v0", dumped["strategy_id"])
+        self.assertTrue(dumped["extensions"]["no_trade_only"])
+        self.assertEqual(-558, perp_observation["data_quality"]["max_data_age_ms"])
+        self.assertEqual(-558.491943359375, perp_observation["extensions"]["raw_data_age_ms"])
+
     def test_builder_rejects_or_errors_on_unsupported_strategy_still(self):
         snapshot = {
             "strategy_family": "unknown_strategy_family",

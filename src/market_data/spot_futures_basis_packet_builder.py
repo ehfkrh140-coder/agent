@@ -133,6 +133,8 @@ def build_spot_futures_basis_opportunity_packet(
 
 def _spot_packet_observation(observation: dict[str, Any]) -> dict[str, Any]:
     depth_available = _has_depth(observation)
+    data_age_ms = observation.get("data_age_ms")
+    latency_ms = observation.get("latency_ms")
     return {
         "observation_id": SPOT_OBSERVATION_ID,
         "venue_id": observation.get("venue_id", SOURCE_VENUE_ID),
@@ -149,9 +151,9 @@ def _spot_packet_observation(observation: dict[str, Any]) -> dict[str, Any]:
         "timestamp_utc": None,
         "liquidity": {"orderbook_depth_available": depth_available},
         "data_quality": {
-            "latency_ms": observation.get("latency_ms"),
-            "data_age_ms": observation.get("data_age_ms"),
-            "max_data_age_ms": observation.get("data_age_ms"),
+            "latency_ms": _coerce_optional_int_ms(latency_ms),
+            "data_age_ms": _coerce_optional_int_ms(data_age_ms),
+            "max_data_age_ms": _coerce_optional_int_ms(data_age_ms),
         },
         "health": {"api_status_known": True, "api_ok": True},
         "extensions": {
@@ -165,12 +167,16 @@ def _spot_packet_observation(observation: dict[str, Any]) -> dict[str, Any]:
             "raw_endpoint_ids": _list_or_empty(observation.get("raw_endpoint_ids")),
             "book_update_id": observation.get("book_update_id"),
             "min_notional": observation.get("min_notional"),
+            "raw_data_age_ms": _raw_optional_number(data_age_ms),
+            "raw_latency_ms": _raw_optional_number(latency_ms),
         },
     }
 
 
 def _perp_packet_observation(observation: dict[str, Any]) -> dict[str, Any]:
     depth_available = _has_depth(observation)
+    data_age_ms = observation.get("data_age_ms")
+    latency_ms = observation.get("latency_ms")
     return {
         "observation_id": PERP_OBSERVATION_ID,
         "venue_id": observation.get("venue_id", SOURCE_VENUE_ID),
@@ -195,9 +201,9 @@ def _perp_packet_observation(observation: dict[str, Any]) -> dict[str, Any]:
             "index_price": observation.get("index_price"),
         },
         "data_quality": {
-            "latency_ms": observation.get("latency_ms"),
-            "data_age_ms": observation.get("data_age_ms"),
-            "max_data_age_ms": observation.get("data_age_ms"),
+            "latency_ms": _coerce_optional_int_ms(latency_ms),
+            "data_age_ms": _coerce_optional_int_ms(data_age_ms),
+            "max_data_age_ms": _coerce_optional_int_ms(data_age_ms),
         },
         "health": {"api_status_known": True, "api_ok": True},
         "extensions": {
@@ -215,6 +221,8 @@ def _perp_packet_observation(observation: dict[str, Any]) -> dict[str, Any]:
             "book_timestamp": observation.get("book_timestamp"),
             "interest_rate": observation.get("interest_rate"),
             "min_notional": observation.get("min_notional"),
+            "raw_data_age_ms": _raw_optional_number(data_age_ms),
+            "raw_latency_ms": _raw_optional_number(latency_ms),
         },
     }
 
@@ -333,6 +341,46 @@ def _list_or_empty(value: Any) -> list[Any]:
     if isinstance(value, tuple):
         return list(value)
     return []
+
+
+def _coerce_optional_int_ms(value: Any) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        try:
+            return int(value)
+        except (OverflowError, ValueError):
+            return None
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            return int(float(text))
+        except (OverflowError, ValueError):
+            return None
+    return None
+
+
+def _raw_optional_number(value: Any) -> int | float | None:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            parsed = float(text)
+        except ValueError:
+            return None
+        if parsed.is_integer():
+            return int(parsed)
+        return parsed
+    return None
 
 
 def _require_mapping(payload: dict[str, Any], name: str) -> None:
