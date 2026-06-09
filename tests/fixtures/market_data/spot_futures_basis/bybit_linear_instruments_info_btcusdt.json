@@ -1,0 +1,28 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "category": "linear",
+    "list": [
+      {
+        "symbol": "BTCUSDT",
+        "contractType": "LinearPerpetual",
+        "status": "Trading",
+        "baseCoin": "BTC",
+        "quoteCoin": "USDT",
+        "settleCoin": "USDT",
+        "priceFilter": {
+          "tickSize": "0.10"
+        },
+        "lotSizeFilter": {
+          "qtyStep": "0.001",
+          "minOrderQty": "0.001",
+          "minNotionalValue": "5"
+        },
+        "fundingInterval": 480
+      }
+    ]
+  },
+  "retExtInfo": {},
+  "time": 1717200000600
+}
