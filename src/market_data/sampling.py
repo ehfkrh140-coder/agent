@@ -137,7 +137,7 @@ def _sample_record(index: int, collected_at: str, packet: OpportunityPacket, rea
         "execution_policy": _adapter_metadata_value(packet, "execution_policy"),
         "stale_assumption_wording_observed": stale_assumption_wording_observed,
         "latency": latency,
-        "opportunity_packet": packet.model_dump(mode="json"),
+        "opportunity_packet": packet.model_dump(mode="json", exclude_none=True),
     }
 
 
