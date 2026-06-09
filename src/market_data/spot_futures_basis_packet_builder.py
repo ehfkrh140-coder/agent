@@ -91,9 +91,10 @@ def build_spot_futures_basis_opportunity_packet(
     )
     readiness_summary = _readiness_summary(readiness_result)
 
-    spot_packet_observation = _spot_packet_observation(spot_observation)
-    perp_packet_observation = _perp_packet_observation(perp_observation)
-    candidate = _basis_candidate(readiness_result, packet_assumptions)
+    identity = _packet_identity(source_bundle, spot_observation, perp_observation)
+    spot_packet_observation = _spot_packet_observation(spot_observation, identity["spot_observation_id"])
+    perp_packet_observation = _perp_packet_observation(perp_observation, identity["perp_observation_id"])
+    candidate = _basis_candidate(readiness_result, packet_assumptions, identity)
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -109,7 +110,7 @@ def build_spot_futures_basis_opportunity_packet(
         "detector_metadata": {
             "detector_name": "spot_futures_basis_packet_builder",
             "detector_version": "v0",
-            "generated_from": "mocked_binance_spot_and_usdm_futures_source_bundle",
+            "generated_from": identity["generated_from"],
             "source_files": [
                 "src/market_data/parsers/spot_futures_basis.py",
                 "src/strategy/spot_futures_basis_readiness.py",
@@ -122,7 +123,7 @@ def build_spot_futures_basis_opportunity_packet(
             "no_trade_only": True,
             "execution_policy": NO_TRADE_EXECUTION_POLICY,
             "status": STATUS,
-            "source_venue_id": source_bundle.get("source_venue_id", SOURCE_VENUE_ID),
+            "source_venue_id": identity["source_venue_id"],
             "comparison_type": source_bundle.get("comparison_type", COMPARISON_TYPE),
             "assumptions": packet_assumptions,
             "readiness": readiness_summary,
@@ -131,12 +132,12 @@ def build_spot_futures_basis_opportunity_packet(
     }
 
 
-def _spot_packet_observation(observation: dict[str, Any]) -> dict[str, Any]:
+def _spot_packet_observation(observation: dict[str, Any], observation_id: str) -> dict[str, Any]:
     depth_available = _has_depth(observation)
     data_age_ms = observation.get("data_age_ms")
     latency_ms = observation.get("latency_ms")
     return {
-        "observation_id": SPOT_OBSERVATION_ID,
+        "observation_id": observation_id,
         "venue_id": observation.get("venue_id", SOURCE_VENUE_ID),
         "venue_name": observation.get("venue_name", "Binance Spot"),
         "market_symbol": observation.get("symbol", "BTCUSDT"),
@@ -158,6 +159,7 @@ def _spot_packet_observation(observation: dict[str, Any]) -> dict[str, Any]:
         "health": {"api_status_known": True, "api_ok": True},
         "extensions": {
             "market_type": "spot",
+            "category": observation.get("category", "spot"),
             "base_asset": observation.get("base_asset", ASSET),
             "quote_asset": observation.get("quote_asset", QUOTE),
             "bid_qty_unit": observation.get("bid_qty_unit", "base_asset"),
@@ -173,12 +175,12 @@ def _spot_packet_observation(observation: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _perp_packet_observation(observation: dict[str, Any]) -> dict[str, Any]:
+def _perp_packet_observation(observation: dict[str, Any], observation_id: str) -> dict[str, Any]:
     depth_available = _has_depth(observation)
     data_age_ms = observation.get("data_age_ms")
     latency_ms = observation.get("latency_ms")
     return {
-        "observation_id": PERP_OBSERVATION_ID,
+        "observation_id": observation_id,
         "venue_id": observation.get("venue_id", SOURCE_VENUE_ID),
         "venue_name": observation.get("venue_name", "Binance USDⓈ-M Futures"),
         "market_symbol": observation.get("symbol", "BTCUSDT"),
@@ -208,11 +210,13 @@ def _perp_packet_observation(observation: dict[str, Any]) -> dict[str, Any]:
         "health": {"api_status_known": True, "api_ok": True},
         "extensions": {
             "market_type": "perp",
+            "category": observation.get("category"),
             "base_asset": observation.get("base_asset", ASSET),
             "quote_asset": observation.get("quote_asset", QUOTE),
             "settlement_asset": observation.get("settlement_asset", QUOTE),
             "margin_asset": observation.get("margin_asset", QUOTE),
             "contract_type": observation.get("contract_type", "PERPETUAL"),
+            "funding_interval": observation.get("funding_interval"),
             "bid_qty_unit": observation.get("bid_qty_unit"),
             "ask_qty_unit": observation.get("ask_qty_unit"),
             "parser_normalized_status": observation.get("parser_normalized_status"),
@@ -227,19 +231,23 @@ def _perp_packet_observation(observation: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _basis_candidate(readiness_result: dict[str, Any], assumptions: list[str]) -> dict[str, Any]:
+def _basis_candidate(
+    readiness_result: dict[str, Any],
+    assumptions: list[str],
+    identity: dict[str, str],
+) -> dict[str, Any]:
     metrics = _candidate_metrics(readiness_result)
     warnings = _list_or_empty(readiness_result.get("warnings"))
     required_missing_fields = _list_or_empty(readiness_result.get("required_missing_fields"))
     return {
-        "candidate_id": CANDIDATE_ID,
+        "candidate_id": identity["candidate_id"],
         "candidate_type": "spot_futures_basis_observation",
         "strategy_family": STRATEGY_FAMILY,
         "strategy_id": STRATEGY_ID,
-        "source_observation_id": SPOT_OBSERVATION_ID,
-        "target_observation_id": PERP_OBSERVATION_ID,
-        "source_venue_id": SOURCE_VENUE_ID,
-        "target_venue_id": SOURCE_VENUE_ID,
+        "source_observation_id": identity["spot_observation_id"],
+        "target_observation_id": identity["perp_observation_id"],
+        "source_venue_id": identity["source_venue_id"],
+        "target_venue_id": identity["source_venue_id"],
         "direction": metrics.get("selected_direction"),
         "gross_gap_absolute": None,
         "gross_gap_pct": metrics.get("selected_gross_basis_pct"),
@@ -257,6 +265,67 @@ def _basis_candidate(readiness_result: dict[str, Any], assumptions: list[str]) -
             "execution_policy": NO_TRADE_EXECUTION_POLICY,
         },
     }
+
+
+
+def _packet_identity(
+    source_bundle: dict[str, Any],
+    spot_observation: dict[str, Any],
+    perp_observation: dict[str, Any],
+) -> dict[str, str]:
+    source_venue_id = _safe_identifier(
+        source_bundle.get("source_venue_id")
+        or spot_observation.get("venue_id")
+        or perp_observation.get("venue_id")
+        or SOURCE_VENUE_ID
+    )
+    symbol = _safe_identifier(
+        spot_observation.get("symbol") or perp_observation.get("symbol") or "BTCUSDT"
+    )
+
+    if source_venue_id == SOURCE_VENUE_ID:
+        return {
+            "source_venue_id": SOURCE_VENUE_ID,
+            "spot_observation_id": SPOT_OBSERVATION_ID,
+            "perp_observation_id": PERP_OBSERVATION_ID,
+            "candidate_id": CANDIDATE_ID,
+            "generated_from": "mocked_binance_spot_and_usdm_futures_source_bundle",
+        }
+
+    perp_market_label = _perp_market_label(source_venue_id, perp_observation)
+    return {
+        "source_venue_id": source_venue_id,
+        "spot_observation_id": f"{source_venue_id}_spot_{symbol}_spot_futures_basis",
+        "perp_observation_id": f"{source_venue_id}_{perp_market_label}_{symbol}_perp_spot_futures_basis",
+        "candidate_id": f"{source_venue_id}_{symbol}_spot_futures_basis_candidate",
+        "generated_from": f"mocked_{source_venue_id}_spot_and_{perp_market_label}_source_bundle",
+    }
+
+
+def _perp_market_label(source_venue_id: str, perp_observation: dict[str, Any]) -> str:
+    category = _safe_identifier(perp_observation.get("category"))
+    if source_venue_id == "bybit" and category == "linear":
+        return "linear"
+    if category:
+        return category
+    contract_type = _safe_identifier(perp_observation.get("contract_type"))
+    if contract_type:
+        return contract_type
+    return "perp"
+
+
+def _safe_identifier(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    safe = []
+    previous_underscore = False
+    for char in text:
+        if char.isalnum():
+            safe.append(char)
+            previous_underscore = False
+        elif not previous_underscore:
+            safe.append("_")
+            previous_underscore = True
+    return "".join(safe).strip("_")
 
 
 def _candidate_metrics(readiness_result: dict[str, Any]) -> dict[str, Any]:
