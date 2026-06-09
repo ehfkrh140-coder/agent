@@ -184,7 +184,14 @@ def parse_bybit_spot_observation(
     )
 
     _validate_bybit_category(ticker_result, "spot", "spot_ticker", required_missing_fields, parser_warnings)
-    _validate_bybit_category(orderbook_result, "spot", "spot_orderbook", required_missing_fields, parser_warnings)
+    _validate_bybit_category(
+        orderbook_result,
+        "spot",
+        "spot_orderbook",
+        required_missing_fields,
+        parser_warnings,
+        allow_missing=True,
+    )
     _validate_bybit_category(instruments_result, "spot", "spot_instruments_info", required_missing_fields, parser_warnings)
 
     depth_bids = _parse_depth_levels(orderbook_result.get("b"), "spot_depth_bids", required_missing_fields, parser_warnings)
@@ -306,7 +313,14 @@ def parse_bybit_perp_observation(
     )
 
     _validate_bybit_category(ticker_result, "linear", "linear_ticker", required_missing_fields, parser_warnings)
-    _validate_bybit_category(orderbook_result, "linear", "linear_orderbook", required_missing_fields, parser_warnings)
+    _validate_bybit_category(
+        orderbook_result,
+        "linear",
+        "linear_orderbook",
+        required_missing_fields,
+        parser_warnings,
+        allow_missing=True,
+    )
     _validate_bybit_category(instruments_result, "linear", "linear_instruments_info", required_missing_fields, parser_warnings)
 
     depth_bids = _parse_depth_levels(orderbook_result.get("b"), "perp_depth_bids", required_missing_fields, parser_warnings)
@@ -596,8 +610,13 @@ def _validate_bybit_category(
     source_name: str,
     required_missing_fields: list[str],
     parser_warnings: list[str],
+    *,
+    allow_missing: bool = False,
 ) -> None:
     category = _string_field(result, "category")
+    if not category and allow_missing:
+        parser_warnings.append(f"{source_name}_category_missing_echo_accepted_expected_{expected_category}")
+        return
     if category != expected_category:
         _add_missing(required_missing_fields, f"{source_name}_category_mismatch")
         parser_warnings.append(f"{source_name}_category={category}_expected_{expected_category}")

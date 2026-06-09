@@ -192,6 +192,56 @@ class SpotFuturesBasisBybitMockedParserTest(unittest.TestCase):
         self.assertIsNone(observation["best_ask"])
         self.assertIn("mark_index_funding_context_only_not_executable", observation["parser_warnings"])
 
+
+    def test_bybit_spot_orderbook_missing_category_is_accepted(self):
+        orderbook = copy.deepcopy(self.payloads["spot_orderbook"])
+        orderbook.pop("category", None)
+        orderbook["result"].pop("category", None)
+
+        observation = self._parse_spot(orderbook_payload=orderbook)
+
+        self.assertEqual("OK", observation["parser_normalized_status"])
+        self.assertEqual([], observation["required_missing_fields"])
+        self.assertNotIn("spot_orderbook_category_mismatch", observation["required_missing_fields"])
+        self.assertEqual("spot", observation["category"])
+        self.assertIn(
+            "spot_orderbook_category_missing_echo_accepted_expected_spot",
+            observation["parser_warnings"],
+        )
+
+    def test_bybit_linear_orderbook_missing_category_is_accepted(self):
+        orderbook = copy.deepcopy(self.payloads["linear_orderbook"])
+        orderbook.pop("category", None)
+        orderbook["result"].pop("category", None)
+
+        observation = self._parse_perp(orderbook_payload=orderbook)
+
+        self.assertEqual("OK", observation["parser_normalized_status"])
+        self.assertEqual([], observation["required_missing_fields"])
+        self.assertNotIn("linear_orderbook_category_mismatch", observation["required_missing_fields"])
+        self.assertEqual("linear", observation["category"])
+        self.assertIn(
+            "linear_orderbook_category_missing_echo_accepted_expected_linear",
+            observation["parser_warnings"],
+        )
+
+    def test_bybit_orderbook_explicit_wrong_category_still_need_data(self):
+        spot_orderbook = copy.deepcopy(self.payloads["spot_orderbook"])
+        spot_orderbook["result"]["category"] = "linear"
+
+        spot_observation = self._parse_spot(orderbook_payload=spot_orderbook)
+
+        self.assertEqual("NEED_DATA", spot_observation["parser_normalized_status"])
+        self.assertIn("spot_orderbook_category_mismatch", spot_observation["required_missing_fields"])
+
+        linear_orderbook = copy.deepcopy(self.payloads["linear_orderbook"])
+        linear_orderbook["result"]["category"] = "spot"
+
+        linear_observation = self._parse_perp(orderbook_payload=linear_orderbook)
+
+        self.assertEqual("NEED_DATA", linear_observation["parser_normalized_status"])
+        self.assertIn("linear_orderbook_category_mismatch", linear_observation["required_missing_fields"])
+
     def test_bybit_source_bundle_no_trade_metadata(self):
         spot = self._parse_spot()
         perp = self._parse_perp()

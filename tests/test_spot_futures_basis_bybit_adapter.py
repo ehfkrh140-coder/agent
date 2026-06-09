@@ -11,6 +11,7 @@ from src.market_data.adapters.spot_futures_basis import (
     DEFAULT_ADAPTER_ID,
     DEFAULT_BYBIT_ADAPTER_ID,
 )
+from src.market_data.packet_builder import OpportunityPacketBuilder
 
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "market_data" / "spot_futures_basis"
@@ -201,6 +202,38 @@ class SpotFuturesBasisBybitAdapterTest(unittest.TestCase):
         self.assertNotIn("Path(", source)
         self.assertNotIn("src.credentials", source.lower())
         self.assertNotIn("private_credentials", source.lower())
+
+
+    def test_bybit_adapter_live_like_orderbook_without_category_builds_parser_ok_packet(self):
+        payloads = _fixture_payloads()
+        for key in (("/v5/market/orderbook", "spot"), ("/v5/market/orderbook", "linear")):
+            payloads[key] = copy.deepcopy(payloads[key])
+            payloads[key].pop("category", None)
+            payloads[key]["result"].pop("category", None)
+
+        packet = self._adapter(MockHttpClient(payloads=payloads)).fetch_snapshot()
+        validated = OpportunityPacketBuilder().build(packet)
+        dumped = validated.model_dump(mode="json")
+        observations = {observation["instrument_type"]: observation for observation in dumped["observations"]}
+        spot = observations["spot"]
+        perp = observations["linear_perpetual"]
+        candidate = dumped["candidates"][0]
+        all_missing_fields = (
+            spot["extensions"]["required_missing_fields"]
+            + perp["extensions"]["required_missing_fields"]
+            + candidate["required_missing_fields"]
+        )
+
+        self.assertEqual("OK", spot["extensions"]["parser_normalized_status"])
+        self.assertEqual("OK", perp["extensions"]["parser_normalized_status"])
+        self.assertEqual([], spot["extensions"]["required_missing_fields"])
+        self.assertEqual([], perp["extensions"]["required_missing_fields"])
+        self.assertEqual([], candidate["required_missing_fields"])
+        self.assertNotIn("spot_orderbook_category_mismatch", all_missing_fields)
+        self.assertNotIn("linear_orderbook_category_mismatch", all_missing_fields)
+        self.assertEqual(6, len(dumped["extensions"]["diagnostics"]))
+        self.assertTrue(dumped["extensions"]["no_trade_only"])
+        self.assertEqual("NO_TRADE_ONLY", dumped["extensions"]["execution_policy"])
 
     def test_bybit_watch_still_no_trade_only_through_adapter(self):
         payloads = _fixture_payloads()
