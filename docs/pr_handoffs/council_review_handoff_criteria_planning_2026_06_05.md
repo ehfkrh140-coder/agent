@@ -270,7 +270,23 @@ Generated JSON policy 확인:
 - Council criteria는 generated JSON 원본이 아니라 handoff evidence summary와 dashboard row를 기반으로 해야 한다.
 - 이번 PR에는 generated JSON을 추가하지 않음.
 
-## 16. Rollback plan
+## 16. User-local verification correction
+
+User-local verification correction:
+
+- Python executable: `C:\Users\qhrb9\Desktop\agent\.venv\Scripts\python.exe`.
+- `pydantic` import 성공: `pydantic=2.13.4`.
+- `yaml` import 성공.
+- `python -m unittest discover -s tests` 통과.
+- Test result: `Ran 451 tests, OK`.
+- Generated JSON status clean: `git status --short -- data\market_samples data\generated_packets` 출력 없음.
+- Interpretation: Codex workspace 실패는 repository code failure가 아니라 workspace dependency/environment issue로 판단한다.
+- Docs-only PR 내용은 source/runtime/config/registry를 변경하지 않았다.
+- Local merge gate는 통과했다.
+- `NO_TRADE_ONLY` 유지.
+- Generated JSON commit 없음.
+
+## 17. Rollback plan
 
 Rollback plan:
 
@@ -279,7 +295,7 @@ Rollback plan:
 - Confirm GitHub Files changed contains only this handoff file after rollback.
 - Re-run required validation commands if rollback evidence is requested.
 
-## 17. Next PR candidates
+## 18. Next PR candidates
 
 다음 PR 후보 순서:
 
