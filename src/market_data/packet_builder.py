@@ -34,6 +34,8 @@ class OpportunityPacketBuilder:
             return self.build_mark_orderbook_gap_hunt(snapshot)
         if strategy_family == "mark_orderbook_gap":
             return self.build_mark_orderbook_gap(snapshot)
+        if strategy_family == "spot_futures_basis":
+            return self.build_spot_futures_basis(snapshot)
         if strategy_family == "cross_exchange_spot_spread":
             return self.build_cross_exchange_spot_spread(snapshot)
         if strategy_family == "orderbook_imbalance":
@@ -41,6 +43,19 @@ class OpportunityPacketBuilder:
         if strategy_family == "tether_cross_market_premium":
             return self.build_tether_cross_market_premium(snapshot)
         raise ValueError(f"Unsupported strategy_family: {strategy_family!r}")
+
+    def build_spot_futures_basis(self, snapshot: dict[str, Any]) -> OpportunityPacket:
+        """Validate a Spot-Futures Basis adapter-produced packet dict.
+
+        The Spot-Futures Basis adapter returns an analysis-only
+        OpportunityPacket-compatible dictionary from ``fetch_snapshot``.
+        This collect-path support branch intentionally performs validation
+        only; it does not fetch live data, parse source bundles, calculate
+        readiness, synthesize candidates, trigger Council/alerts, or add any
+        trading behavior.
+        """
+
+        return OpportunityPacket.model_validate(snapshot)
 
     def build_mark_orderbook_gap_hunt(self, snapshot: dict[str, Any]) -> OpportunityPacket:
         """Build a Mark-Orderbook Gap Hunt packet from an adapter-produced packet dict.
