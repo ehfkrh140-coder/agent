@@ -1,0 +1,26 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "category": "spot",
+    "list": [
+      {
+        "symbol": "BTCUSDT",
+        "baseCoin": "BTC",
+        "quoteCoin": "USDT",
+        "status": "Trading",
+        "priceFilter": {
+          "tickSize": "0.01"
+        },
+        "lotSizeFilter": {
+          "basePrecision": "0.000001",
+          "quotePrecision": "0.00000001",
+          "minOrderQty": "0.00001",
+          "minOrderAmt": "5"
+        }
+      }
+    ]
+  },
+  "retExtInfo": {},
+  "time": 1717200000300
+}
