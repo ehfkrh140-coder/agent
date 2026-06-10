@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.market_data.depth_vwap_context import build_spot_futures_basis_vwap_context
+
 SCHEMA_VERSION = "opportunity_packet_v0"
 STRATEGY_FAMILY = "spot_futures_basis"
 STRATEGY_ID = "spot_futures_basis_v0"
@@ -36,6 +38,14 @@ REQUIRED_PACKET_ASSUMPTIONS = (
     "WATCH does not trigger Council auto-call, alert, or execution",
     "spot/perp symbol string equality does not imply product equivalence",
     "funding rate is context, not basis decision alone",
+)
+
+DEPTH_VWAP_CONTEXT_ASSUMPTIONS = (
+    "VWAP context is analysis-only",
+    "VWAP context is not execution permission",
+    "VWAP context does not prove fill feasibility",
+    "top-of-book liquidity is not fill feasibility",
+    "NO_TRADE_ONLY",
 )
 
 REQUIRED_METRIC_FIELDS = (
@@ -68,6 +78,9 @@ def build_spot_futures_basis_opportunity_packet(
     *,
     created_at_utc: str,
     packet_id: str | None = None,
+    target_size: Any | None = None,
+    target_notional: Any | None = None,
+    depth_vwap_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a pure analysis-only Spot-Futures Basis OpportunityPacket dict."""
 
@@ -84,19 +97,31 @@ def build_spot_futures_basis_opportunity_packet(
         perp_observation = {}
 
     effective_packet_id = packet_id or _deterministic_packet_id(source_bundle, created_at_utc)
+    depth_vwap_context_payload = _optional_depth_vwap_context(
+        source_bundle,
+        target_size=target_size,
+        target_notional=target_notional,
+        depth_vwap_context=depth_vwap_context,
+    )
     packet_assumptions = _merged_assumptions(
         source_bundle.get("assumptions"),
         readiness_result.get("assumptions"),
         REQUIRED_PACKET_ASSUMPTIONS,
+        DEPTH_VWAP_CONTEXT_ASSUMPTIONS if depth_vwap_context_payload is not None else (),
     )
     readiness_summary = _readiness_summary(readiness_result)
 
     identity = _packet_identity(source_bundle, spot_observation, perp_observation)
     spot_packet_observation = _spot_packet_observation(spot_observation, identity["spot_observation_id"])
     perp_packet_observation = _perp_packet_observation(perp_observation, identity["perp_observation_id"])
-    candidate = _basis_candidate(readiness_result, packet_assumptions, identity)
+    candidate = _basis_candidate(
+        readiness_result,
+        packet_assumptions,
+        identity,
+        depth_vwap_context=_candidate_depth_vwap_context(depth_vwap_context_payload),
+    )
 
-    return {
+    packet = {
         "schema_version": SCHEMA_VERSION,
         "packet_id": effective_packet_id,
         "created_at_utc": created_at_utc,
@@ -130,6 +155,9 @@ def build_spot_futures_basis_opportunity_packet(
             "parser_source_bundle_summary": _source_bundle_summary(source_bundle),
         },
     }
+    if depth_vwap_context_payload is not None:
+        packet["extensions"]["depth_vwap_context"] = depth_vwap_context_payload
+    return packet
 
 
 def _spot_packet_observation(observation: dict[str, Any], observation_id: str) -> dict[str, Any]:
@@ -235,10 +263,20 @@ def _basis_candidate(
     readiness_result: dict[str, Any],
     assumptions: list[str],
     identity: dict[str, str],
+    *,
+    depth_vwap_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     metrics = _candidate_metrics(readiness_result)
     warnings = _list_or_empty(readiness_result.get("warnings"))
     required_missing_fields = _list_or_empty(readiness_result.get("required_missing_fields"))
+    extensions = {
+        "warnings": warnings,
+        "comparability_pass": metrics.get("comparability_pass"),
+        "no_trade_only": True,
+        "execution_policy": NO_TRADE_EXECUTION_POLICY,
+    }
+    if depth_vwap_context is not None:
+        extensions["depth_vwap_context"] = depth_vwap_context
     return {
         "candidate_id": identity["candidate_id"],
         "candidate_type": "spot_futures_basis_observation",
@@ -258,14 +296,43 @@ def _basis_candidate(
         "metrics": metrics,
         "required_missing_fields": required_missing_fields,
         "assumptions": assumptions,
-        "extensions": {
-            "warnings": warnings,
-            "comparability_pass": metrics.get("comparability_pass"),
-            "no_trade_only": True,
-            "execution_policy": NO_TRADE_EXECUTION_POLICY,
-        },
+        "extensions": extensions,
     }
 
+
+def _optional_depth_vwap_context(
+    source_bundle: dict[str, Any],
+    *,
+    target_size: Any | None,
+    target_notional: Any | None,
+    depth_vwap_context: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if isinstance(depth_vwap_context, dict):
+        return depth_vwap_context
+    if target_size is None and target_notional is None:
+        return None
+    return build_spot_futures_basis_vwap_context(
+        source_bundle,
+        target_size=target_size,
+        target_notional=target_notional,
+    )
+
+
+def _candidate_depth_vwap_context(depth_vwap_context: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(depth_vwap_context, dict):
+        return None
+    directions = depth_vwap_context.get("directions")
+    return {
+        "behavior": depth_vwap_context.get("behavior"),
+        "no_trade_only": depth_vwap_context.get("no_trade_only"),
+        "execution_policy": depth_vwap_context.get("execution_policy"),
+        "target_size": depth_vwap_context.get("target_size"),
+        "target_notional": depth_vwap_context.get("target_notional"),
+        "directions": directions if isinstance(directions, dict) else {},
+        "context_only": True,
+        "warnings": _list_or_empty(depth_vwap_context.get("warnings")),
+        "assumptions": list(DEPTH_VWAP_CONTEXT_ASSUMPTIONS),
+    }
 
 
 def _packet_identity(
