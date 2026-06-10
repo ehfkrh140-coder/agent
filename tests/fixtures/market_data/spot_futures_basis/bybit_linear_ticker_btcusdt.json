@@ -1,0 +1,24 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "category": "linear",
+    "list": [
+      {
+        "symbol": "BTCUSDT",
+        "bid1Price": "65020.00",
+        "bid1Size": "2.500",
+        "ask1Price": "65030.00",
+        "ask1Size": "2.250",
+        "lastPrice": "65025.00",
+        "markPrice": "65024.50",
+        "indexPrice": "65018.75",
+        "fundingRate": "0.0001",
+        "nextFundingTime": "1717228800000",
+        "openInterest": "12500.000"
+      }
+    ]
+  },
+  "retExtInfo": {},
+  "time": 1717200000400
+}
