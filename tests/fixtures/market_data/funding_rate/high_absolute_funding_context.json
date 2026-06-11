@@ -1,0 +1,22 @@
+{
+  "fixtureCase": "high_absolute_funding_context",
+  "representedSource": "okx_funding_rate_history",
+  "code": "0",
+  "msg": "",
+  "data": [
+    {
+      "instType": "SWAP",
+      "instId": "BTC-USDT-SWAP",
+      "fundingRate": "0.00450000",
+      "realizedRate": "0.00440000",
+      "fundingTime": "1717200000000",
+      "method": "periodic",
+      "formulaType": "withRate"
+    }
+  ],
+  "expectedParserOutcome": {
+    "parserStatusCandidate": "OK_WITH_WARNINGS",
+    "warnings": ["high_abs_funding_context"]
+  },
+  "expectedContextOnlyInterpretation": "high absolute funding is human watch context, not ENTER"
+}

@@ -1,0 +1,17 @@
+{
+  "fixtureCase": "missing_optional_interval",
+  "representedSource": "binance_usdm_funding_info",
+  "payload": [
+    {
+      "symbol": "BTCUSDT",
+      "adjustedFundingRateCap": "0.00300000",
+      "adjustedFundingRateFloor": "-0.00300000"
+    }
+  ],
+  "expectedParserOutcome": {
+    "parserStatusCandidate": "OK",
+    "requiredMissingFields": [],
+    "optionalMissingFields": ["funding_interval_hours"],
+    "warnings": ["optional_interval_missing"]
+  }
+}

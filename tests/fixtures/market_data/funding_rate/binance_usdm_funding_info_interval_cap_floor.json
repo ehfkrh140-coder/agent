@@ -1,0 +1,14 @@
+[
+  {
+    "symbol": "BTCUSDT",
+    "adjustedFundingRateCap": "0.00300000",
+    "adjustedFundingRateFloor": "-0.00300000",
+    "fundingIntervalHours": 8
+  },
+  {
+    "symbol": "ETHUSDT",
+    "adjustedFundingRateCap": "0.00250000",
+    "adjustedFundingRateFloor": "-0.00250000",
+    "fundingIntervalHours": 4
+  }
+]

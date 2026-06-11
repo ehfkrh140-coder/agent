@@ -1,0 +1,17 @@
+{
+  "fixtureCase": "missing_required_funding_rate",
+  "representedSource": "binance_usdm_funding_rate_history",
+  "payload": [
+    {
+      "symbol": "BTCUSDT",
+      "fundingTime": 1717200000000,
+      "markPrice": "68000.12500000"
+    }
+  ],
+  "expectedParserOutcome": {
+    "parserStatusCandidate": "NEED_SOURCE_FIELDS",
+    "requiredMissingFields": ["funding_rate"],
+    "optionalMissingFields": [],
+    "warnings": []
+  }
+}

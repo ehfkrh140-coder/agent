@@ -1,0 +1,46 @@
+{
+  "fixtureCase": "varying_funding_interval",
+  "binanceFundingInfo": [
+    {
+      "symbol": "BTCUSDT",
+      "adjustedFundingRateCap": "0.00300000",
+      "adjustedFundingRateFloor": "-0.00300000",
+      "fundingIntervalHours": 8
+    },
+    {
+      "symbol": "ETHUSDT",
+      "adjustedFundingRateCap": "0.00250000",
+      "adjustedFundingRateFloor": "-0.00250000",
+      "fundingIntervalHours": 4
+    }
+  ],
+  "bybitInstrumentsInfo": {
+    "category": "linear",
+    "list": [
+      {
+        "symbol": "BTCUSDT",
+        "fundingInterval": 480
+      },
+      {
+        "symbol": "ETHUSDT",
+        "fundingInterval": 240
+      }
+    ]
+  },
+  "okxCurrentFunding": [
+    {
+      "instId": "BTC-USDT-SWAP",
+      "fundingTime": "1717200000000",
+      "nextFundingTime": "1717228800000"
+    },
+    {
+      "instId": "ETH-USDT-SWAP",
+      "fundingTime": "1717200000000",
+      "nextFundingTime": "1717214400000"
+    }
+  ],
+  "expectedParserOutcome": {
+    "parserStatusCandidate": "OK",
+    "warnings": ["do_not_hard_code_8h_interval"]
+  }
+}
