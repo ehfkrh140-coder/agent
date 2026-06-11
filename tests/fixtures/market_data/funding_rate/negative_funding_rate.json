@@ -1,0 +1,13 @@
+{
+  "fixtureCase": "negative_funding_rate",
+  "representedSource": "binance_usdm_funding_rate_history",
+  "payload": [
+    {
+      "symbol": "ETHUSDT",
+      "fundingRate": "-0.00005000",
+      "fundingTime": 1717228800000,
+      "markPrice": "3500.25000000"
+    }
+  ],
+  "expectedContextOnlyInterpretation": "negative funding is not long permission"
+}

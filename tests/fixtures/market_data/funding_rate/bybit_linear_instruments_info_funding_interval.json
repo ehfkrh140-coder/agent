@@ -1,0 +1,27 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "category": "linear",
+    "list": [
+      {
+        "symbol": "BTCUSDT",
+        "contractType": "LinearPerpetual",
+        "status": "Trading",
+        "fundingInterval": 480,
+        "upperFundingRate": "0.00300000",
+        "lowerFundingRate": "-0.00300000"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "contractType": "LinearPerpetual",
+        "status": "Trading",
+        "fundingInterval": 240,
+        "upperFundingRate": "0.00250000",
+        "lowerFundingRate": "-0.00250000"
+      }
+    ],
+    "nextPageCursor": ""
+  },
+  "time": 1717200000000
+}

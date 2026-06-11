@@ -1,0 +1,39 @@
+{
+  "fixtureCase": "okx_predicted_vs_realized_semantics",
+  "currentFundingPayload": {
+    "code": "0",
+    "msg": "",
+    "data": [
+      {
+        "instType": "SWAP",
+        "instId": "BTC-USDT-SWAP",
+        "fundingRate": "0.00009000",
+        "nextFundingRate": "0.00007000",
+        "settFundingRate": "0.00008000",
+        "fundingTime": "1717200000000",
+        "nextFundingTime": "1717228800000",
+        "premium": "0.00001200",
+        "ts": "1717199900000"
+      }
+    ]
+  },
+  "historyFundingPayload": {
+    "code": "0",
+    "msg": "",
+    "data": [
+      {
+        "instType": "SWAP",
+        "instId": "BTC-USDT-SWAP",
+        "fundingRate": "0.00008000",
+        "realizedRate": "0.00007900",
+        "fundingTime": "1717171200000",
+        "method": "periodic",
+        "formulaType": "withRate"
+      }
+    ]
+  },
+  "expectedParserOutcome": {
+    "parserStatusCandidate": "OK",
+    "warnings": ["do_not_collapse_predicted_and_realized"]
+  }
+}
