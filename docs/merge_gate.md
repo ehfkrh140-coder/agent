@@ -26,6 +26,16 @@ Do not merge if any of the following are true:
 - Changed files include strategy/config/code but no impact scope or rollback plan exists.
 - No-trade compliance is not explicitly stated.
 
+## Codex PR Review Evidence Gate
+Before merging a Codex-authored PR, reviewers must apply `docs/codex_pr_review_gate.md` as a merge gate checklist.
+
+- Compare the task's Expected Files Changed against GitHub PR Files changed, not only Codex-local staged files.
+- If GitHub PR Files changed is larger than Expected Files Changed, includes cumulative prior docs/handoffs, or includes files outside the allowed scope, hold the merge.
+- If GitHub Checks / CI are unavailable, inspect the task handoff validation evidence and exact command output before considering merge.
+- If the handoff records a Codex `git fetch origin main` failure or missing branch freshness evidence, verify the GitHub commit parent and cumulative diff more strictly.
+- Keep `NO_TRADE_ONLY`, private API/order/alert prohibitions, and generated JSON clean checks as mandatory merge conditions for every PR.
+- Codex may create PRs, but GPT designer or human reviewer approval is required before merge.
+
 ## Human approval required
 Human approval is required for:
 - strategy changes that can affect active/future/experimental status;
