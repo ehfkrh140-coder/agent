@@ -1,0 +1,24 @@
+{
+  "code": "0",
+  "msg": "",
+  "data": [
+    {
+      "instType": "SWAP",
+      "instId": "BTC-USDT-SWAP",
+      "fundingRate": "0.00010000",
+      "realizedRate": "0.00009500",
+      "fundingTime": "1717200000000",
+      "method": "current_period",
+      "formulaType": "withRate"
+    },
+    {
+      "instType": "SWAP",
+      "instId": "ETH-USDT-SWAP",
+      "fundingRate": "-0.00005000",
+      "realizedRate": "-0.00004500",
+      "fundingTime": "1717228800000",
+      "method": "current_period",
+      "formulaType": "withRate"
+    }
+  ]
+}
